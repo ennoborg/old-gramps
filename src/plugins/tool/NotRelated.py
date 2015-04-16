@@ -368,6 +368,13 @@ class NotRelated(tool.ActivePersonTool, ManagedWindow.ManagedWindow) :
                       childHandle not in self.handlesOfPeopleAlreadyProcessed:
                         self.handlesOfPeopleToBeProcessed.add(childHandle)
 
+            # step 5 -- associations
+            for assoc in person.get_person_ref_list():
+                assocHandle = assoc.get_reference_handle()
+                if assocHandle and \
+                  assocHandle not in self.handlesOfPeopleAlreadyProcessed:
+                    self.handlesOfPeopleToBeProcessed.add(assocHandle)
+
 
     def findUnrelatedPeople(self) :
 
