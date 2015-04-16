@@ -52,7 +52,7 @@ from gen.db import DbTxn
 from gui.views.listview import ListView
 import Utils
 from gen.display.name import displayer as name_displayer
-from QuestionDialog import ErrorDialog, QuestionDialog
+from QuestionDialog import ErrorDialog, QuestionDialog, QuestionDialog2
 import Errors
 import Bookmarks
 import config
@@ -287,18 +287,31 @@ class BasePersonView(ListView):
         """
         Remove a person from the database.
         """
+        prompt = True
+        if len(self.selected_handles()) > 1:
+            q = QuestionDialog2(
+                _("Remove selected items?"),
+                _("More than one item has been selected for deletion. "
+                  "Ask before deleting each one?"),
+                _("Yes"),
+                _("No"))
+            prompt = q.run()
+            
         for sel in self.selected_handles():
             person = self.dbstate.db.get_person_from_handle(sel)
             self.active_person = person
-            name = name_displayer.display(person) 
+            if prompt:
+                name = name_displayer.display(person) 
 
-            msg = _('Deleting the person will remove the person '
+                msg = _('Deleting the person will remove the person '
                              'from the database.')
-            msg = "%s %s" % (msg, Utils.data_recover_msg)
-            QuestionDialog(_('Delete %s?') % name, 
+                msg = "%s %s" % (msg, Utils.data_recover_msg)
+                QuestionDialog(_('Delete %s?') % name, 
                                           msg, 
                                           _('_Delete Person'), 
                                           self.delete_person_response)
+            else:
+                self.delete_person_response()
 
     def delete_person_response(self):
         """
