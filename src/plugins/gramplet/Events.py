@@ -68,12 +68,12 @@ class Events(Gramplet, DbGUIElement):
         top = gtk.TreeView()
         titles = [('', NOSORT, 50,),
                   (_('Type'), 1, 100),
-                  (_('Main Participants'), 2, 200),
+                  (_('Description'), 6, 150),
                   (_('Date'), 4, 100),
                   ('', 4, 100),
                   (_('Place'), 5, 400),
-                  (_('Description'), 6, 150),
-                  (_('Role'), 7, 100)]
+                  (_('Role'), 7, 100),
+                  (_('Main Participants'), 2, 200)]
         self.model = ListModel(top, titles, event_func=self.edit_event)
         return top
         
@@ -100,12 +100,12 @@ class Events(Gramplet, DbGUIElement):
 
         self.model.add((event.get_handle(),
                         str(event.get_type()),
-                        participants,
+                        event.get_description(),
                         event_date,
                         event_sort,
                         place,
-                        event.get_description(),
-                        str(event_ref.get_role())))
+                        str(event_ref.get_role()),
+                        participants))
 
     def edit_event(self, treeview):
         """

@@ -187,7 +187,7 @@ class EventEmbedList(DbGUIElement, GroupEmbeddedList):
         The columns to show as a tuple containing 
         tuples (show/noshow, model column)
         """
-        return ((1, 1), (1, 6), (1, 3), (1, 4), (1, 0), (1, 5), (1, 2))
+        return ((1, 1), (1, 0), (1, 3), (1, 4), (1, 5), (1, 6), (1, 2))
 
     def default_types(self):
         return [
