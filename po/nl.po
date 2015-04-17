@@ -34,7 +34,7 @@
 # reference	     waarnaar verwezen wordt
 # count		     aantal maal
 # lineage	     lijn
-# locality	     plaats
+# locality	     wijk
 # u gebruiken
 # telkens werkwoord achteraan plaatsen
 msgid ""
@@ -2027,7 +2027,7 @@ msgstr "FOUT: bestandsformaat niet herkend voor bestand %s"
 
 #: ../src/cli/arghandler.py:399
 msgid "List of known family trees in your database path\n"
-msgstr "Liijst van de bekende stambomen in uw gegevensbestandspad\n"
+msgstr "Lijst van de bekende stambomen in uw gegevensbestandspad\n"
 
 #: ../src/cli/arghandler.py:403
 #, python-format
@@ -4853,7 +4853,7 @@ msgstr "Een ongeldige of onvolledige formaatdefinitie."
 #: ../src/plugins/webreport/NarrativeWeb.py:1413
 #: ../src/Filters/SideBar/_PlaceSidebarFilter.py:89
 msgid "Locality"
-msgstr "Plaats"
+msgstr "Wijk"
 
 # stad
 #: ../src/gui/configure.py:454
@@ -7000,7 +7000,7 @@ msgstr "Adres bewerken"
 #: ../src/gui/editors/editattribute.py:84
 #: ../src/gui/editors/editattribute.py:136
 msgid "Attribute Editor"
-msgstr "Bewerken kenmeken"
+msgstr "Bewerken kenmerken"
 
 #: ../src/gui/editors/editattribute.py:130
 #: ../src/gui/editors/editattribute.py:134
@@ -7947,7 +7947,7 @@ msgstr "Een nieuw kenmerk aanmaken en toevoegen"
 
 #: ../src/gui/editors/displaytabs/attrembedlist.py:54
 msgid "Remove the existing attribute"
-msgstr "Het bestanande kenmerk verwijderen"
+msgstr "Het bestaande kenmerk verwijderen"
 
 #: ../src/gui/editors/displaytabs/attrembedlist.py:55
 msgid "Edit the selected attribute"
@@ -9150,7 +9150,7 @@ msgstr "Exporteer scherm..."
 
 #: ../src/gui/views/listview.py:214 ../src/plugins/lib/libpersonview.py:354
 msgid "action|_Edit..."
-msgstr "Berwerken..."
+msgstr "Bewerken..."
 
 #: ../src/gui/views/listview.py:401
 msgid "Active object not visible"
@@ -21760,7 +21760,7 @@ msgstr "Parochie: %s "
 #: ../src/plugins/textreport/PlaceReport.py:152
 #, python-format
 msgid "Locality: %s "
-msgstr "Plaats: %s "
+msgstr "Wijk: %s "
 
 # Stad
 #: ../src/plugins/textreport/PlaceReport.py:153
@@ -22444,7 +22444,7 @@ msgstr ""
 msgid "%d corrupted family relationship fixed\n"
 msgid_plural "%d corrupted family relationship fixed\n"
 msgstr[0] "%d gecorrumpeerde familierelatie hersteld\n"
-msgstr[1] "%d gecorrumpeerde familierelaties herstekd\n"
+msgstr[1] "%d gecorrumpeerde familierelaties hersteld\n"
 
 #: ../src/plugins/tool/Check.py:2031
 #, python-format
@@ -22797,7 +22797,7 @@ msgstr "Stap 1: Opbouwen van de voorlopige lijsten"
 
 #: ../src/plugins/tool/FindDupes.py:213
 msgid "Pass 2: Calculating potential matches"
-msgstr "Stap 2: Bereken van mogelijke overeenkomsten"
+msgstr "Stap 2: Berekenen van mogelijke overeenkomsten"
 
 #: ../src/plugins/tool/FindDupes.py:546
 msgid "Potential Merges"
@@ -23178,7 +23178,7 @@ msgstr "Connecties voor het opsplitsen van de achternamen:"
 #: ../src/plugins/tool/PatchNames.py:136
 msgid "Connectors not splitting surnames:"
 msgstr ""
-"Connertors die niet gebruikt wordne voor het opsplitsen van de achternamen"
+"Connectors die niet gebruikt worden voor het opsplitsen van de achternamen"
 
 #: ../src/plugins/tool/PatchNames.py:172
 msgid "Extracting Information from Names"
@@ -27821,7 +27821,7 @@ msgstr "Straat:"
 
 #: ../src/Filters/Rules/Place/_HasPlace.py:51
 msgid "Locality:"
-msgstr "Plaats:"
+msgstr "Wijk:"
 
 #: ../src/Filters/Rules/Place/_HasPlace.py:53
 msgid "County:"
@@ -29173,8 +29173,8 @@ msgid ""
 "Publication Information, such as city and year of publication, name of "
 "publisher, ..."
 msgstr ""
-"Publicati-informatie zoals locatie en jaar van uitgave, de naam van d "
-"euitgever, ..."
+"Publicatie-informatie zoals locatie en jaar van uitgave, de naam van de "
+"uitgever, ..."
 
 #: ../src/glade/editsource.glade.h:7 ../src/glade/editcitation.glade.h:26
 #: ../src/glade/editsourceref.glade.h:23
@@ -29487,7 +29487,7 @@ msgstr ""
 
 #: ../src/glade/editcitation.glade.h:30 ../src/glade/editsourceref.glade.h:28
 msgid "<b>Shared source information</b>"
-msgstr "<b>Gedeelde bron informatie</b>"
+msgstr "<b>Gedeelde broninformatie</b>"
 
 #: ../src/glade/editurl.glade.h:1
 msgid "_Web address:"
@@ -29686,7 +29686,7 @@ msgstr "Laagste niveau voor de locatie-indeling: een straatnaam bijvoorbeeld."
 #: ../src/glade/editlocation.glade.h:15 ../src/glade/editaddress.glade.h:21
 #: ../src/glade/editplace.glade.h:32 ../src/plugins/tool/ownereditor.glade.h:9
 msgid "_Locality:"
-msgstr "_Plaats"
+msgstr "_Wijk:"
 
 #: ../src/glade/editlocation.glade.h:16
 msgid "A district within, or a settlement near to, a town or city."
@@ -29835,7 +29835,7 @@ msgstr "Datum waarop dit een geldig adres was."
 
 #: ../src/glade/editaddress.glade.h:22
 msgid "The locality of the address"
-msgstr "Adresplaats"
+msgstr "Adreswijk"
 
 # pad
 #: ../src/glade/editmedia.glade.h:4 ../src/glade/editmediaref.glade.h:16
@@ -30117,7 +30117,7 @@ msgid ""
 "Use Alternate Locations tab to store the current name."
 msgstr ""
 "Het dorp of de stad waar de locatie is. \n"
-"U kunt de tab 'Alternateve locaties' gebruiken om de huidige naam op te "
+"U kunt de tab 'Alternatieve locaties' gebruiken om de huidige naam op te "
 "slaan."
 
 #: ../src/glade/editplace.glade.h:27
