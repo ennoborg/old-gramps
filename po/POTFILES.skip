@@ -84,6 +84,7 @@ src/Filters/Rules/_MatchesEventFilterBase.py
 src/Filters/Rules/_MatchesFilterBase.py
 src/Filters/Rules/_MatchesSourceConfidenceBase.py
 src/Filters/Rules/_MatchesSourceFilterBase.py
+src/Filters/Rules/_MatchesCitationFilterBase.py
 src/Filters/Rules/_RegExpIdBase.py
 src/Filters/Rules/Person/_HasTextMatchingRegexpOf.py
 src/Filters/Rules/Family/_MemberBase.py

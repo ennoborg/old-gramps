@@ -55,6 +55,7 @@ Match on related objects
 _MatchesFilterEventBase      Object has an event that matches another filter
 _MatchesSourceConfidenceBase Object with specific confidence on direct sources
 _MatchesSourceFilterBase     Object matches another filter on direct sources
+_MatchesCitationFilterBase   Object matches another filter on citations
 
 Count based
 _HasGalleryBase              Object has </>/= number of media objects
@@ -82,6 +83,7 @@ from Filters.Rules._MatchesFilterBase import MatchesFilterBase
 from Filters.Rules._MatchesEventFilterBase import MatchesEventFilterBase
 from Filters.Rules._MatchesSourceConfidenceBase import MatchesSourceConfidenceBase
 from Filters.Rules._MatchesSourceFilterBase import MatchesSourceFilterBase
+from Filters.Rules._MatchesCitationFilterBase import MatchesCitationFilterBase
 from Filters.Rules._ChangedSinceBase import ChangedSinceBase
 
 from Filters.Rules import (Person, Family, Event, Source, Citation, Place, 

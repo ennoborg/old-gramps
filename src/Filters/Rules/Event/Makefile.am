@@ -15,7 +15,7 @@ pkgpython_PYTHON = \
 	_HasGallery.py \
 	_HasIdOf.py\
 	_HasNote.py \
-    _HasSourceCount.py \
+	_HasSourceCount.py \
 	_HasType.py\
 	_HasNoteMatchingSubstringOf.py\
 	_HasReferenceCountOf.py\
@@ -23,6 +23,7 @@ pkgpython_PYTHON = \
 	_MatchesPlaceFilter.py\
 	_MatchesSourceConfidence.py\
 	_MatchesSourceFilter.py\
+	_MatchesCitationFilter.py\
 	_HasAttribute.py\
 	_HasDayOfWeek.py\
 	__init__.py

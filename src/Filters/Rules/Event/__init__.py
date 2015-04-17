@@ -44,6 +44,7 @@ from _MatchesFilter import MatchesFilter
 from _MatchesPersonFilter import MatchesPersonFilter
 from _MatchesSourceConfidence import MatchesSourceConfidence
 from _MatchesSourceFilter import MatchesSourceFilter
+from _MatchesCitationFilter import MatchesCitationFilter
 from _HasAttribute import HasAttribute
 from _HasData import HasData
 from _ChangedSince import ChangedSince
@@ -66,6 +67,7 @@ editor_rule_list = [
     MatchesPersonFilter,
     MatchesSourceConfidence,
     MatchesSourceFilter,
+    MatchesCitationFilter,
     HasAttribute,
     HasData,
     ChangedSince,

@@ -32,6 +32,7 @@ pkgpython_PYTHON = \
 	_MatchesEventFilterBase.py \
 	_MatchesSourceConfidenceBase.py \
 	_MatchesSourceFilterBase.py \
+	_MatchesCitationFilterBase.py \
 	_HasCitationBase.py
 
 
