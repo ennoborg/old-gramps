@@ -424,7 +424,7 @@ class PatchNames(tool.BatchTool, ManagedWindow.ManagedWindow):
             if self.nickid in data:
                 given, nick = data[self.nickid]
                 handle = self.model.append()
-                self.model.set_value(handle, 0, 1)
+                self.model.set_value(handle, 0, 0)
                 self.model.set_value(handle, 1, gid)
                 self.model.set_value(handle, 2, _('Nickname'))
                 self.model.set_value(handle, 3, nick)
@@ -434,7 +434,7 @@ class PatchNames(tool.BatchTool, ManagedWindow.ManagedWindow):
             if self.titleid in data:
                 title, given = data[self.titleid]
                 handle = self.model.append()
-                self.model.set_value(handle, 0, 1)
+                self.model.set_value(handle, 0, 0)
                 self.model.set_value(handle, 1, gid)
                 self.model.set_value(handle, 2, _('Person|Title'))
                 self.model.set_value(handle, 3, title)
@@ -444,7 +444,7 @@ class PatchNames(tool.BatchTool, ManagedWindow.ManagedWindow):
             if self.pref1id in data:
                 given, prefixtotal, new_prefix = data[self.pref1id]
                 handle = self.model.append()
-                self.model.set_value(handle, 0, 1)
+                self.model.set_value(handle, 0, 0)
                 self.model.set_value(handle, 1, gid)
                 self.model.set_value(handle, 2, _('Prefix in given name'))
                 self.model.set_value(handle, 3, prefixtotal)
@@ -454,7 +454,7 @@ class PatchNames(tool.BatchTool, ManagedWindow.ManagedWindow):
             if self.compid in data:
                 surn_list, pref_list, con_list, prims, origs = data[self.compid]
                 handle = self.model.append()
-                self.model.set_value(handle, 0, 1)
+                self.model.set_value(handle, 0, 0)
                 self.model.set_value(handle, 1, gid)
                 self.model.set_value(handle, 2, _('Compound surname'))
                 newval = ''
