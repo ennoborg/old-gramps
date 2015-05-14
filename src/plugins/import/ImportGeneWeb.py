@@ -67,6 +67,73 @@ _cal_map = {
     'F' : gen.lib.Date.CAL_FRENCH,
     }
 
+pevents_map = {
+    "#birt" : 'Gramps_event_type', #Epers_Birth
+    "#bapt" : 'Gramps_event_type', #Epers_Baptism
+    "#deat" : 'Gramps_event_type', #Epers_Death
+    "#buri" : 'Gramps_event_type', #Epers_Burial
+    "#crem" : 'Gramps_event_type', #Epers_Cremation
+    "#acco" : 'Gramps_event_type', #Epers_Accomplishment
+    "#acqu" : 'Gramps_event_type', #Epers_Acquisition
+    "#adhe" : 'Gramps_event_type', #Epers_Adhesion
+    "#awar" : 'Gramps_event_type', #Epers_Decoration
+    "#bapl" : 'Gramps_event_type', #Epers_BaptismLDS
+    "#barm" : 'Gramps_event_type', #Epers_BarMitzvah
+    "#basm" : 'Gramps_event_type', #Epers_BatMitzvah
+    "#bles" : 'Gramps_event_type', #Epers_Benediction
+    "#cens" : 'Gramps_event_type', #Epers_Recensement
+    "#chgn" : 'Gramps_event_type', #Epers_ChangeName
+    "#circ" : 'Gramps_event_type', #Epers_Circumcision
+    "#conf" : 'Gramps_event_type', #Epers_Confirmation
+    "#conl" : 'Gramps_event_type', #Epers_ConfirmationLDS
+    "#degr" : 'Gramps_event_type', #Epers_Diploma
+    "#demm" : 'Gramps_event_type', #Epers_DemobilisationMilitaire
+    "#dist" : 'Gramps_event_type', #Epers_Distinction
+    "#dotl" : 'Gramps_event_type', #Epers_DotationLDS
+    "#educ" : 'Gramps_event_type', #Epers_Education
+    "#elec" : 'Gramps_event_type', #Epers_Election
+    "#emig" : 'Gramps_event_type', #Epers_Emigration
+    "#endl" : 'Gramps_event_type', #Epers_Dotation
+    "#exco" : 'Gramps_event_type', #Epers_Excommunication
+    "#fcom" : 'Gramps_event_type', #Epers_FirstCommunion
+    "#flkl" : 'Gramps_event_type', #Epers_FamilyLinkLDS
+    "#fune" : 'Gramps_event_type', #Epers_Funeral
+    "#grad" : 'Gramps_event_type', #Epers_Graduate
+    "#hosp" : 'Gramps_event_type', #Epers_Hospitalisation
+    "#illn" : 'Gramps_event_type', #Epers_Illness
+    "#immi" : 'Gramps_event_type', #Epers_Immigration
+    "#lpas" : 'Gramps_event_type', #Epers_ListePassenger
+    "#mdis" : 'Gramps_event_type', #Epers_MilitaryDistinction
+    "#mobm" : 'Gramps_event_type', #Epers_MobilisationMilitaire
+    "#mpro" : 'Gramps_event_type', #Epers_MilitaryPromotion
+    "#mser" : 'Gramps_event_type', #Epers_MilitaryService
+    "#natu" : 'Gramps_event_type', #Epers_Naturalisation
+    "#occu" : 'Gramps_event_type', #Epers_Occupation
+    "#ordn" : 'Gramps_event_type', #Epers_Ordination
+    "#prop" : 'Gramps_event_type', #Epers_Property
+    "#resi" : 'Gramps_event_type', #Epers_Residence
+    "#reti" : 'Gramps_event_type', #Epers_Retired
+    "#slgc" : 'Gramps_event_type', #Epers_ScellentChildLDS
+    "#slgp" : 'Gramps_event_type', #Epers_ScellentParentLDS
+    "#slgs" : 'Gramps_event_type', #Epers_ScellentSpouseLDS
+    "#vteb" : 'Gramps_event_type', #Epers_VenteBien
+    "#will" : 'Gramps_event_type', #Epers_Will
+                     }
+
+fevents_map = {
+    "#marr" : 'Gramps_event_type', #Efam_Marriage
+    "#nmar" : 'Gramps_event_type', #Efam_NoMarriage
+    "#nmen" : 'Gramps_event_type', #Efam_NoMention
+    "#enga" : 'Gramps_event_type', #Efam_Engage
+    "#div"  : 'Gramps_event_type', #Efam_Divorce
+    "#sep"  : 'Gramps_event_type', #Efam_Separated
+    "#anul" : 'Gramps_event_type', #Efam_Annulation
+    "#marb" : 'Gramps_event_type', #Efam_MarriageBann
+    "#marc" : 'Gramps_event_type', #Efam_MarriageContract)
+    "#marl" : 'Gramps_event_type', #Efam_MarriageLicense)
+    "#resi" : 'Gramps_event_type', #Efam_Residence)
+                  }
+
 #-------------------------------------------------------------------------
 #
 #
@@ -97,9 +164,10 @@ class GeneWebParser(object):
     def __init__(self, dbase, file):
         self.db = dbase
         if file: # Unit tests can create the parser w/o underlying file
-			self.f = open(file,"rU")
-			self.filename = file
-			self.encoding = 'iso-8859-1'
+            self.f = open(file,"rU")
+            self.filename = file
+            self.encoding = 'iso-8859-1'
+            self.gwplus = False
 
     def get_next_line(self):
         self.lineno += 1
@@ -143,7 +211,21 @@ class GeneWebParser(object):
                     fields = line.split(" ")
             
                     LOG.debug("LINE: %s" %line)
-                    if fields[0] == "fam":
+
+                    if fields[0] == "gwplus":
+                        self.gwplus = True
+                        self.encoding = 'utf-8'
+                    elif fields[0] in pevents_map:
+                        LOG.info(fields)
+                    elif fields[0] in fevents_map:
+                        LOG.info(fields)
+                    elif fields[0] == "encoding:":
+                        self.encoding = fields[1]
+                    elif fields[0] == "pevt":
+                        LOG.info(fields)
+                    elif fields[0] == "fevt":
+                        LOG.info(fields)
+                    elif fields[0] == "fam":
                         self.current_mode = "fam"
                         self.read_family_line(line,fields)
                     elif fields[0] == "rel":
@@ -167,10 +249,10 @@ class GeneWebParser(object):
                         self.read_person_notes_lines(line,fields)
                     elif fields[0] == "notes-db":
                         self.read_database_notes_lines(line,fields)
+                    elif fields[0] == "pages-ext" or "wizard-note":
+                        pass
                     elif fields[0] == "end":
                         self.current_mode = None
-                    elif fields[0] == "encoding:":
-                        self.encoding = fields[1]
                     else:
                         LOG.warn("parse_geneweb_file(): Token >%s< unknown. line %d skipped: %s" % 
                                  (fields[0],self.lineno,line))
@@ -628,9 +710,8 @@ class GeneWebParser(object):
                 birth_source = self.get_or_create_source(self.decode(fields[idx]))
                 idx += 1
             elif field[0] == '!':
-                LOG.debug("Baptize at: %s" % fields[idx])
-                bapt_date = self.parse_date(self.decode(fields[idx][1:]))
-                idx += 1
+                LOG.debug("Baptize at: %s" % field[1:])
+                bapt_date = self.parse_date(self.decode(field[1:]))
             elif field == '#bp' and idx < len(fields):
                 LOG.debug("Birth Place: %s" % fields[idx])
                 birth_place = self.get_or_create_place(self.decode(fields[idx]))
