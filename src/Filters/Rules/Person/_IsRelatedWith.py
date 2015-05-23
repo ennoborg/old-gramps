@@ -86,7 +86,7 @@ class IsRelatedWith(Rule):
                     for parent_handle in (family.get_father_handle(), family.get_mother_handle()):
                         if parent_handle:
                             expand.append(self.db.get_person_from_handle(parent_handle))
-            # Check Sibilings
+            # Check Siblings
                     for child_ref in family.get_child_ref_list():
                         expand.append(self.db.get_person_from_handle(child_ref.ref))
     
