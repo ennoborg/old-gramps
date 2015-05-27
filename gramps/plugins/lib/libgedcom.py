@@ -5758,21 +5758,35 @@ class GedcomParser(UpdateCallback):
                 self.dbase.add_place(place, self.trans)
                 self.place_names[place.get_title()].append(place.get_handle())
             else:
-                place.merge(state.place)
-                self.dbase.commit_place(place, self.trans)
-            place_title = _pd.display(self.dbase, place)
-            state.pf.load_place(self.place_import, place, place_title)
-
-            # Create the Place Details (it is committed with the event)
-            place_detail = Place()
-            place_detail.set_name(PlaceName(value=title))
-            place_detail.set_title(title)
-            # For RootsMagic etc. Place Details e.g. address, hospital, cemetary
-            place_detail.set_type((PlaceType.CUSTOM, _("Detail")))
-            placeref = PlaceRef()
-            placeref.ref = place.get_handle()
-            place_detail.set_placeref_list([placeref])
-            state.place = place_detail
+                try:
+                    # This is the first ADDR
+                    refs = list(self.dbase.find_backlink_handles(place_handle))
+                    # We haven't commited the event yet, so the place will not be
+                    # linked to it. If there are any refs they will be from other
+                    # events (etc)
+                    if len(refs) == 0:
+                        place = self.__find_place(title, location)
+                        if place is None:
+                            place = old_place
+                            self.__add_location(place, location)
+                        else:
+                            place.merge(old_place)
+                            self.place_import.remove_location(old_place.handle)
+                            self.dbase.remove_place(place_handle, self.trans)
+                            self.place_names[title].remove(place_handle)
+                    else:
+                        place = self.__find_place(title, location)
+                        if place is None:
+                            place = self.__create_place(title, location)
+                        else:
+                            pass
+                except:
+                    place = self.__find_place(title, location)
+                    if place is None:
+                        place = self.__create_place(title, location)
+                    else:
+                        pass
+                    print(free_form, place_handle)
         else:
             place = state.place
             if place:
