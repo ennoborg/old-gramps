@@ -7624,9 +7624,9 @@ class GedcomStageOne(object):
                 continue
 
             if level == 0 and key[0] == '@':
-                if value == ("FAM", "FAMILY") :
+                if value in ("FAM", "FAMILY") :
                     current_family_id = key.strip()[1:-1]
-                elif value == ("INDI", "INDIVIDUAL"):
+                elif value in ("INDI", "INDIVIDUAL"):
                     self.pcnt += 1
             elif key in ("HUSB", "HUSBAND", "WIFE") and \
                  self.__is_xref_value(value):
