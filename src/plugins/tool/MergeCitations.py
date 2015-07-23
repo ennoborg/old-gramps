@@ -108,12 +108,17 @@ class MergeCitations(tool.BatchTool,ManagedWindow.ManagedWindow):
 
         # retrieve options
         fields = self.options.handler.options_dict['fields']
+        dont_merge_media = self.options.handler.options_dict['dont_merge_media']
         dont_merge_notes = self.options.handler.options_dict['dont_merge_notes']
 
         my_menu = gtk.ListStore(str, object)
         for val in sorted(_val2label):
             my_menu.append([_val2label[val], val])
 
+        self.media_obj = top.get_object("media")
+        self.media_obj.set_active(dont_merge_media)
+        self.media_obj.show()
+        
         self.notes_obj = top.get_object("notes")
         self.notes_obj.set_active(dont_merge_notes)
         self.notes_obj.show()
@@ -145,11 +150,15 @@ class MergeCitations(tool.BatchTool,ManagedWindow.ManagedWindow):
         on cancel, update the saved values of the options.
         """
         fields = self.menu.get_model()[self.menu.get_active()][1]
+        dont_merge_media = int(self.media_obj.get_active())
+        LOG.debug("cancel fields %d dont_merge_media %d" % 
+                  (fields, dont_merge_media))
         dont_merge_notes = int(self.notes_obj.get_active())
         LOG.debug("cancel fields %d dont_merge_notes %d" % 
                   (fields, dont_merge_notes))
 
         self.options.handler.options_dict['fields'] = fields
+        self.options.handler.options_dict['dont_merge_media'] = dont_merge_media
         self.options.handler.options_dict['dont_merge_notes'] = dont_merge_notes
         # Save options
         self.options.handler.save_options()
@@ -170,10 +179,13 @@ class MergeCitations(tool.BatchTool,ManagedWindow.ManagedWindow):
         (Derived from ExtractCity)
         """
         fields = self.menu.get_model()[self.menu.get_active()][1]
+        dont_merge_media = int(self.media_obj.get_active())
+        LOG.debug("fields %d dont_merge_media %d" % (fields, dont_merge_media))
         dont_merge_notes = int(self.notes_obj.get_active())
         LOG.debug("fields %d dont_merge_notes %d" % (fields, dont_merge_notes))
 
         self.options.handler.options_dict['fields'] = fields
+        self.options.handler.options_dict['dont_merge_media'] = dont_merge_media
         self.options.handler.options_dict['dont_merge_notes'] = dont_merge_notes
         # Save options
         self.options.handler.save_options()
@@ -202,6 +214,7 @@ class MergeCitations(tool.BatchTool,ManagedWindow.ManagedWindow):
                     key += "\n" + \
                         confidence[citation.get_confidence_level()]
                 if key in dict and \
+                    (not dont_merge_media or len(citation.media_list) == 0) and \
                     (not dont_merge_notes or len(citation.note_list) == 0):
                     citation_match_handle = dict[key]
                     citation_match = \
@@ -217,7 +230,8 @@ class MergeCitations(tool.BatchTool,ManagedWindow.ManagedWindow):
                         "citation backlink handles", \
                         list(db.find_backlink_handles(citation.get_handle()))
                     num_merges += 1
-                elif (not dont_merge_notes or len(citation.note_list) == 0):
+                elif (not dont_merge_media or len(citation.media_list) == 0) and \
+                     (not dont_merge_notes or len(citation.note_list) == 0):
                     dict[key] = citation_handle
                 self.progress.step()
         db.enable_signals()
@@ -245,9 +259,15 @@ class MergeCitationsOptions(tool.ToolOptions):
         # Options specific for this report
         self.options_dict = {
             'fields'   : 1,
+            'dont_merge_media' : 0,
             'dont_merge_notes' : 0,
         }
         self.options_help = {
+            'dont_merge_media'   : 
+                ("=0/1","Whether to merge citations if they have media", 
+                 ["Merge citations with media", 
+                  "Do not merge citations with media"],
+                 False),
             'dont_merge_notes'   : 
                 ("=0/1","Whether to merge citations if they have notes", 
                  ["Merge citations with notes", 
