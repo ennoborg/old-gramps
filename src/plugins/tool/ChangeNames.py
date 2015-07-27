@@ -56,8 +56,8 @@ from glade import Glade
 
 prefix_list = [
     "de", "van", "von", "di", "le", "du", "dela", "della",
-    "des", "vande", "ten", "da", "af", "den", "das", "dello",
-    "del", "en", "ein", "el" "et", "les", "lo", "los", "un",
+    "des", "vande", "ten", "da", "af", "ap", "den", "das", "dello",
+    "del", "en", "ein", "el" "et", "les", "lo", "los", "of", "un",
     "um", "una", "uno",
     ]
 
@@ -111,7 +111,7 @@ class ChangeNames(tool.BatchTool, ManagedWindow.ManagedWindow):
                 for x in xrange(len(namesplitSP)-s1):
                     # check if any subsurname is not cap
                     notcap = False
-                    if namesplitSP[s1+x] != namesplitSP[s1+x].capitalize():
+                    if not (namesplitSP[s1+x].lower() in prefix_list) and (namesplitSP[s1+x] != namesplitSP[s1+x].capitalize()):
                         notcap = True
                         break
                 if notcap:
@@ -163,13 +163,12 @@ class ChangeNames(tool.BatchTool, ManagedWindow.ManagedWindow):
             # check if first string is in prefix_list, if so CAP the rest
             # Names like (von) Kohl(-)Brandt 
             result = ""
-            s1 = 0
-            if namesplitSP[0].lower() in prefix_list:
-                s1 = 1
-                result = namesplitSP[0].lower()+ ' '
-            for x in range(lSP-s1):
+            for x in range(lSP):
+                if namesplitSP[x].lower() in prefix_list:
+                    result = result + namesplitSP[x].lower() + namesep
+                else:
                 # CAP all subsurnames
-                result = result + namesplitSP[s1+x].capitalize() + namesep
+                    result = result + namesplitSP[x].capitalize() + namesep
             return result[:-1]
 
     def display(self):
@@ -208,7 +207,7 @@ class ChangeNames(tool.BatchTool, ManagedWindow.ManagedWindow):
         self.progress.set_pass(_('Building display'),len(self.name_list))
         for name in self.name_list:
             handle = self.model.append()
-            self.model.set_value(handle,0,True)
+            self.model.set_value(handle,0,False)
             self.model.set_value(handle,1, name)
             namecap = self.name_cap(name)
             self.model.set_value(handle,2, namecap)
