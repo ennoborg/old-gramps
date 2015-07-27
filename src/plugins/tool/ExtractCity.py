@@ -558,7 +558,7 @@ class ExtractCity(tool.BatchTool, ManagedWindow.ManagedWindow):
             descr = place.get_title()
 
             handle = self.model.append()
-            self.model.set_value(handle, 0, True)
+            self.model.set_value(handle, 0, False)
             self.model.set_value(handle, 1, descr)
             if data[0]:
                 self.model.set_value(handle, 2, data[0])

@@ -30855,6 +30855,10 @@ msgstr "<b>Overeenkomst drempelwaarde</b>"
 msgid "Use soundex codes"
 msgstr "Soundex-codes gebruiken"
 
+#: ../src/plugins/tool/mergecitations.glade.h
+msgid "Don't merge if citation has media"
+msgstr "Niet samenvoegen indien citaat media bevat"
+
 #: ../src/plugins/tool/mergecitations.glade.h:4
 msgid "Don't merge if citation has notes"
 msgstr "Niet samenvoegen indien citaat opmerkingen bevat"
