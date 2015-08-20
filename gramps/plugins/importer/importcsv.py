@@ -49,11 +49,15 @@ LOG = logging.getLogger(".ImportCSV")
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.sgettext
 ngettext = glocale.translation.ngettext # else "nearby" comments are ignored
-from gramps.gen.lib import ChildRef, Citation, Event, EventRef, EventType, Family, FamilyRelType, Name, NameType, Note, NoteType, Person, Place, Source, Surname, Tag
+from gramps.gen.lib import (ChildRef, Citation, Event, EventRef, EventType, 
+                            Family, FamilyRelType, Name, NameType, Note, 
+                            NoteType, Person, Place, Source, Surname, Tag, 
+                            PlaceName, PlaceType, PlaceRef)
 from gramps.gen.db import DbTxn
 from gramps.gen.datehandler import parser as _dp
 from gramps.gen.utils.string import gender as gender_map
 from gramps.gen.utils.id import create_id
+from gramps.gen.utils.location import located_in
 from gramps.gen.lib.eventroletype import EventRoleType
 from gramps.gen.constfunc import conv_to_unicode
 from gramps.gen.config import config
@@ -125,8 +129,21 @@ class CSVParser(object):
         self.index = 0
         self.fam_count = 0
         self.indi_count = 0
+        self.place_count = 0
         self.pref  = {} # person ref, internal to this sheet
         self.fref  = {} # family ref, internal to this sheet        
+        self.placeref = {}
+        self.place_types = {}
+        # Build reverse dictionary, name to type number
+        for items in PlaceType().get_map().items(): # (0, 'Custom')
+            self.place_types[items[1]] = items[0]
+            self.place_types[items[1].lower()] = items[0]
+            if _(items[1]) != items[1]:
+                self.place_types[_(items[1])] = items[0]
+        # Add custom types:
+        for custom_type in self.db.get_place_types():
+            self.place_types[custom_type] = 0
+            self.place_types[custom_type.lower()] = 0
         column2label = {
             "surname": ("Lastname", "Surname", _("Surname"), "lastname",
                 "last_name", "surname", _("surname")),
@@ -136,7 +153,7 @@ class CSVParser(object):
             "callname": ("Callname", "Call name", _("Call name"), "Call",
                 _("Call"), "callname", "call_name", "call name", "call",
                 _("call")),
-            "title": ("Title", _("Person|Title"), "title", _("Person|title")),
+            "title": ("Title", _("Person or Place|Title"), "title", _("Person or Place|title")),
             "prefix": ("Prefix", _("Prefix"), "prefix", _("prefix")),
             "suffix": ("Suffix", _("Suffix"), "suffix", _("suffix")),
             "gender": ("Gender", _("Gender"), "gender", _("gender")),
@@ -144,6 +161,9 @@ class CSVParser(object):
             "note": ("Note", _("Note"), "note", _("note")),
             "birthplace": ("Birthplace", "Birth place", _("Birth place"),
                 "birthplace", "birth_place", "birth place", _("birth place")),
+            "birthplace_id": ("Birthplaceid", "Birth place id", _("Birth place id"),
+                              "birthplaceid", "birth_place_id", "birth place id", _("birth place id"),
+                              "birthplace_id"),
             "birthdate": ("Birthdate", "Birth date", _("Birth date"),
                 "birthdate", "birth_date", "birth date", _("birth date")),
             "birthsource": ("Birthsource", "Birth source", _("Birth source"),
@@ -152,6 +172,10 @@ class CSVParser(object):
             "baptismplace": ("Baptismplace", "Baptism place",
                 _("Baptism place"), "baptismplace", "baptism place",
                 _("baptism place")),
+            "baptismplace_id": ("Baptismplaceid", "Baptism place id",
+                                _("Baptism place id"), "baptismplaceid", "baptism place id",
+                                _("baptism place id"), "baptism_place_id",
+                                "baptismplace_id"),
             "baptismdate": ("Baptismdate", "Baptism date", _("Baptism date"),
                 "baptismdate", "baptism date", _("baptism date")),
             "baptismsource": ("Baptismsource", "Baptism source",
@@ -159,6 +183,9 @@ class CSVParser(object):
                 _("baptism source")),
             "burialplace": ("Burialplace", "Burial place", _("Burial place"),
                 "burialplace", "burial place", _("burial place")),
+            "burialplace_id": ("Burialplaceid", "Burial place id", _("Burial place id"),
+                               "burialplaceid", "burial place id", _("burial place id"),
+                               "burial_place_id", "burialplace_id"),
             "burialdate": ("Burialdate", "Burial date", _("Burial date"),
                 "burialdate", "burial date", _("burial date")),
             "burialsource": ("Burialsource", "Burial source",
@@ -166,6 +193,9 @@ class CSVParser(object):
                 _("burial source")),
             "deathplace": ("Deathplace", "Death place", _("Death place"),
                 "deathplace", "death_place", "death place", _("death place")),
+            "deathplace_id": ("Deathplaceid", "Death place id", _("Death place id"),
+                              "deathplaceid", "death_place_id", "death place id", _("death place id"),
+                              "death_place_id", "deathplace_id"),
             "deathdate": ("Deathdate", "Death date", _("Death date"),
                 "deathdate", "death_date", "death date", _("death date")),
             "deathsource": ("Deathsource", "Death source", _("Death source"),
@@ -189,7 +219,16 @@ class CSVParser(object):
             "marriage": ("Marriage", _("Marriage"), "marriage", _("marriage")),
             "date": ("Date", _("Date"), "date", _("date")),
             "place": ("Place", _("Place"), "place", _("place")),
-            }
+            "place_id": ("Placeid", "place id", "Place id", "place_id", "placeid"),
+            "name": ("Name", _("Name"), "name", _("name")),
+            "type": ("Type", _("Type"), "type", _("type")),
+            "latitude": ("Latitude", _("latitude"), "latitude", _("latitude")),
+            "longitude": ("Longitude", _("Longitude"), "longitude", _("longitude")),
+            "code": ("Code", _("Code"), "code", _("code")),
+            "enclosed_by": ("Enclosed by", _("Enclosed by"), "enclosed by", _("enclosed by"), 
+                            "enclosed_by", _("enclosed_by"), "Enclosed_by", _("Enclosed_by"),
+                            "enclosedby")
+        }
         lab2col_dict = []
         for key in list(column2label.keys()):
             for val in column2label[key]:
@@ -251,6 +290,18 @@ class CSVParser(object):
                 return self.pref[id_.lower()]
             else:
                 return None
+        elif type_ == "place":
+            if id_.startswith("[") and id_.endswith("]"):
+                id_ = self.db.id2user_format(id_[1:-1])
+                db_lookup = self.db.get_place_from_gramps_id(id_)
+                if db_lookup is None:
+                    return self.lookup(type_, id_)
+                else:
+                    return db_lookup
+            elif id_.lower() in self.placeref:
+                return self.placeref[id_.lower()]
+            else:
+                return None
         else:
             LOG.warn("invalid lookup type in CSV import: '%s'" % type_)
             return None
@@ -266,6 +317,9 @@ class CSVParser(object):
         elif type_ == "family":
             id_ = self.db.fid2user_format(id_)
             self.fref[id_.lower()] = object_
+        elif type_ == "place":
+            id_ = self.db.pid2user_format(id_)
+            self.placeref[id_.lower()] = object_
         else:
             LOG.warn("invalid storeup type in CSV import: '%s'" % type_)
 
@@ -305,8 +359,10 @@ class CSVParser(object):
         self.index = 0
         self.fam_count = 0
         self.indi_count = 0
+        self.place_count = 0
         self.pref  = {} # person ref, internal to this sheet
         self.fref  = {} # family ref, internal to this sheet        
+        self.placeref = {}
         header = None
         line_number = 0
         for row in data:
@@ -324,7 +380,7 @@ class CSVParser(object):
                     col[key] = count
                     count += 1
                 continue
-            # three different kinds of data: person, family, and marriage
+            # four different kinds of data: person, family, and marriage
             if (("marriage" in header) or
                 ("husband" in header) or
                 ("wife" in header)):
@@ -333,6 +389,8 @@ class CSVParser(object):
                 self._parse_family(line_number, row, col)
             elif "surname" in header:
                 self._parse_person(line_number, row, col)
+            elif "place" in header:
+                self._parse_place(line_number, row, col)
             else:
                 LOG.warn("ignoring line %d" % line_number)
         return None
@@ -344,6 +402,7 @@ class CSVParser(object):
         wife     = rd(line_number, row, col, "wife")
         marriagedate = rd(line_number, row, col, "date")
         marriageplace = rd(line_number, row, col, "place")
+        marriageplace_id = rd(line_number, row, col, "place_id")
         marriagesource = rd(line_number, row, col, "source")
         note = rd(line_number, row, col, "note")
         wife = self.lookup("person", wife)
@@ -369,9 +428,14 @@ class CSVParser(object):
         if marriagesource:
             # add, if new
             new, marriagesource = self.get_or_create_source(marriagesource)
+        if marriageplace and marriageplace_id:
+            raise Error("Error in marriage: can't have a place and place_id")
         if marriageplace:
             # add, if new
             new, marriageplace = self.get_or_create_place(marriageplace)
+        elif marriageplace_id:
+            # better exist already, locally or in database:
+            marriageplace = self.lookup("place", marriageplace_id)
         if marriagedate:
             marriagedate = _dp.parse(marriagedate)
         if marriagedate or marriageplace or marriagesource or note:
@@ -500,15 +564,19 @@ class CSVParser(object):
         source    = rd(line_number, row, col, "source")
         note      = rd(line_number, row, col, "note")
         birthplace  = rd(line_number, row, col, "birthplace")
+        birthplace_id  = rd(line_number, row, col, "birthplace_id")
         birthdate   = rd(line_number, row, col, "birthdate")
         birthsource = rd(line_number, row, col, "birthsource")
         baptismplace  = rd(line_number, row, col, "baptismplace")
+        baptismplace_id  = rd(line_number, row, col, "baptismplace_id")
         baptismdate   = rd(line_number, row, col, "baptismdate")
         baptismsource = rd(line_number, row, col, "baptismsource")
         burialplace  = rd(line_number, row, col, "burialplace")
+        burialplace_id  = rd(line_number, row, col, "burialplace_id")
         burialdate   = rd(line_number, row, col, "burialdate")
         burialsource = rd(line_number, row, col, "burialsource")
         deathplace  = rd(line_number, row, col, "deathplace")
+        deathplace_id  = rd(line_number, row, col, "deathplace_id")
         deathdate   = rd(line_number, row, col, "deathdate")
         deathsource = rd(line_number, row, col, "deathsource")
         deathcause  = rd(line_number, row, col, "deathcause")
@@ -594,8 +662,13 @@ class CSVParser(object):
         # Birth:
         if birthdate is not None:
             birthdate = _dp.parse(birthdate)
+        if birthplace and birthplace_id:
+            raise Error("Error in person: can't have a birthplace and birthplace_id")
         if birthplace is not None:
             new, birthplace = self.get_or_create_place(birthplace)
+        elif birthplace_id:
+            # better exist already, locally or in database:
+            birthplace = self.lookup("place", birthplace_id)
         if birthsource is not None:
             new, birthsource = self.get_or_create_source(birthsource)
         if birthdate or birthplace or birthsource:
@@ -611,8 +684,13 @@ class CSVParser(object):
         # Baptism:
         if baptismdate is not None:
             baptismdate = _dp.parse(baptismdate)
+        if baptismplace and baptismplace_id:
+            raise Error("Error in person: can't have a baptismplace and baptismplace_id")
         if baptismplace is not None:
             new, baptismplace = self.get_or_create_place(baptismplace)
+        elif baptismplace_id:
+            # better exist already, locally or in database:
+            baptismplace = self.lookup("place", baptismplace_id)
         if baptismsource is not None:
             new, baptismsource = self.get_or_create_source(baptismsource)
         if baptismdate or baptismplace or baptismsource:
@@ -629,8 +707,13 @@ class CSVParser(object):
         # Death:
         if deathdate is not None:
             deathdate = _dp.parse(deathdate)
+        if deathplace and deathplace_id:
+            raise Error("Error in person: can't have a deathplace and deathplace_id")
         if deathplace is not None:
             new, deathplace = self.get_or_create_place(deathplace)
+        elif deathplace_id:
+            # better exist already, locally or in database:
+            deathplace = self.lookup("place", deathplace_id)
         if deathsource is not None:
             new, deathsource = self.get_or_create_source(deathsource)
         if deathdate or deathplace or deathsource or deathcause:
@@ -649,8 +732,13 @@ class CSVParser(object):
         # Burial:
         if burialdate is not None:
             burialdate = _dp.parse(burialdate)
+        if burialplace and burialplace_id:
+            raise Error("Error in person: can't have a burialplace and burialplace_id")
         if burialplace is not None:
             new, burialplace = self.get_or_create_place(burialplace)
+        elif burialplace_id:
+            # better exist already, locally or in database:
+            burialplace = self.lookup("place", burialplace_id)
         if burialsource is not None:
             new, burialsource = self.get_or_create_source(burialsource)
         if burialdate or burialplace or burialsource:
@@ -669,6 +757,56 @@ class CSVParser(object):
             new, source = self.get_or_create_source(source)
             self.find_and_set_citation(person, source)
         self.db.commit_person(person, self.trans)
+
+    def _parse_place(self, line_number, row, col):
+        "Parse the content of a Place line."
+        place_id = rd(line_number, row, col, "place")
+        place_title = rd(line_number, row, col, "title")
+        place_name = rd(line_number, row, col, "name")
+        place_type_str = rd(line_number, row, col, "type")
+        place_latitude = rd(line_number, row, col, "latitude")
+        place_longitude = rd(line_number, row, col, "longitude")
+        place_code = rd(line_number, row, col, "code")
+        place_enclosed_by_id = rd(line_number, row, col, "enclosed_by")
+        place_date = rd(line_number, row, col, "date")
+        #########################################################
+        # if this place already exists, don't create it
+        place = self.lookup("place", place_id)
+        if place is None:
+            # new place
+            place = self.create_place()
+            self.storeup("place", place_id.lower(), place)
+        if place_title is not None:
+            place.title = place_title
+        if place_name is not None:
+            place.name = PlaceName(value=place_name)
+        if place_type_str is not None:
+            place.place_type = self.get_place_type(place_type_str)
+        if place_latitude is not None:
+            place.lat = place_latitude
+        if place_longitude is not None:
+            place.long = place_longitude
+        if place_code is not None:
+            place.code = place_code
+        if place_enclosed_by_id is not None:
+            place_enclosed_by = self.lookup("place", place_enclosed_by_id)
+            if place_enclosed_by is None:
+                raise Exception("cannot enclose %s in %s as it doesn't exist" % (place.gramps_id, place_enclosed_by_id))
+            if not place_enclosed_by.handle in place.placeref_list:
+                placeref = PlaceRef()
+                placeref.ref = place_enclosed_by.handle
+                if place_date:
+                    placeref.date = _dp.parse(place_date)
+                place.placeref_list.append(placeref)
+        #########################################################
+        self.db.commit_place(place, self.trans)
+
+    def get_place_type(self, place_type_str):
+        if place_type_str in self.place_types:
+            return PlaceType((self.place_types[place_type_str], place_type_str))
+        else:
+            # New custom type:
+            return PlaceType((0, place_type_str))
 
     def get_or_create_family(self, family_ref, husband, wife):
         "Return the family object for the give family ID."
@@ -763,6 +901,15 @@ class CSVParser(object):
         self.indi_count += 1
         return person
 
+    def create_place(self):
+        """ Used to create a new person we know doesn't exist """
+        place = Place()
+        if self.default_tag:
+            place.add_tag(self.default_tag.handle)
+        self.db.add_place(place, self.trans)
+        self.place_count += 1
+        return place
+
     def get_or_create_place(self, place_name):
         "Return the requested place object tuple-packed with a new indicator."
         LOG.debug("get_or_create_place: looking for: %s", place_name)
@@ -773,6 +920,7 @@ class CSVParser(object):
                 return (0, place)
         place = Place()
         place.set_title(place_name)
+        place.name = PlaceName(value=place_name)
         self.db.add_place(place, self.trans)
         return (1, place)
 

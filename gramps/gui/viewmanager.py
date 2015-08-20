@@ -358,7 +358,8 @@ class ViewManager(CLIManager):
 
         self.window = Gtk.Window()
         self.window.set_icon_from_file(ICON)
-        self.window.set_has_resize_grip(True)
+        if Gtk.get_minor_version() < 14:
+            self.window.set_has_resize_grip(True)
         self.window.set_default_size(width, height)
 
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -663,7 +664,7 @@ class ViewManager(CLIManager):
         """
         Initialize the interface.
         """
-        self.views = get_available_views()
+        self.views = get_available_views(self.uistate)
         defaults = views_to_show(self.views,
                                  config.get('preferences.use-last-view'))
         self.current_views = defaults[2]
@@ -764,7 +765,7 @@ class ViewManager(CLIManager):
             try:
                 backup(self.dbstate.db)
             except DbException as msg:
-                ErrorDialog(_("Error saving backup data"), msg)
+                ErrorDialog(_("Error saving backup data"), msg, parent=self.uistate.window)
             self.uistate.set_busy_cursor(False)
             self.uistate.progress.hide()
 
@@ -779,7 +780,8 @@ class ViewManager(CLIManager):
                 _("Aborting changes will return the database to the state "
                   "it was before you started this editing session."),
                 _("Abort changes"),
-                _("Cancel"))
+                _("Cancel"),
+                parent=self.uistate.window)
 
             if dialog.run():
                 self.dbstate.db.disable_signals()
@@ -791,7 +793,8 @@ class ViewManager(CLIManager):
                 _("Cannot abandon session's changes"),
                 _('Changes cannot be completely abandoned because the '
                   'number of changes made in the session exceeded the '
-                  'limit.'))
+                  'limit.'),
+                parent=self.uistate.window)
 
     def __init_action_group(self, name, actions, sensitive=True, toggles=None):
         """
@@ -1283,8 +1286,9 @@ class ViewManager(CLIManager):
         label.set_size_request(90, -1)
         label.set_halign(Gtk.Align.START)
         hbox.pack_start(label, False, True, 0)
-        include = Gtk.RadioButton(None, "%s (%s %s)" % (_("Include"),
-                                                        mbytes, _("Megabyte|MB")))
+        include = Gtk.RadioButton.new_with_mnemonic_from_widget(
+            None, "%s (%s %s)" % (_("Include"),
+                                  mbytes, _("Megabyte|MB")))
         exclude = Gtk.RadioButton.new_with_mnemonic_from_widget(include, _("Exclude"))
         include.connect("toggled", lambda widget: self.media_toggle(widget, file_entry))
         hbox.pack_start(include, False, True, 0)
@@ -1608,7 +1612,8 @@ def run_plugin(pdata, dbstate, uistate):
                 'gramps_bugtracker_url' : URL_BUGHOME,
                 'firstauthoremail': pdata.authors_email[0] if
                         pdata.authors_email else '...',
-                'error_msg': pmgr.get_fail_list()[-1][1][1]})
+                'error_msg': pmgr.get_fail_list()[-1][1][1]},
+            parent=uistate.window)
         return
 
     if pdata.ptype == REPORT:
@@ -1633,7 +1638,7 @@ def make_plugin_callback(pdata, dbstate, uistate):
     """
     return lambda x: run_plugin(pdata, dbstate, uistate)
 
-def get_available_views():
+def get_available_views(uistate):
     """
     Query the views and determine what views to show and in which order
 
@@ -1664,7 +1669,8 @@ def get_available_views():
                     'gramps_bugtracker_url' : URL_BUGHOME,
                     'firstauthoremail': pdata.authors_email[0] if
                             pdata.authors_email else '...',
-                    'error_msg': lasterror})
+                    'error_msg': lasterror},
+                parent=uistate.window)
             continue
         viewclass = getattr(mod, pdata.viewclass)
 

@@ -447,7 +447,8 @@ class ListView(NavigationView):
             WarningDialog(
                 _("Could Not Set a Bookmark"), 
                 _("A bookmark could not be set because "
-                  "nothing was selected."))
+                  "nothing was selected."),
+                parent=self.uistate.window)
 
     ####################################################################
     # 
@@ -541,7 +542,8 @@ class ListView(NavigationView):
                 _("More than one item has been selected for deletion. "
                   "Select the option indicating how to delete the items:"),
                 _("Delete All"),
-                _("Confirm Each Delete"))
+                _("Confirm Each Delete"),
+                parent=self.uistate.window)
             prompt = not q.run()
             
         if not prompt:
@@ -563,7 +565,8 @@ class ListView(NavigationView):
                 descr = object.get_gramps_id()
                 self.uistate.set_busy_cursor(True)
                 QuestionDialog(_('Delete %s?') % descr, msg,
-                               _('_Delete Item'), query.query_response)
+                               _('_Delete Item'), query.query_response,
+                               parent=self.uistate.window)
                 self.uistate.set_busy_cursor(False)
             else:
                 query.query_response()
@@ -630,7 +633,7 @@ class ListView(NavigationView):
         if same_col:
             # activate when https://bugzilla.gnome.org/show_bug.cgi?id=684558
             # is resolved
-            if False and (Gtk.get_major_version(), Gtk.get_minor_version()) >= (3,8):
+            if False:
                 self.model.reverse_order()
             else:
                 ## GTK 3.6 rows_reordered not exposed by gi, we need to reconnect

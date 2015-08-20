@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #
 # update_po - a gramps tool to update translations
 #
@@ -71,7 +71,7 @@ elif sys.platform in ['linux', 'linux2', 'darwin', 'cygwin']:
     msgfmtCmd = 'msgfmt'
     msgattribCmd = 'msgattrib'
     xgettextCmd = 'xgettext'
-    pythonCmd = os.path.join(sys.prefix, 'bin', 'python')
+    pythonCmd = os.path.join(sys.prefix, 'bin', 'python3')
 else:
     print("Found platform %s, OS %s" % (sys.platform, os.name))
     print ("Update PO ERROR: unknown system, don't know msgmerge, ... commands")

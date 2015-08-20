@@ -690,7 +690,8 @@ class GrampsParser(UpdateCallback):
             "places": (None, self.stop_places), 
             "placeobj": (self.start_placeobj, self.stop_placeobj), 
             "placeref": (self.start_placeref, self.stop_placeref), 
-            "ptitle": (None, self.stop_ptitle), 
+            "ptitle": (None, self.stop_ptitle),
+            "pname": (self.start_place_name, self.stop_place_name),
             "location": (self.start_location, None), 
             "lds_ord": (self.start_lds_ord, self.stop_lds_ord), 
             "temple": (self.start_temple, None), 
@@ -1701,7 +1702,7 @@ class GrampsParser(UpdateCallback):
     def start_name(self, attrs):
         if self.person:
             self.start_person_name(attrs)
-        else:
+        if self.placeobj: # XML 1.7.0
             self.start_place_name(attrs)
 
     def start_place_name(self, attrs):
@@ -2618,6 +2619,8 @@ class GrampsParser(UpdateCallback):
         self.placeobj.add_alternative_name(place_name)
 
     def stop_placeobj(self, *tag):
+        if self.placeobj.name.get_value() == '':
+            self.placeobj.name.set_value(self.placeobj.title)
         self.db.commit_place(self.placeobj, self.trans, 
                              self.placeobj.get_change_time())
         self.placeobj = None
@@ -2691,7 +2694,7 @@ class GrampsParser(UpdateCallback):
     def stop_name(self, attrs):
         if self.person:
             self.stop_person_name(attrs)
-        else:
+        if self.placeobj: # XML 1.7.0
             self.stop_place_name(attrs)
 
     def stop_place_name(self, tag):

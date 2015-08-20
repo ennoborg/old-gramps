@@ -443,7 +443,9 @@ class ConfigureDialog(ManagedWindow):
         if not callback:
             callback = self.update_slider
         lwidget = BasicLabel("%s: " % label)
-        adj = Gtk.Adjustment(config.get(constant), range[0], range[1], 1, 0, 0)
+        adj = Gtk.Adjustment(value=config.get(constant), lower=range[0],
+                             upper=range[1], step_increment=1,
+                             page_increment=0, page_size=0)
         slider = Gtk.Scale(adjustment=adj)
         slider.set_digits(0)
         slider.set_value_pos(Gtk.PositionType.BOTTOM)
@@ -463,7 +465,9 @@ class ConfigureDialog(ManagedWindow):
         if not callback:
             callback = self.update_spinner
         lwidget = BasicLabel("%s: " % label)
-        adj = Gtk.Adjustment(config.get(constant), range[0], range[1], 1, 0, 0)
+        adj = Gtk.Adjustment(value=config.get(constant), lower=range[0],
+                             upper=range[1], step_increment=1,
+                             page_increment=0, page_size=0)
         spinner = Gtk.SpinButton(adjustment=adj, climb_rate=0.0, digits=0)
         spinner.connect('value-changed', callback, constant)
         spinner.set_hexpand(True)
@@ -483,6 +487,7 @@ class GrampsPreferences(ConfigureDialog):
             self.add_behavior_panel,
             self.add_famtree_panel,
             self.add_formats_panel,
+            self.add_places_panel,
             self.add_text_panel,
             self.add_prefix_panel,
             self.add_date_panel,
@@ -998,26 +1003,6 @@ class GrampsPreferences(ConfigureDialog):
         grid.attach(obox, 1, row, 2, 1)
         row += 1
         
-        # Place format:
-        obox = Gtk.ComboBoxText()
-        formats = [_('Title'), _('Automatic')]
-        list(map(obox.append_text, formats))
-        active = config.get('preferences.place-format')
-        if active >= len(formats):
-            active = 0
-        obox.set_active(active)
-        obox.connect('changed', self.place_format_changed)
-        lwidget = BasicLabel("%s: " % _('Place format'))
-        grid.attach(lwidget, 0, row, 1, 1)
-        grid.attach(obox, 1, row, 2, 1)
-        row += 1
-        
-        # Legacy place title mode
-        self.add_checkbox(grid,
-                          _("Display legacy place title field in editors"),
-                          row, 'preferences.place-title', stop=3)
-        row += 1
-
         # Age precision:
         # precision=1 for "year", 2: "year, month" or 3: "year, month, days"
         obox = Gtk.ComboBoxText()
@@ -1105,7 +1090,7 @@ class GrampsPreferences(ConfigureDialog):
 
         # Text in sidebar:
         self.add_checkbox(grid, 
-                          _("Show text in sidebar buttons (requires restart)"), 
+                          _("Show text label beside Navigator buttons (requires restart)"), 
                           row, 'interface.sidebar-text', stop=3)
         row += 1
 
@@ -1116,6 +1101,45 @@ class GrampsPreferences(ConfigureDialog):
                           extra_callback=self.cb_grampletbar_close)
         row += 1
         return _('Display'), grid
+
+    def add_places_panel(self, configdialog):
+        row = 0
+        grid = Gtk.Grid()
+        grid.set_border_width(12)
+        grid.set_column_spacing(6)
+        grid.set_row_spacing(6)
+
+        self.add_checkbox(grid, _("Enable automatic place title generation"),
+                          row, 'preferences.place-auto', stop=3)
+        row += 1
+
+        self.add_checkbox(grid, _("Suppress comma after house number"),
+                          row, 'preferences.place-number', stop=3)
+        row += 1
+
+        self.add_checkbox(grid, _("Reverse display order"),
+                          row, 'preferences.place-reverse', stop=3)
+        row += 1
+
+        # Place restriction
+        obox = Gtk.ComboBoxText()
+        formats = [_("Full place name"),
+                   _("-> Hamlet/VillageTown/City"),
+                   _("Hamlet/VillageTown/City ->")]
+        list(map(obox.append_text, formats))
+        active = config.get('preferences.place-restrict')
+        obox.set_active(active)
+        obox.connect('changed', self.place_restrict_changed)
+        lwidget = BasicLabel("%s: " % _('Restrict'))
+        grid.attach(lwidget, 0, row, 1, 1)
+        grid.attach(obox, 1, row, 2, 1)
+        row += 1
+
+        self.add_entry(grid, _("Language"),
+                          row, 'preferences.place-lang')
+        row += 1
+
+        return _('Places'), grid
 
     def add_text_panel(self, configdialog):
         row = 0
@@ -1172,17 +1196,14 @@ class GrampsPreferences(ConfigureDialog):
         active = obj.get_active()
         config.set('behavior.check-for-updates', active)
 
+    def place_restrict_changed(self, obj):
+        active = obj.get_active()
+        config.set('preferences.place-restrict', active)
+
     def date_format_changed(self, obj):
         config.set('preferences.date-format', obj.get_active())
         OkDialog(_('Change is not immediate'), 
                  _('Changing the date format will not take '
-                   'effect until the next time Gramps is started.'),
-                 parent=self.window)
-
-    def place_format_changed(self, obj):
-        config.set('preferences.place-format', obj.get_active())
-        OkDialog(_('Change is not immediate'), 
-                 _('Changing the place format will not take '
                    'effect until the next time Gramps is started.'),
                  parent=self.window)
 

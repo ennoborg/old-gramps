@@ -149,7 +149,8 @@ class MyInteger(Gtk.SpinButton):
 
     def __init__(self, min, max):
         GObject.GObject.__init__(self)
-        self.set_adjustment(Gtk.Adjustment(min, min, max, 1))
+        self.set_adjustment(Gtk.Adjustment(value=min, lower=min, upper=max,
+                                           step_increment=1))
         self.show()
 
     def get_text(self):
@@ -243,8 +244,8 @@ class MyLesserEqualGreater(Gtk.ComboBox):
         cell = Gtk.CellRendererText()
         self.pack_start(cell, True)
         self.add_attribute(cell, 'text', 0)
-        self.clist = ['lesser than', 'equal to', 'greater than']
-        self.clist_trans = [_('lesser than'), _('equal to'), _('greater than')]
+        self.clist = ['less than', 'equal to', 'greater than']
+        self.clist_trans = [_('less than'), _('equal to'), _('greater than')]
         for name in self.clist_trans:
             store.append(row=[name])
         self.set_active(default)
@@ -453,6 +454,7 @@ class EditRule(ManagedWindow):
         self.valuebox = self.get_widget('valuebox')
         self.rname = self.get_widget('ruletree')
         self.rule_name = self.get_widget('rulename')
+        self.description = self.get_widget('description')
 
         self.notebook = Gtk.Notebook()
         self.notebook.set_show_tabs(0)
@@ -462,7 +464,6 @@ class EditRule(ManagedWindow):
         self.page_num = 0
         self.page = []
         self.class2page = {}
-        the_map = {}
 
         if self.namespace == 'Person':
             class_list = rules.person.editor_rule_list
@@ -490,10 +491,6 @@ class EditRule(ManagedWindow):
             pos = 0
             l2 = Gtk.Label(label=class_obj.name, halign=Gtk.Align.START)
             l2.show()
-            c = Gtk.TreeView()
-            #c.set_data('d', pos)
-            c.show()
-            the_map[class_obj] = c
             grid = Gtk.Grid()
             grid.set_border_width(12)
             grid.set_column_spacing(6)
@@ -639,7 +636,7 @@ class EditRule(ManagedWindow):
         else:
             self.sel_class = None
 
-        keys = sorted(the_map, key=lambda x: x.name, reverse=True)
+        keys = sorted(class_list, key=lambda x: x.name, reverse=True)
         catlist = sorted(set(class_obj.category for class_obj in keys))
 
         for category in catlist:
@@ -728,23 +725,22 @@ class EditRule(ManagedWindow):
         Update the informational display on the right hand side of the dialog 
         box with the description of the selected report.
         """
-
         store, node = self.selection.get_selected()
         if node:
-            try:
-                class_obj = store.get_value(node, 1)
-                self.display_values(class_obj)
-            except:
-                self.valuebox.set_sensitive(0)
-                self.rule_name.set_text(_('No rule selected'))
-                self.get_widget('description').set_text('')
+            class_obj = store.get_value(node, 1)
+            self.display_values(class_obj)
 
     def display_values(self, class_obj):
-        page = self.class2page[class_obj]
-        self.notebook.set_current_page(page)
-        self.valuebox.set_sensitive(1)
-        self.rule_name.set_text(class_obj.name)
-        self.get_widget('description').set_text(class_obj.description)
+        if class_obj in self.class2page:
+            page = self.class2page[class_obj]
+            self.notebook.set_current_page(page)
+            self.valuebox.set_sensitive(1)
+            self.rule_name.set_text(class_obj.name)
+            self.description.set_text(class_obj.description)
+        else:
+            self.valuebox.set_sensitive(0)
+            self.rule_name.set_text(_('No rule selected'))
+            self.description.set_text('')
 
     def rule_ok(self, obj):
         if self.rule_name.get_text() == _('No rule selected'):

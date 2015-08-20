@@ -124,7 +124,8 @@ class PlaceSelection(ManagedWindow, OsmGps):
                             ' oval depending on the latitude.'))
         label.set_valign(Gtk.Align.END)
         self.window.vbox.pack_start(label, False, True, 0)
-        adj = Gtk.Adjustment(1.0, 0.1, 3.0, 0.1, 0, 0)
+        adj = Gtk.Adjustment(value=1.0, lower=0.1, upper=3.0,
+                             step_increment=0.1, page_increment=0, page_size=0)
         # default value is 1.0, minimum is 0.1 and max is 3.0
         slider = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL,
                            adjustment=adj)
@@ -193,7 +194,8 @@ class PlaceSelection(ManagedWindow, OsmGps):
                                self.oldvalue)
                              )
         for place in self.places:
-            self.plist.append(place)
+            p = (place[0].value, place[1].value, place[2].value, place[3])
+            self.plist.append(p)
         # here, we could add value from geography names services ...
 
         # if we found no place, we must create a default place.

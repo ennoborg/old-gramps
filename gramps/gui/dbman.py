@@ -33,7 +33,6 @@ creating, and deleting of databases.
 import os
 import time
 import copy
-import shutil
 import subprocess
 from urllib.parse import urlparse
 
@@ -132,7 +131,7 @@ class DbManager(CLIDbManager):
         if parent:
             self.top.set_transient_for(parent)
 
-        for attr in ['connect', 'cancel', 'new', 'remove', 'copy',
+        for attr in ['connect', 'cancel', 'new', 'remove',
                      'dblist', 'rename', 'repair', 'rcs', 'msg']:
             setattr(self, attr, self.glade.get_object(attr))
 
@@ -161,7 +160,6 @@ class DbManager(CLIDbManager):
         self.remove.connect('clicked', self.__remove_db)
         self.new.connect('clicked', self.__new_db)
         self.rename.connect('clicked', self.__rename_db)
-        self.copy.connect('clicked', self.__copy_db)
         self.repair.connect('clicked', self.__repair_db)
         self.selection.connect('changed', self.__selection_changed)
         self.dblist.connect('button-press-event', self.__button_press)
@@ -218,7 +216,6 @@ class DbManager(CLIDbManager):
         if not node:
             self.connect.set_sensitive(False)
             self.rename.set_sensitive(False)
-            self.copy.set_sensitive(False)
             self.rcs.set_sensitive(False)
             self.repair.set_sensitive(False)
             self.remove.set_sensitive(False)
@@ -250,7 +247,6 @@ class DbManager(CLIDbManager):
             self.repair.set_sensitive(False)
             
         self.rename.set_sensitive(True)
-        self.copy.set_sensitive(True)
         self.remove.set_sensitive(True)
         self.new.set_sensitive(True)
 
@@ -416,7 +412,6 @@ class DbManager(CLIDbManager):
         """
         self.connect.set_sensitive(False)
         self.rename.set_sensitive(False)
-        self.copy.set_sensitive(False)
         self.rcs.set_sensitive(False)
         self.repair.set_sensitive(False)
         self.remove.set_sensitive(False)
@@ -554,7 +549,7 @@ class DbManager(CLIDbManager):
                 _("Remove the '%s' Family Tree?") % self.data_to_delete[0],
                 _("Removing this Family Tree will permanently destroy the data."),
                 _("Remove Family Tree"),
-                self.__really_delete_db)
+                self.__really_delete_db, parent=self.top)
         else:
             rev = self.data_to_delete[0]
             parent = store[(path[0],)][0]
@@ -566,7 +561,7 @@ class DbManager(CLIDbManager):
                 _("Removing this version will prevent you from "
                   "extracting it in the future."),
                 _("Remove version"),
-                self.__really_delete_version)
+                self.__really_delete_version, parent=self.top)
 
     def __really_delete_db(self):
         """
@@ -637,28 +632,6 @@ class DbManager(CLIDbManager):
         path = self.model.get_path(node)
         self.name_renderer.set_property('editable', True)
         self.dblist.set_cursor(path, self.column, True)
-
-    def __copy_db(self, obj):
-        """
-        Copy the database through low-level file copies.
-        """
-        # First, get the selected tree:
-        store, node = self.selection.get_selected()
-        # New title:
-        date_string = time.strftime("%d %b %Y %H:%M:%S", time.gmtime())
-        title = _("%(new_DB_name)s (copied %(date_string)s)") % {
-                      'new_DB_name' : store[node][NAME_COL],
-                      'date_string' : date_string }
-        # Create the row and directory, awaits user edit of title:
-        (new_dir, title) = self._create_new_db(title, create_db=False)
-        # Copy the files:
-        name_file = conv_to_unicode(store[node][FILE_COL], 'utf8')
-        old_dir = os.path.dirname(name_file)
-        for filename in os.listdir(old_dir):
-            if filename == "name.txt":
-                continue
-            old_file = os.path.abspath(os.path.join(old_dir, filename))
-            shutil.copy2(old_file, new_dir)
 
     def __repair_db(self, obj):
         """

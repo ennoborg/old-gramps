@@ -136,7 +136,8 @@ class StyleListDisplay(object):
             self.sheetlist.save()
         except IOError as msg:
             from ...dialog import ErrorDialog
-            ErrorDialog(_("Error saving stylesheet"), str(msg))
+            ErrorDialog(_("Error saving stylesheet"),
+                        str(msg), parent=self.window)
         except:
             log.error("Failed to save stylesheet", exc_info=True)
 
@@ -231,9 +232,9 @@ class StyleEditor(object):
         self.plist = ListModel(self.top.get_object("ptree"), titles, 
                                          self.change_display)
 
-        for name in ('color', 'bgcolor', 'line_color', 'fill_color'):
-            color = self.top.get_object(name)
-            label = self.top.get_object(name + '_code')
+        for widget_name in ('color', 'bgcolor', 'line_color', 'fill_color'):
+            color = self.top.get_object(widget_name)
+            label = self.top.get_object(widget_name + '_code')
             color.connect('notify::color', self.color_changed, label)
 
         self.top.get_object("style_name").set_text(name)
