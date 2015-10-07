@@ -1,8 +1,11 @@
+# -*- coding: utf-8 -*-
+#
 # Gramps - a GTK+/GNOME based genealogy program
 #
 # Copyright (C) 2000-2007  Donald N. Allingham
 # Copyright (C) 2008-2009  Brian G. Matherly
 # Copyright (C) 2009       Rob G. Healey <robhealey1@gmail.com>
+# Copyright (C) 2014       Vlada Perić <vlada.peric@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -56,18 +59,17 @@ def easter(year):
     to the Astronomical Almanac", ed. P. K.  Seidelmann (1992).  Note:
     Ash Wednesday is 46 days before Easter Sunday.
     """
-    c = year / 100
-    n = year - 19 * (year / 19)
-    k = (c - 17) / 25
-    i = c - c / 4 - (c - k) / 3 + 19 * n + 15
-    i = i - 30 * (i / 30)
-    i = i - (i / 28) * (1 - (i / 28) * (29 / (i + 1))
-                           * ((21 - n) / 11))
-    j = year + year / 4 + i + 2 - c + c / 4
-    j = j - 7 * (j / 7)
+    c = year // 100
+    n = year - 19 * (year // 19)
+    k = (c - 17) // 25
+    i = c - c // 4 - (c - k) // 3 + 19 * n + 15
+    i = i - 30 * (i // 30)
+    i = i - (i // 28) * (1 - (i // 28) * (29 // (i + 1)) * ((21 - n) // 11) )
+    j = year + year // 4 + i + 2 - c + c // 4
+    j = j - 7 * (j // 7)
     l = i - j
-    month = 3 + (l + 40) / 44
-    day = l + 28 - 31 * (month / 4)
+    month = 3 + (l + 40) // 44
+    day = l + 28 - 31 * (month // 4)
     return "%d/%d/%d" % (year, month, day)
 
 def julian_easter(year):
@@ -135,6 +137,12 @@ def dst(year, area="us"):
 def dow(y, m, d):
     """ Return the ISO day of week for the given year, month and day. """
     return datetime.date(y, m, d).isoweekday()
+
+def cmp(a, b):
+    """
+    Replacement for older Python's cmp.
+    """
+    return (a > b) - (a < b)
 
 #------------------------------------------------------------------------
 #
@@ -303,7 +311,7 @@ class _Xml2Obj:
     def start_element(self, name, attributes):
         'SAX start element even handler'
         # Instantiate an Element object
-        element = _Element(name.encode(), attributes)
+        element = _Element(name, attributes)
         # Push element onto the stack and make it a child of parent
         if len(self.nodeStack) > 0:
             parent = self.nodeStack[-1]
