@@ -26,8 +26,6 @@
 # python modules
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.sgettext
 import logging
 log = logging.getLogger(".")
 
@@ -43,6 +41,8 @@ from gi.repository import Gtk
 # gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
 from gramps.gen.lib import NoteType, Place
 from gramps.gen.db import DbTxn
 from .editprimary import EditPrimary
@@ -57,7 +57,7 @@ from gramps.gen.display.place import displayer as place_displayer
 from gramps.gen.config import config
 from ..dialog import ErrorDialog
 from ..glade import Glade
-from gramps.gen.const import URL_MANUAL_PAGE
+from gramps.gen.const import URL_MANUAL_SECT2
 
 #-------------------------------------------------------------------------
 #
@@ -65,8 +65,8 @@ from gramps.gen.const import URL_MANUAL_PAGE
 #
 #-------------------------------------------------------------------------
 
-WIKI_HELP_PAGE = '%s_-_Entering_and_editing_data:_detailed_-_part_2' % URL_MANUAL_PAGE
-WIKI_HELP_SEC = _('Place_Editor_dialog')
+WIKI_HELP_PAGE = URL_MANUAL_SECT2
+WIKI_HELP_SEC = _('manual|Place_Editor_dialog')
 
 #-------------------------------------------------------------------------
 #
@@ -147,11 +147,13 @@ class EditPlace(EditPrimary):
         self.privacy = PrivacyButton(self.top.get_object("private"), self.obj, 
                                      self.db.readonly)
 
+        custom_place_types = sorted(self.db.get_place_types(),
+                                    key=lambda s: s.lower())
         self.place_type = MonitoredDataType(self.top.get_object("place_type"),
                                             self.obj.set_type,
                                             self.obj.get_type,
                                             self.db.readonly,
-                                            self.db.get_place_types())
+                                            custom_place_types)
 
         self.code = MonitoredEntry(
             self.top.get_object("code_entry"),
