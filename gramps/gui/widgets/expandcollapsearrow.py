@@ -8,7 +8,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful, 
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
@@ -36,7 +36,6 @@ _LOG = logging.getLogger(".widgets.expandcollapsearrow")
 # GTK/Gnome modules
 #
 #-------------------------------------------------------------------------
-from gi.repository import GObject
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gramps.gen.constfunc import has_display
@@ -72,14 +71,14 @@ class ExpandCollapseArrow(Gtk.EventBox):
         """
         Constructor for the ExpandCollapseArrow class.
 
-        :param collapsed: True if arrow must be shown collapsed, 
+        :param collapsed: True if arrow must be shown collapsed,
                           False otherwise
         :type collapsed: bool
         :param onbuttonpress: The callback function for button press
         :type onbuttonpress: callback
         :param pair: user param for onbuttonpress function
         """
-        GObject.GObject.__init__(self)
+        Gtk.EventBox.__init__(self)
         if collapsed :
             self.arrow = Gtk.Arrow(arrow_type=Gtk.ArrowType.RIGHT,
                                               shadow_type=Gtk.ShadowType.OUT)

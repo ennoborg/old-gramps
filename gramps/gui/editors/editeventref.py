@@ -33,17 +33,28 @@
 #
 #-------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
+_ = glocale.translation.sgettext
 from gramps.gen.lib import EventType, NoteType
 from gramps.gen.db import DbTxn
 from ..glade import Glade
-from .displaytabs import (CitationEmbedList, NoteTab, GalleryTab, 
+from .displaytabs import (CitationEmbedList, NoteTab, GalleryTab,
                          EventBackRefList, AttrEmbedList)
 from ..widgets import (PrivacyButton, MonitoredEntry,
                      MonitoredDate, MonitoredDataType)
 from .editreference import RefTab, EditReference
 
 from .objectentries import PlaceEntry
+
+from gramps.gen.const import URL_MANUAL_SECT2
+
+#-------------------------------------------------------------------------
+#
+# Constants
+#
+#-------------------------------------------------------------------------
+
+WIKI_HELP_PAGE = URL_MANUAL_SECT2
+WIKI_HELP_SEC = _('manual|Event_Reference_Editor_dialog')
 
 #-------------------------------------------------------------------------
 #
@@ -60,7 +71,7 @@ class EditEventRef(EditReference):
     def _local_init(self):
         self.width_key = 'interface.event-ref-width'
         self.height_key = 'interface.event-ref-height'
-        
+
         self.top = Glade()
         self.set_window(self.top.toplevel,
                         self.top.get_object('eer_title'),
@@ -74,13 +85,13 @@ class EditEventRef(EditReference):
         notebook = self.top.get_object('notebook_ref')
         #recreate start page as GrampsTab
         notebook.remove_page(0)
-        self.reftab = RefTab(self.dbstate, self.uistate, self.track, 
+        self.reftab = RefTab(self.dbstate, self.uistate, self.track,
                               _('General'), tblref)
         tblref =  self.top.get_object('table62')
         notebook = self.top.get_object('notebook')
         #recreate start page as GrampsTab
         notebook.remove_page(0)
-        self.primtab = RefTab(self.dbstate, self.uistate, self.track, 
+        self.primtab = RefTab(self.dbstate, self.uistate, self.track,
                               _('_General'), tblref)
 
     def _post_init(self):
@@ -99,18 +110,19 @@ class EditEventRef(EditReference):
     def _connect_signals(self):
         self.define_ok_button(self.top.get_object('ok'),self.ok_clicked)
         self.define_cancel_button(self.top.get_object('cancel'))
-        self.define_help_button(self.top.get_object('help'))
+        self.define_help_button(self.top.get_object('help'),
+                WIKI_HELP_PAGE, WIKI_HELP_SEC)
 
     def _connect_db_signals(self):
         """
-        Connect any signals that need to be connected. 
+        Connect any signals that need to be connected.
         Called by the init routine of the base class (_EditPrimary).
         """
         self._add_db_signal('event-rebuild', self.close)
         self._add_db_signal('event-delete', self.check_for_close)
 
     def _setup_fields(self):
-        
+
         self.ref_privacy = PrivacyButton(
             self.top.get_object('eer_ref_priv'),
             self.source_ref, self.db.readonly)
@@ -141,7 +153,7 @@ class EditEventRef(EditReference):
         self.ev_privacy = PrivacyButton(
             self.top.get_object("eer_ev_priv"),
             self.source, self.db.readonly)
-                
+
         self.role_selector = MonitoredDataType(
             self.top.get_object('eer_role_combo'),
             self.source_ref.set_role,
@@ -200,7 +212,7 @@ class EditEventRef(EditReference):
                                 notetype=NoteType.EVENT)
         self._add_tab(notebook, self.note_tab)
         self.track_ref_for_deletion("note_tab")
-        
+
         self.note_ref_tab = NoteTab(self.dbstate,
                                     self.uistate,
                                     self.track,
@@ -208,7 +220,7 @@ class EditEventRef(EditReference):
                                     notetype=NoteType.EVENTREF)
         self._add_tab(notebook_ref, self.note_ref_tab)
         self.track_ref_for_deletion("note_ref_tab")
-        
+
         self.gallery_tab = GalleryTab(self.dbstate,
                                       self.uistate,
                                       self.track,
@@ -241,7 +253,7 @@ class EditEventRef(EditReference):
         else:
             submenu_label = _('New Event')
         return (_('Event Reference Editor'),submenu_label)
-        
+
     def ok_clicked(self, obj):
 
         if self.source.handle:
@@ -253,7 +265,7 @@ class EditEventRef(EditReference):
             with DbTxn(_("Add Event"), self.db) as trans:
                 self.add_event(self.source,trans)
             self.source_ref.ref = self.source.handle
-        
+
         if self.update:
             self.update(self.source_ref,self.source)
 

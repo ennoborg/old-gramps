@@ -36,7 +36,7 @@ class LdsTemples(object):
     """
     Parsing class for the LDS temples file
     """
-    
+
     def __init__(self):
         """
         Parses the lds.xml file to load the LDS temple code to name
@@ -47,16 +47,15 @@ class LdsTemples(object):
         self.__current_temple = ""
         self.__tlist = []
 
-        lds_filename = os.path.join(DATA_DIR, "lds.xml")
+        lds_filename = os.path.expanduser(os.path.join(DATA_DIR, "lds.xml"))
 
         try:
-            xml_file = open(os.path.expanduser(lds_filename), 'rb')
             parser = ParserCreate()
             parser.StartElementHandler = self.__start_element
             parser.EndElementHandler = self.__end_element
             parser.CharacterDataHandler = self.__characters
-            parser.ParseFile(xml_file)
-            xml_file.close()
+            with open(lds_filename, 'rb') as xml_file:
+                parser.ParseFile(xml_file)
         except Exception as msg:
             LOG.error(str(msg))
 
@@ -82,18 +81,18 @@ class LdsTemples(object):
 
     def name(self, code):
         """
-        returns the name associated with the LDS Temple code 
+        returns the name associated with the LDS Temple code
         """
         return self.__temple_to_abrev.get(code, _("Unknown"))
-       
+
     def name_code_data(self):
         """
         returns a list of temple codes, temple name tuples
         """
-        return sorted([(code, name) for name, code 
+        return sorted([(code, name) for name, code
                        in self.__temple_codes.items()],
                       key=lambda v: v[1])
- 
+
     def __start_element(self, tag, attrs):
         """
         XML parsing function that is called when an XML element is first found

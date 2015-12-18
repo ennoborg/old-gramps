@@ -67,6 +67,8 @@ _LOG = logging.getLogger("GeoGraphy.markerlayer")
 #-------------------------------------------------------------------------
 
 try:
+    import gi
+    gi.require_version('OsmGpsMap', '1.0')
     from gi.repository import OsmGpsMap as osmgpsmap
 except:
     raise
@@ -121,7 +123,7 @@ class MarkerLayer(GObject.GObject, osmgpsmap.MapLayer):
         We use cairo to resize the marker.
         """
         max_interval = self.max_value - self.nb_ref_by_places
-        min_interval = self.nb_ref_by_places - self.min_value  
+        min_interval = self.nb_ref_by_places - self.min_value
         if max_interval == 0: # This to avoid divide by zero
             max_interval = 0.01
         if min_interval == 0: # This to avoid divide by zero

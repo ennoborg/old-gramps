@@ -72,6 +72,8 @@ from gramps.gen.constfunc import get_env_var
 #-------------------------------------------------------------------------
 
 try:
+    import gi
+    gi.require_version('OsmGpsMap', '1.0')
     from gi.repository import OsmGpsMap as osmgpsmap
 except:
     raise
@@ -100,7 +102,7 @@ class OsmGps():
 
     def build_widget(self):
         """
-        create the vbox 
+        create the vbox
         """
         self.vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         cache_path = config.get('geography.path')

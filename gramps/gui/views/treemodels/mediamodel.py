@@ -38,12 +38,11 @@ from gi.repository import Gtk
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from gramps.gen.datehandler import displayer, format_time
 from gramps.gen.lib import Date, MediaObject
-from gramps.gen.constfunc import conv_to_unicode
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 from .flatbasemodel import FlatBaseModel
 
@@ -58,7 +57,7 @@ class MediaModel(FlatBaseModel):
                  skip=set(), sort_map=None):
         self.gen_cursor = db.get_media_cursor
         self.map = db.get_raw_object_data
-        
+
         self.fmap = [
             self.column_description,
             self.column_id,
@@ -70,7 +69,7 @@ class MediaModel(FlatBaseModel):
             self.column_change,
             self.column_tag_color,
             ]
-        
+
         self.smap = [
             self.column_description,
             self.column_id,
@@ -106,40 +105,26 @@ class MediaModel(FlatBaseModel):
         return len(self.fmap)+1
 
     def column_description(self, data):
-        descr = data[4]
-        if isinstance(descr, str):
-            return descr
-        try:
-            return str(descr)
-        except:
-            return conv_to_unicode(descr, 'latin1')
+        return data[4]
 
     def column_path(self, data):
-        path = data[2]
-        if isinstance(path, str):
-            return path
-        try:
-            return str(path)
-        except:
-            return str(path.encode('iso-8859-1'))
+        return data[2]
 
     def column_mime(self, data):
         mime = data[3]
-        if mime and isinstance(mime, str):
-            return mime
         if mime:
-            return str(mime)
+            return mime
         else:
             return _('Note')
 
     def column_id(self,data):
-        return str(data[1])
+        return data[1]
 
     def column_date(self,data):
         if data[10]:
             date = Date()
             date.unserialize(data[10])
-            return str(displayer.display(date))
+            return displayer.display(date)
         return ''
 
     def sort_date(self,data):
@@ -174,20 +159,28 @@ class MediaModel(FlatBaseModel):
         """
         Return the tag name from the given tag handle.
         """
-        return self.db.get_tag_from_handle(tag_handle).get_name()
-        
+        cached, value = self.get_cached_value(tag_handle, "TAG_NAME")
+        if not cached:
+            value = self.db.get_tag_from_handle(tag_handle).get_name()
+            self.set_cached_value(tag_handle, "TAG_NAME", value)
+        return value
+
     def column_tag_color(self, data):
         """
         Return the tag color.
         """
-        tag_color = "#000000000000"
-        tag_priority = None
-        for handle in data[11]:
-            tag = self.db.get_tag_from_handle(handle)
-            this_priority = tag.get_priority()
-            if tag_priority is None or this_priority < tag_priority:
-                tag_color = tag.get_color()
-                tag_priority = this_priority
+        tag_handle = data[0]
+        cached, tag_color = self.get_cached_value(tag_handle, "TAG_COLOR")
+        if not cached:
+            tag_color = "#000000000000"
+            tag_priority = None
+            for handle in data[11]:
+                tag = self.db.get_tag_from_handle(handle)
+                this_priority = tag.get_priority()
+                if tag_priority is None or this_priority < tag_priority:
+                    tag_color = tag.get_color()
+                    tag_priority = this_priority
+            self.set_cached_value(tag_handle, "TAG_COLOR", tag_color)
         return tag_color
 
     def column_tags(self, data):

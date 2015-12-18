@@ -30,12 +30,12 @@ import datetime
 
 #------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.sgettext
-from gramps.gen.lib import (ChildRefType, Date, Span, Name, StyledText, 
+from gramps.gen.lib import (ChildRefType, Date, Span, Name, StyledText,
                             StyledTextTag, StyledTextTagType)
 from gramps.gen.display.name import displayer as name_displayer
 from gramps.gen.utils.alive import probably_alive
@@ -67,7 +67,9 @@ RECORDS = [
     (_T_("Living couple married most recently"), 'family_youngestmarried',True),
     (_T_("Living couple married most long ago"), 'family_oldestmarried',  True),
     (_T_("Shortest past marriage"),          'family_shortest',         False),
-    (_T_("Longest past marriage"),           'family_longest',          True)]
+    (_T_("Longest past marriage"),           'family_longest',          True),
+    (_T_("Couple with smallest age difference"), 'family_smallestagediff',  True),
+    (_T_("Couple with biggest age difference"),  'family_biggestagediff',   True)]
 
 #------------------------------------------------------------------------
 #
@@ -142,6 +144,7 @@ def find_records(db, filter, top_size, callname,
             continue
 
         name = _get_styled_primary_name(person, callname,
+                                        trans_text=trans_text,
                                         name_format=name_format)
 
         if death_date is None:
@@ -163,12 +166,12 @@ def find_records(db, filter, top_size, callname,
             divorce_date = None
             for event_ref in family.get_event_ref_list():
                 event = db.get_event_from_handle(event_ref.ref)
-                if (event.get_type().is_marriage() and 
-                    (event_ref.get_role().is_family() or 
+                if (event.get_type().is_marriage() and
+                    (event_ref.get_role().is_family() or
                      event_ref.get_role().is_primary())):
                     marriage_date = event.get_date_object()
-                elif (event.get_type().is_divorce() and 
-                      (event_ref.get_role().is_family() or 
+                elif (event.get_type().is_divorce() and
+                      (event_ref.get_role().is_family() or
                        event_ref.get_role().is_primary())):
                     divorce_date = event.get_date_object()
 
@@ -221,6 +224,8 @@ def find_records(db, filter, top_size, callname,
     family_oldestmarried = []
     family_shortest = []
     family_longest = []
+    family_smallestagediff = []
+    family_biggestagediff = []
 
     for family in db.iter_families():
         #family = db.get_family_from_handle(family_handle)
@@ -242,25 +247,49 @@ def find_records(db, filter, top_size, callname,
 
         name = StyledText(trans_text("%(father)s and %(mother)s")) % {
                 'father': _get_styled_primary_name(father, callname,
+                                                   trans_text=trans_text,
                                                    name_format=name_format),
                 'mother': _get_styled_primary_name(mother, callname,
+                                                   trans_text=trans_text,
                                                    name_format=name_format)}
 
         _record(None, family_mostchildren,
                 len(family.get_child_ref_list()),
                 name, 'Family', family.handle, top_size)
 
+        father_birth_ref = father.get_birth_ref()
+        if father_birth_ref:
+            father_birth_date = db.get_event_from_handle(father_birth_ref.ref).get_date_object()
+        else:
+            father_birth_date = None
+
+        mother_birth_ref = mother.get_birth_ref()
+        if mother_birth_ref:
+            mother_birth_date = db.get_event_from_handle(mother_birth_ref.ref).get_date_object()
+        else:
+            mother_birth_date = None
+
+        if _good_date(father_birth_date) and _good_date(mother_birth_date):
+            if father_birth_date >> mother_birth_date:
+                _record(family_smallestagediff, family_biggestagediff,
+                        father_birth_date - mother_birth_date,
+                        name, 'Family', family.handle, top_size)
+            elif mother_birth_date >> father_birth_date:
+                _record(family_smallestagediff, family_biggestagediff,
+                        mother_birth_date - father_birth_date,
+                        name, 'Family', family.handle, top_size)
+
         marriage_date = None
         divorce = None
         divorce_date = None
         for event_ref in family.get_event_ref_list():
             event = db.get_event_from_handle(event_ref.ref)
-            if (event.get_type().is_marriage() and 
-                (event_ref.get_role().is_family() or 
+            if (event.get_type().is_marriage() and
+                (event_ref.get_role().is_family() or
                  event_ref.get_role().is_primary())):
                 marriage_date = event.get_date_object()
-            if (event and event.get_type().is_divorce() and 
-                (event_ref.get_role().is_family() or 
+            if (event and event.get_type().is_divorce() and
+                (event_ref.get_role().is_family() or
                  event_ref.get_role().is_primary())):
                 divorce = event
                 divorce_date = event.get_date_object()
@@ -284,16 +313,16 @@ def find_records(db, filter, top_size, callname,
             # Mother died but death date unknown or inexact
             continue
 
-        if (divorce_date is None 
-            and father_death_date is None 
+        if (divorce_date is None
+            and father_death_date is None
             and mother_death_date is None):
             # Still married and alive
             if probably_alive(father, db) and probably_alive(mother, db):
                 _record(family_youngestmarried, family_oldestmarried,
                         today_date - marriage_date,
                         name, 'Family', family.handle, top_size)
-        elif (_good_date(divorce_date) or 
-              _good_date(father_death_date) or 
+        elif (_good_date(divorce_date) or
+              _good_date(father_death_date) or
               _good_date(mother_death_date)):
             end = None
             if _good_date(father_death_date) and _good_date(mother_death_date):
@@ -313,7 +342,7 @@ def find_records(db, filter, top_size, callname,
                     duration, name, 'Family', family.handle, top_size)
     #python 3 workaround: assign locals to tmp so we work with runtime version
     tmp = locals()
-    return [(trans_text(text), varname, tmp[varname]) 
+    return [(trans_text(text), varname, tmp[varname])
                 for (text, varname, default) in RECORDS]
 
 def _record(lowest, highest, value, text, handle_type, handle, top_size):
@@ -354,7 +383,8 @@ CALLNAME_DONTUSE = 0
 CALLNAME_REPLACE = 1
 CALLNAME_UNDERLINE_ADD = 2
 
-def _get_styled(name, callname, placeholder=False, name_format=None):
+def _get_styled(name, callname, placeholder=False,
+                trans_text=glocale.translation.sgettext, name_format=None):
     """
     Return a StyledText object with the name formatted according to the
     parameters:
@@ -364,6 +394,11 @@ def _get_styled(name, callname, placeholder=False, name_format=None):
         (CALLNAME_UNDERLINE_ADD) or not used at all (CALLNAME_DONTUSE).
     @param placeholder: whether a series of underscores should be inserted as a
         placeholder if first name or surname are missing.
+    @param trans_text: allow deferred translation of strings
+    @type trans_text: a GrampsLocale sgettext instance
+    trans_text is a defined keyword (see po/update_po.py, po/genpot.sh)
+    :param name_format: optional format to control display of person's name
+    :type name_format: None or int
     """
 
     # Make a copy of the name object so we don't mess around with the real
@@ -384,9 +419,10 @@ def _get_styled(name, callname, placeholder=False, name_format=None):
         elif callname == CALLNAME_UNDERLINE_ADD:
             if n.call not in n.first_name:
                 # Add call name to first name.
-                n.first_name = "\"%(call)s\" (%(first)s)" % {
-                        'call':  n.call,
-                        'first': n.first_name}
+                # translators: used in French+Russian, ignore otherwise
+                n.first_name = trans_text('"%(callname)s" (%(firstname)s)') % {
+                                             'callname':  n.call,
+                                             'firstname': n.first_name }
 
     real_format = name_displayer.get_default_format()
     if name_format is not None:
@@ -407,8 +443,8 @@ def _get_styled(name, callname, placeholder=False, name_format=None):
 
     return StyledText(text, tags)
 
-def _get_styled_primary_name(person, callname,
-                             placeholder=False, name_format=None):
+def _get_styled_primary_name(person, callname, placeholder=False,
+                 trans_text=glocale.translation.sgettext, name_format=None):
     """
     Return a StyledText object with the person's name formatted according to
     the parameters:
@@ -418,7 +454,13 @@ def _get_styled_primary_name(person, callname,
         (CALLNAME_UNDERLINE_ADD) or not used at all (CALLNAME_DONTUSE).
     @param placeholder: whether a series of underscores should be inserted as a
         placeholder if first name or surname are missing.
+    @param trans_text: allow deferred translation of strings
+    @type trans_text: a GrampsLocale sgettext instance
+    trans_text is a defined keyword (see po/update_po.py, po/genpot.sh)
+    :param name_format: optional format to control display of person's name
+    :type name_format: None or int
     """
 
     return _get_styled(person.get_primary_name(), callname,
-                       placeholder, name_format)
+                       trans_text=trans_text,
+                       placeholder=placeholder, name_format=name_format)

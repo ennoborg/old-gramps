@@ -42,7 +42,7 @@ log = logging.getLogger(".DateParser")
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from ..lib.date import Date, DateError, Today
@@ -115,7 +115,7 @@ def french_valid(date_tuple):
     valid = True
     # year 1 starts on 22.9.1792
     if date_tuple[2] < 1:
-        valid = False       
+        valid = False
     return valid
 
 def _build_prefix_table(month_to_int, month_variants):
@@ -193,7 +193,7 @@ class DateParser(object):
     """
 
     _locale = GrampsLocale(lang='en', languages='en')
-    
+
     _fmt_parse = re.compile(".*%(\S).*%(\S).*%(\S).*")
 
     # RFC-2822 only uses capitalized English abbreviated names, no locales.
@@ -234,7 +234,7 @@ class DateParser(object):
         #alternative spelling
         "cheshvan": 2,   "adar sheni":  7, "iyar"    : 9,
         #GEDCOM months
-        "tsh" : 1, "csh": 5, "ksl": 3, "tvt": 4, "shv": 5, "adr": 6, 
+        "tsh" : 1, "csh": 5, "ksl": 3, "tvt": 4, "shv": 5, "adr": 6,
         "ads" : 7, "nsn": 8, "iyr": 9, "svn":10, "tmz":11, "aav":12,
         "ell":13,
         }
@@ -285,10 +285,10 @@ class DateParser(object):
     newyear_to_int = {
         "jan1":  Date.NEWYEAR_JAN1,
         "mar1":  Date.NEWYEAR_MAR1,
-        "mar25": Date.NEWYEAR_MAR25, 
+        "mar25": Date.NEWYEAR_MAR25,
         "sep1" : Date.NEWYEAR_SEP1,
         }
-    
+
     quality_to_int = {
         'estimated'  : Date.QUAL_ESTIMATED,
         'est.'       : Date.QUAL_ESTIMATED,
@@ -305,7 +305,7 @@ class DateParser(object):
         # see init_strings, so there is no need to override this if you have no aliases
         # for "today".
         # We also secretly support "$T" like in some reports.
-    
+
     _langs = set()
     def __init_prefix_tables(self):
         lang = self._locale.lang
@@ -316,9 +316,9 @@ class DateParser(object):
             DateParser._langs.add(lang)
         ds = DateStrings(self._locale)
         log.debug("Begin building parser prefix tables for {}".format(lang))
-        _build_prefix_table(DateParser.month_to_int, 
+        _build_prefix_table(DateParser.month_to_int,
             _generate_variants(
-                    zip(ds.long_months, ds.short_months, 
+                    zip(ds.long_months, ds.short_months,
                         ds.swedish_SV, ds.alt_long_months)))
         _build_prefix_table(DateParser.hebrew_to_int,
             _generate_variants(zip(ds.hebrew)))
@@ -350,6 +350,7 @@ class DateParser(object):
                        match.groups() == ('d', 'b', 'y'))
             self.ymd = (match.groups() == ('y', 'm', 'd') or \
                        match.groups() == ('y', 'b', 'd'))
+            # note ('m','d','y') is valid -- in which case both will be False
         else:
             self.dmy = True
             self.ymd = False
@@ -366,14 +367,14 @@ class DateParser(object):
     def init_strings(self):
         """
         This method compiles regular expression strings for matching dates.
-        
+
         Most of the re's in most languages can stay as is. span and range
         most likely will need to change. Whatever change is done, this method
         may be called first as DateParser.init_strings(self) so that the
         invariant expresions don't need to be repeteadly coded. All differences
         can be coded after DateParser.init_strings(self) call, that way they
         override stuff from this method.
-        
+
         .. seealso:: :class:`.DateParserRU` as an example.
         """
         _ = self._locale.translation.gettext
@@ -418,7 +419,7 @@ class DateParser(object):
 
         self._qual     = re.compile("(.* ?)%s\s+(.+)" % self._qual_str,
                                     re.IGNORECASE)
-        
+
         self._span     = re.compile("(from)\s+(?P<start>.+)\s+to\s+(?P<stop>.+)",
                                     re.IGNORECASE)
         self._range    = re.compile("(bet|bet.|between)\s+(?P<start>.+)\s+and\s+(?P<stop>.+)",
@@ -455,7 +456,7 @@ class DateParser(object):
         self._numeric  = re.compile("((\d+)[/\.]\s*)?((\d+)[/\.]\s*)?(\d+)\s*$")
         self._iso      = re.compile("(\d+)(/(\d+))?-(\d+)-(\d+)\s*$")
         self._isotimestamp = re.compile("^\s*?(\d{4})([01]\d)([0123]\d)(?:(?:[012]\d[0-5]\d[0-5]\d)|(?:\s+[012]\d:[0-5]\d(?::[0-5]\d)?))?\s*?$")
-        self._rfc      = re.compile("(%s,)?\s+(\d|\d\d)\s+%s\s+(\d+)\s+\d\d:\d\d(:\d\d)?\s+(\+|-)\d\d\d\d" 
+        self._rfc      = re.compile("(%s,)?\s+(\d|\d\d)\s+%s\s+(\d+)\s+\d\d:\d\d(:\d\d)?\s+(\+|-)\d\d\d\d"
                                     % (self._rfc_day_str, self._rfc_mon_str))
         self._today = re.compile("^\s*%s\s*$" % self._today_str, re.IGNORECASE)
 
@@ -497,7 +498,7 @@ class DateParser(object):
         return self._parse_calendar(text, self._stext, self._stext2,
                                     self.swedish_to_int,swedish_valid)
 
-                             
+
     def _parse_calendar(self, text, regex1, regex2, mmap, check=None):
         match = regex1.match(text.lower())
         if match:
@@ -527,29 +528,45 @@ class DateParser(object):
         match = regex2.match(text.lower())
         if match:
             groups = match.groups()
-            if groups[1] is None:
-                m = 0
-            else:
-                m = mmap[groups[1].lower()]
-            d = self._get_int(groups[0])
-
-            if groups[2] is None:
-                y = None
-                s = False
-            else:
-                if groups[4] is not None: # slash year digit
-                    y = int(groups[3]) + 1 # fullyear + 1
-                    s = True
+            if self.ymd:
+                if groups[3] is None:
+                    m = 0
                 else:
-                    y = int(groups[3])
+                    m = mmap[groups[3].lower()]
+                d = self._get_int(groups[4])
+                if groups[0] is None:
+                    y = None
                     s = False
+                else:
+                    if groups[2] is not None: # slash year digit
+                        y = int(groups[1]) + 1 # fullyear + 1
+                        s = True
+                    else: # regular, non-slash year
+                        y = int(groups[1])
+                        s = False
+            else:
+                if groups[1] is None:
+                    m = 0
+                else:
+                    m = mmap[groups[1].lower()]
+                d = self._get_int(groups[0])
+                if groups[2] is None:
+                    y = None
+                    s = False
+                else:
+                    if groups[4] is not None: # slash year digit
+                        y = int(groups[3]) + 1 # fullyear + 1
+                        s = True
+                    else: # regular, non-slash year
+                        y = int(groups[3])
+                        s = False
             value = (d, m, y, s)
             if check and not check((d, m, y)):
                 value = Date.EMPTY
             return value
-        
+
         return Date.EMPTY
-    
+
     def _parse_subdate(self, text, subparser=None, cal=None):
         """
         Convert only the date portion of a date.
@@ -622,6 +639,10 @@ class DateParser(object):
                     y = self._get_int(groups[4])
                     m = 0
                     d = 0
+                elif groups[3] is None:
+                    y = self._get_int(groups[1])
+                    m = self._get_int(groups[4])
+                    d = 0
                 else:
                     y = self._get_int(groups[1])
                     m = self._get_int(groups[3])
@@ -655,7 +676,7 @@ class DateParser(object):
     def match_calendar(self, text, cal):
         """
         Try parsing calendar.
-        
+
         Return calendar index and the text with calendar removed.
         """
         match = self._cal.match(text)
@@ -667,7 +688,7 @@ class DateParser(object):
     def match_calendar_newyear(self, text, cal, newyear):
         """
         Try parsing calendar and newyear code.
-        
+
         Return newyear index and the text with calendar removed.
         """
         match = self._calny.match(text)
@@ -686,7 +707,7 @@ class DateParser(object):
     def match_newyear(self, text, newyear):
         """
         Try parsing calendar and newyear code.
-        
+
         Return newyear index and the text with calendar removed.
         """
         match = self._ny.match(text)
@@ -703,7 +724,7 @@ class DateParser(object):
     def match_quality(self, text, qual):
         """
         Try matching quality.
-        
+
         Return quality index and the text with quality removed.
         """
         match = self._qual.match(text)
@@ -715,7 +736,7 @@ class DateParser(object):
     def match_span(self, text, cal, ny, qual, date):
         """
         Try matching span date.
-        
+
         On success, set the date and return 1. On failure return 0.
         """
         match = self._span.match(text)
@@ -742,7 +763,7 @@ class DateParser(object):
     def match_range(self, text, cal, ny, qual, date):
         """
         Try matching range date.
-        
+
         On success, set the date and return 1. On failure return 0.
         """
         match = self._range.match(text)
@@ -761,7 +782,7 @@ class DateParser(object):
                 return 0
             if bc2:
                 stop = self.invert_year(stop)
-            
+
             date.set(qual, Date.MOD_RANGE, cal, start + stop, newyear=ny)
             return 1
         return 0
@@ -769,7 +790,7 @@ class DateParser(object):
     def match_bce(self, text):
         """
         Try matching BCE qualifier.
-        
+
         Return BCE (True/False) and the text with matched part removed.
         """
         match = self._bce_re.match(text)
@@ -786,7 +807,7 @@ class DateParser(object):
     def match_modifier(self, text, cal, ny, qual, bc, date):
         """
         Try matching date with modifier.
-        
+
         On success, set the date and return 1. On failure return 0.
         """
         # modifiers before the date
@@ -843,7 +864,7 @@ class DateParser(object):
         qual = Date.QUAL_NONE
         cal  = Date.CAL_GREGORIAN
         newyear = Date.NEWYEAR_JAN1
-        
+
         (text, cal, newyear) = self.match_calendar_newyear(text, cal, newyear)
         (text, newyear) = self.match_newyear(text, newyear)
         (text, cal) = self.match_calendar(text, cal)
@@ -876,7 +897,7 @@ class DateParser(object):
 
     def invert_year(self, subdate):
         return (subdate[0], subdate[1], -subdate[2], subdate[3])
-    
+
     def parse(self, text):
         """
         Parses the text, returning a :class:`.Date` object.

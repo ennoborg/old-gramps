@@ -31,8 +31,6 @@ mechanism for the user to edit address information.
 # Python modules
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
@@ -46,11 +44,23 @@ from gi.repository import Gtk
 # gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
 from .editsecondary import EditSecondary
 from gramps.gen.lib import NoteType
 from ..glade import Glade
 from .displaytabs import CitationEmbedList, NoteTab
 from ..widgets import MonitoredDate, MonitoredEntry, PrivacyButton
+from gramps.gen.const import URL_MANUAL_SECT3
+
+#-------------------------------------------------------------------------
+#
+# Constants
+#
+#-------------------------------------------------------------------------
+
+WIKI_HELP_PAGE = URL_MANUAL_SECT3
+WIKI_HELP_SEC = _('manual|Address_Editor_dialog')
 
 #-------------------------------------------------------------------------
 #
@@ -75,7 +85,7 @@ class EditAddress(EditSecondary):
     def _local_init(self):
         self.width_key = 'interface.address-width'
         self.height_key = 'interface.address-height'
-        
+
         self.top = Glade()
         self.set_window(self.top.toplevel,
                         self.top.get_object("title"),
@@ -84,12 +94,12 @@ class EditAddress(EditSecondary):
     def _setup_fields(self):
         self.addr_start = MonitoredDate(
             self.top.get_object("date_entry"),
-            self.top.get_object("date_stat"), 
+            self.top.get_object("date_stat"),
             self.obj.get_date_object(),
             self.uistate,
             self.track,
             self.db.readonly)
-            
+
         self.street = MonitoredEntry(
             self.top.get_object("street"), self.obj.set_street,
             self.obj.get_street, self.db.readonly)
@@ -117,30 +127,31 @@ class EditAddress(EditSecondary):
         self.phone = MonitoredEntry(
             self.top.get_object("phone"), self.obj.set_phone,
             self.obj.get_phone, self.db.readonly)
-            
+
         self.priv = PrivacyButton(self.top.get_object("private"),
                                   self.obj, self.db.readonly)
 
     def _connect_signals(self):
-        self.define_help_button(self.top.get_object('help'))
         self.define_cancel_button(self.top.get_object('cancel'))
         self.define_ok_button(self.top.get_object('ok'),self.save)
+        self.define_help_button(self.top.get_object('help'),
+                WIKI_HELP_PAGE, WIKI_HELP_SEC)
 
     def _create_tabbed_pages(self):
         """
         Create the notebook tabs and inserts them into the main
         window.
         """
-        
+
         notebook = Gtk.Notebook()
-        
-        self.srcref_list = CitationEmbedList(self.dbstate, 
-                                             self.uistate, 
-                                             self.track, 
+
+        self.srcref_list = CitationEmbedList(self.dbstate,
+                                             self.uistate,
+                                             self.track,
                                              self.obj.get_citation_list())
         self._add_tab(notebook, self.srcref_list)
         self.track_ref_for_deletion("srcref_list")
-        
+
         self.note_tab = NoteTab(self.dbstate, self.uistate, self.track,
                     self.obj.get_note_list(),
                     notetype=NoteType.ADDRESS)

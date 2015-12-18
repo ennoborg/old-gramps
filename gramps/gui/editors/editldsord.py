@@ -30,8 +30,6 @@ mechanism for the user to edit personal LDS information.
 # Python modules
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
@@ -45,6 +43,8 @@ from gi.repository import Gtk
 # gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
 from gramps.gen.lib import LdsOrd, NoteType
 from gramps.gen.display.name import displayer as name_displayer
 from gramps.gen.utils.lds import TEMPLES
@@ -52,9 +52,19 @@ from ..glade import Glade
 from .editsecondary import EditSecondary
 from .objectentries import PlaceEntry
 from .displaytabs import CitationEmbedList,NoteTab
-from ..widgets import (PrivacyButton, MonitoredDate, 
+from ..widgets import (PrivacyButton, MonitoredDate,
                      MonitoredMenu, MonitoredStrMenu)
 from ..selectors import SelectorFactory
+from gramps.gen.const import URL_MANUAL_SECT1
+
+#-------------------------------------------------------------------------
+#
+# Constants
+#
+#-------------------------------------------------------------------------
+
+WIKI_HELP_PAGE = URL_MANUAL_SECT1
+WIKI_HELP_SEC = _('manual|LDS_Ordinance_Editor')
 
 _DATA_MAP = {
     LdsOrd.BAPTISM : [
@@ -118,7 +128,7 @@ _DATA_MAP = {
         LdsOrd.STATUS_UNCLEARED,
         ],
     }
-    
+
 #-------------------------------------------------------------------------
 #
 # EditLdsOrd class
@@ -143,7 +153,7 @@ class EditLdsOrd(EditSecondary):
     def _local_init(self):
         self.width_key = 'interface.lds-width'
         self.height_key = 'interface.lds-height'
-        
+
         self.top = Glade()
         self.set_window(self.top.toplevel,
                         self.top.get_object('title'),
@@ -154,8 +164,9 @@ class EditLdsOrd(EditSecondary):
     def _connect_signals(self):
         self.parents_select.connect('clicked',self.select_parents_clicked)
         self.define_cancel_button(self.top.get_object('cancel'))
-        self.define_help_button(self.top.get_object('help'))
         self.define_ok_button(self.top.get_object('ok'),self.save)
+        self.define_help_button(self.top.get_object('help'),
+                WIKI_HELP_PAGE, WIKI_HELP_SEC)
 
     def _get_types(self):
         return (LdsOrd.BAPTISM,
@@ -241,18 +252,18 @@ class EditLdsOrd(EditSecondary):
 
     def _create_tabbed_pages(self):
         notebook = Gtk.Notebook()
-        self.citation_list = CitationEmbedList(self.dbstate, self.uistate, 
-                                             self.track, 
+        self.citation_list = CitationEmbedList(self.dbstate, self.uistate,
+                                             self.track,
                                              self.obj.get_citation_list())
         self._add_tab(notebook, self.citation_list)
         self.track_ref_for_deletion("citation_list")
-        
+
         self.note_tab = NoteTab(self.dbstate, self.uistate, self.track,
                     self.obj.get_note_list(),
                     notetype=NoteType.LDS)
         self._add_tab(notebook, self.note_tab)
         self.track_ref_for_deletion("note_tab")
-        
+
         self._setup_notebook_tabs( notebook)
         notebook.show_all()
         self.top.get_object('vbox').pack_start(notebook, True, True, 0)
@@ -336,8 +347,8 @@ class EditFamilyLdsOrd(EditSecondary):
         EditSecondary.__init__(self, state, uistate, track, attrib, callback)
 
     def _local_init(self):
-        self.top = Glade() 
-        self.set_window(self.top.toplevel, 
+        self.top = Glade()
+        self.set_window(self.top.toplevel,
                         self.top.get_object('title'),
                         _('LDS Ordinance Editor'))
         self.share_btn = self.top.get_object('share_place')
@@ -408,18 +419,18 @@ class EditFamilyLdsOrd(EditSecondary):
 
     def _create_tabbed_pages(self):
         notebook = Gtk.Notebook()
-        self.srcref_list = CitationEmbedList(self.dbstate,self.uistate, 
-                                             self.track, 
+        self.srcref_list = CitationEmbedList(self.dbstate,self.uistate,
+                                             self.track,
                                              self.obj.get_citation_list())
         self._add_tab(notebook, self.srcref_list)
         self.track_ref_for_deletion("srcref_list")
-        
+
         self.note_tab = NoteTab(self.dbstate, self.uistate, self.track,
                     self.obj.get_note_list(),
                     notetype=NoteType.LDS)
         self._add_tab(notebook, self.note_tab)
         self.track_ref_for_deletion("note_tab")
-        
+
         notebook.show_all()
         self.top.get_object('vbox').pack_start(notebook, True, True, 0)
 

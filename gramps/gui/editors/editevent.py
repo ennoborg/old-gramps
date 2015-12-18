@@ -25,8 +25,6 @@
 # Python modules
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.sgettext
 
 #-------------------------------------------------------------------------
 #
@@ -40,7 +38,9 @@ from gi.repository import Gtk
 # gramps modules
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import URL_MANUAL_PAGE
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
+from gramps.gen.const import URL_MANUAL_SECT2
 from gramps.gen.lib import Event, NoteType
 from gramps.gen.db import DbTxn
 from ..display import display_help
@@ -48,9 +48,9 @@ from .editprimary import EditPrimary
 from .objectentries import PlaceEntry
 from ..glade import Glade
 from ..dialog import ErrorDialog
-from .displaytabs import (CitationEmbedList, NoteTab, GalleryTab, 
+from .displaytabs import (CitationEmbedList, NoteTab, GalleryTab,
                           EventBackRefList, EventAttrEmbedList)
-from ..widgets import (MonitoredEntry, PrivacyButton, MonitoredDataType, 
+from ..widgets import (MonitoredEntry, PrivacyButton, MonitoredDataType,
                        MonitoredDate, MonitoredTagList)
 from gramps.gen.utils.db import get_participant_from_event
 
@@ -59,8 +59,9 @@ from gramps.gen.utils.db import get_participant_from_event
 # Constants
 #
 #-------------------------------------------------------------------------
-WIKI_HELP_PAGE = '%s_-_Entering_and_Editing_Data:_Detailed_-_part_2' % URL_MANUAL_PAGE
-WIKI_HELP_SEC = _('manual|Editing_Information_About_Events')
+
+WIKI_HELP_PAGE = URL_MANUAL_SECT2
+WIKI_HELP_SEC = _('manual|New_Event_dialog')
 
 #-------------------------------------------------------------------------
 #
@@ -72,7 +73,7 @@ class EditEvent(EditPrimary):
     def __init__(self, dbstate, uistate, track, event, callback=None):
 
         EditPrimary.__init__(self, dbstate, uistate, track,
-                             event, dbstate.db.get_event_from_handle, 
+                             event, dbstate.db.get_event_from_handle,
                              dbstate.db.get_event_from_gramps_id)
 
         self._init_event()
@@ -108,7 +109,7 @@ class EditEvent(EditPrimary):
         self.height_key = 'interface.event-height'
 
         self.top = Glade()
-        self.set_window(self.top.toplevel, None, 
+        self.set_window(self.top.toplevel, None,
                         self.get_menu_title())
 
         self.place = self.top.get_object('place')
@@ -125,7 +126,7 @@ class EditEvent(EditPrimary):
 
     def _connect_db_signals(self):
         """
-        Connect any signals that need to be connected. 
+        Connect any signals that need to be connected.
         Called by the init routine of the base class (_EditPrimary).
         """
         self._add_db_signal('event-rebuild', self._do_close)
@@ -134,26 +135,26 @@ class EditEvent(EditPrimary):
     def _setup_fields(self):
 
         # place, select_place, add_del_place
-        
+
         self.place_field = PlaceEntry(self.dbstate, self.uistate, self.track,
                                       self.top.get_object("place"),
                                       self.top.get_object("place_event_box"),
                                       self.obj.set_place_handle,
                                       self.obj.get_place_handle,
                                       self.add_del_btn, self.share_btn)
-        
+
         self.descr_field = MonitoredEntry(self.top.get_object("event_description"),
                                           self.obj.set_description,
-                                          self.obj.get_description, 
+                                          self.obj.get_description,
                                           self.db.readonly)
 
         self.gid = MonitoredEntry(self.top.get_object("gid"),
                                   self.obj.set_gramps_id,
                                   self.obj.get_gramps_id, self.db.readonly)
 
-        self.tags = MonitoredTagList(self.top.get_object("tag_label"), 
-                                     self.top.get_object("tag_button"), 
-                                     self.obj.set_tag_list, 
+        self.tags = MonitoredTagList(self.top.get_object("tag_label"),
+                                     self.top.get_object("tag_button"),
+                                     self.obj.set_tag_list,
                                      self.obj.get_tag_list,
                                      self.db,
                                      self.uistate, self.track,
@@ -170,7 +171,7 @@ class EditEvent(EditPrimary):
         self.date_field = MonitoredDate(self.top.get_object("date_entry"),
                                         self.top.get_object("date_stat"),
                                         self.obj.get_date_object(),
-                                        self.uistate, self.track, 
+                                        self.uistate, self.track,
                                         self.db.readonly)
 
     def _create_tabbed_pages(self):
@@ -183,17 +184,17 @@ class EditEvent(EditPrimary):
         self.citation_list = CitationEmbedList(self.dbstate,
                                                self.uistate,
                                                self.track,
-                                               self.obj.get_citation_list(), 
+                                               self.obj.get_citation_list(),
                                                self.get_menu_title())
         self._add_tab(notebook, self.citation_list)
-        
+
         self.note_list = NoteTab(self.dbstate,
                                  self.uistate,
                                  self.track,
                                  self.obj.get_note_list(),
                                  notetype=NoteType.EVENT)
         self._add_tab(notebook, self.note_list)
-        
+
 
         self.gallery_list = GalleryTab(self.dbstate,
                                        self.uistate,
@@ -215,7 +216,7 @@ class EditEvent(EditPrimary):
         self._add_tab(notebook, self.backref_list)
 
         self._setup_notebook_tabs(notebook)
-        
+
         notebook.show_all()
         self.top.get_object('vbox').pack_start(notebook, True, True, 0)
 
@@ -231,6 +232,7 @@ class EditEvent(EditPrimary):
     def help_clicked(self, obj):
         """Display the relevant portion of GRAMPS manual"""
         display_help(webpage=WIKI_HELP_PAGE, section=WIKI_HELP_SEC)
+
     def save(self, *obj):
         self.ok_button.set_sensitive(False)
         if self.object_is_empty():
@@ -239,14 +241,14 @@ class EditEvent(EditPrimary):
                           "enter data or cancel the edit."))
             self.ok_button.set_sensitive(True)
             return
-        
+
         (uses_dupe_id, id) = self._uses_duplicate_id()
         if uses_dupe_id:
             prim_object = self.get_from_gramps_id(id)
             name = prim_object.get_description()
             msg1 = _("Cannot save event. ID already exists.")
             msg2 = _("You have attempted to use the existing Gramps ID with "
-                         "value %(id)s. This value is already used by '" 
+                         "value %(id)s. This value is already used by '"
                          "%(prim_object)s'. Please enter a different ID or leave "
                          "blank to get the next available ID value.") % {
                          'id' : id, 'prim_object' : name }
@@ -286,7 +288,7 @@ class EditEvent(EditPrimary):
         entered date when importing from a XML file, so we can get an
         incorrect fail.
         """
-        
+
         if self.db.readonly:
             return False
         elif self.obj.handle:
@@ -317,7 +319,7 @@ class DeleteEventQuery(object):
         with DbTxn(_("Delete Event (%s)") % self.event.get_gramps_id(),
                    self.db) as trans:
             self.db.disable_signals()
-        
+
             ev_handle_list = [self.event.get_handle()]
 
             for handle in self.person_list:

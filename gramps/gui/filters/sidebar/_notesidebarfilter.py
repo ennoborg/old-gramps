@@ -36,7 +36,7 @@ from gi.repository import Gtk
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from ... import widgets
@@ -66,7 +66,9 @@ class NoteSidebarFilter(SidebarFilter):
         self.event_menu = widgets.MonitoredDataType(
             self.ntype,
             self.note.set_type,
-            self.note.get_type)
+            self.note.get_type,
+            False, # read-only?
+            dbstate.db.get_note_types())
 
         self.filter_regex = Gtk.CheckButton(label=_('Use regular expressions'))
 
@@ -124,7 +126,7 @@ class NoteSidebarFilter(SidebarFilter):
 
             rule = HasNote([text, ntype], use_regex=regex)
             generic_filter.add_rule(rule)
-                
+
             # check the Tag
             if tag:
                 model = self.tag.get_model()
@@ -141,7 +143,7 @@ class NoteSidebarFilter(SidebarFilter):
                 generic_filter.add_rule(rule)
 
         return generic_filter
-        
+
     def on_filters_changed(self, name_space):
         if name_space == 'Note':
             all_filter = GenericNoteFilter()

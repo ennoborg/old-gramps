@@ -41,14 +41,13 @@ _ENTER = Gdk.keyval_from_name("Enter")
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS classes
+# Gramps classes
 #
 #-------------------------------------------------------------------------
 from .surnamemodel import SurnameModel
 from .embeddedlist import EmbeddedList, TEXT_COL, MARKUP_COL, ICON_COL
 from ...ddtargets import DdTargets
 from gramps.gen.lib import Surname, NameOriginType
-from gramps.gen.constfunc import conv_to_unicode
 
 #-------------------------------------------------------------------------
 #
@@ -59,7 +58,7 @@ class SurnameTab(EmbeddedList):
 
     _HANDLE_COL = 5
     _DND_TYPE   = DdTargets.SURNAME
-    
+
     _MSG = {
         'add'   : _('Create and add a new surname'),
         'del'   : _('Remove the selected surname'),
@@ -67,7 +66,7 @@ class SurnameTab(EmbeddedList):
         'up'    : _('Move the selected surname upwards'),
         'down'  : _('Move the selected surname downwards'),
     }
-    
+
     #index = column in model. Value =
     #  (name, sortcol in model, width, markup/text
     _column_names = [
@@ -77,7 +76,7 @@ class SurnameTab(EmbeddedList):
         ]
     _column_combo = (_('Origin'), -1, 150, 3)  # name, sort, width, modelcol
     _column_toggle = (_('Name|Primary'), -1, 80, 4)
-    
+
     def __init__(self, dbstate, uistate, track, name, on_change=None,
                  top_label='<b>%s</b>' % _("Multiple Surnames") ):
         self.obj = name
@@ -85,9 +84,9 @@ class SurnameTab(EmbeddedList):
         self.curr_col = -1
         self.curr_cellr = None
         self.curr_celle = None
-        
-        EmbeddedList.__init__(self, dbstate, uistate, track, _('Family Surnames'), 
-                              SurnameModel, move_buttons=True, 
+
+        EmbeddedList.__init__(self, dbstate, uistate, track, _('Family Surnames'),
+                              SurnameModel, move_buttons=True,
                               top_label=top_label)
 
     def build_columns(self):
@@ -101,7 +100,7 @@ class SurnameTab(EmbeddedList):
                 renderer.set_property('editable', not self.dbstate.db.readonly)
                 renderer.connect('editing_started', self.on_edit_start, colno)
                 renderer.connect('edited', self.on_edit_inline, self.column_order()[colno][1])
-        
+
         # now we add the two special columns
         # combobox for type
         colno = len(self.columns)
@@ -176,10 +175,10 @@ class SurnameTab(EmbeddedList):
         for idx in range(len(self.model)):
             node = self.model.get_iter(idx)
             surn = self.model.get_value(node, 5)
-            surn.set_prefix(conv_to_unicode(self.model.get_value(node, 0), 'UTF-8'))
-            surn.set_surname(conv_to_unicode(self.model.get_value(node, 1), 'UTF-8'))
-            surn.set_connector(conv_to_unicode(self.model.get_value(node, 2), 'UTF-8'))
-            surn.get_origintype().set(conv_to_unicode(self.model.get_value(node, 3), 'UTF-8'))
+            surn.set_prefix(self.model.get_value(node, 0))
+            surn.set_surname(self.model.get_value(node, 1))
+            surn.set_connector(self.model.get_value(node, 2))
+            surn.get_origintype().set(self.model.get_value(node, 3))
             surn.set_primary(self.model.get_value(node, 4))
             new_list += [surn]
         return new_list
@@ -203,7 +202,7 @@ class SurnameTab(EmbeddedList):
         prim = False
         if len(self.obj.get_surname_list()) == 0:
             prim = True
-        node = self.model.append(row=['', '', '', str(NameOriginType()), prim, 
+        node = self.model.append(row=['', '', '', str(NameOriginType()), prim,
                                       Surname()])
         self.selection.select_iter(node)
         path = self.model.get_path(node)
@@ -229,7 +228,7 @@ class SurnameTab(EmbeddedList):
         self.curr_col = colnr
         self.curr_cellr = cellr
         self.curr_celle = celle
-    
+
     def on_edit_start_cmb(self, cellr, celle, path, colnr):
         """
         An edit starts in the origin type column
@@ -279,14 +278,14 @@ class SurnameTab(EmbeddedList):
         act = cmb.get_active()
         if act == -1:
             return
-        self.on_orig_edited(None, path, 
+        self.on_orig_edited(None, path,
                             self.cmborig.get_value(
                                             self.cmborig.get_iter((act,)),1),
                             colnr)
 
     def on_prim_toggled(self, cell, path, colnr):
         """
-        Primary surname on path is toggled. colnr must be the col 
+        Primary surname on path is toggled. colnr must be the col
         in the model
         """
         #obtain current value
@@ -318,7 +317,7 @@ class SurnameTab(EmbeddedList):
 
     def key_pressed(self, obj, event):
         """
-        Handles the key being pressed. 
+        Handles the key being pressed.
         Here we make sure tab moves to next or previous value in row on TAB
         """
         if not EmbeddedList.key_pressed(self, obj, event):
@@ -338,7 +337,7 @@ class SurnameTab(EmbeddedList):
     def next_cell(self):
         """
         Move to the next cell to edit it
-        """           
+        """
         (model, node) = self.selection.get_selected()
         if node:
             path = self.model.get_path(node).get_indices()[0]
@@ -365,12 +364,12 @@ class SurnameTab(EmbeddedList):
                     self.curr_celle.editing_done()
                     return
         return True
-                    
-        
+
+
     def prev_cell(self):
         """
         Move to the next cell to edit it
-        """     
+        """
         (model, node) = self.selection.get_selected()
         if node:
             path = self.model.get_path(node).get_indices()[0]

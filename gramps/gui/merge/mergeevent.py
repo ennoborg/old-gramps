@@ -29,7 +29,7 @@ Provide merge capabilities for events.
 #-------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.sgettext
-from gramps.gen.const import URL_MANUAL_PAGE
+from gramps.gen.const import URL_MANUAL_SECT3
 from ..display import display_help
 from ..managedwindow import ManagedWindow
 from gramps.gen.datehandler import get_date
@@ -41,8 +41,7 @@ from gramps.gen.merge import MergeEventQuery
 # Gramps constants
 #
 #-------------------------------------------------------------------------
-WIKI_HELP_PAGE = '%s_-_Entering_and_Editing_Data:_Detailed_-_part_3' % \
-    URL_MANUAL_PAGE
+WIKI_HELP_PAGE = URL_MANUAL_SECT3
 WIKI_HELP_SEC = _('manual|Merge_Events')
 _GLADE_FILE = 'mergeevent.glade'
 
@@ -165,7 +164,7 @@ class MergeEvent(ManagedWindow):
         else:
             phoenix = self.ev2
             titanic = self.ev1
-            # Add second handle to history so that when merge is complete, 
+            # Add second handle to history so that when merge is complete,
             # phoenix is the selected row.
             self.uistate.set_active(phoenix.get_handle(), 'Event')
 
@@ -180,7 +179,7 @@ class MergeEvent(ManagedWindow):
         if self.get_widget("gramps_btn1").get_active() ^ use_handle1:
             phoenix.set_gramps_id(titanic.get_gramps_id())
         # cause is deprecated.
-        
+
         query = MergeEventQuery(self.dbstate, phoenix, titanic)
         query.execute()
         self.uistate.set_busy_cursor(False)

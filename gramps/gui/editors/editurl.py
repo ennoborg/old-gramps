@@ -24,17 +24,27 @@
 # python modules
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
 # gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
 from .editsecondary import EditSecondary
 from ..widgets import MonitoredEntry, PrivacyButton, MonitoredDataType
 from ..glade import Glade
+from gramps.gen.const import URL_MANUAL_SECT1
+
+#-------------------------------------------------------------------------
+#
+# Constants
+#
+#-------------------------------------------------------------------------
+
+WIKI_HELP_PAGE = URL_MANUAL_SECT1
+WIKI_HELP_SEC = _('manual|Internet_Address_Editor')
 
 #-------------------------------------------------------------------------
 #
@@ -51,20 +61,22 @@ class EditUrl(EditSecondary):
     def _local_init(self):
         self.width_key = 'interface.url-width'
         self.height_key = 'interface.url-height'
-        
+
         self.top = Glade()
         self.jump = self.top.get_object('jump')
 
         self.set_window(self.top.toplevel,
                         self.top.get_object("title"),
                         _('Internet Address Editor'))
-            
+
     def _connect_signals(self):
         self.jump.connect('clicked', self.jump_to)
         self.define_cancel_button(self.top.get_object('button125'))
         self.define_ok_button(self.top.get_object('button124'), self.save)
-        self.define_help_button(self.top.get_object('button130'))
-        
+        # TODO help button (rename glade button name)
+        self.define_help_button(self.top.get_object('button130'),
+                WIKI_HELP_PAGE, WIKI_HELP_SEC)
+
     def jump_to(self, obj):
         if self.obj.get_path():
             from ..display import display_url
@@ -72,20 +84,20 @@ class EditUrl(EditSecondary):
 
     def _setup_fields(self):
         self.des  = MonitoredEntry(self.top.get_object("url_des"),
-                                   self.obj.set_description, 
+                                   self.obj.set_description,
                                    self.obj.get_description, self.db.readonly)
 
-        self.addr  = MonitoredEntry(self.top.get_object("url_addr"), 
-                                    self.obj.set_path, self.obj.get_path, 
+        self.addr  = MonitoredEntry(self.top.get_object("url_addr"),
+                                    self.obj.set_path, self.obj.get_path,
                                     self.db.readonly)
-        
+
         self.priv = PrivacyButton(self.top.get_object("priv"),
                                   self.obj, self.db.readonly)
 
-        self.type_sel = MonitoredDataType(self.top.get_object("type"), 
-                                          self.obj.set_type, 
+        self.type_sel = MonitoredDataType(self.top.get_object("type"),
+                                          self.obj.set_type,
                                           self.obj.get_type, self.db.readonly)
-            
+
     def build_menu_names(self, obj):
         etitle =_('Internet Address Editor')
         return (etitle, etitle)

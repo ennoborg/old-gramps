@@ -32,7 +32,7 @@ _ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from .grampstype import GrampsType
@@ -62,4 +62,4 @@ class UrlType(GrampsType):
         GrampsType.__init__(self, value)
 
 
-        
+

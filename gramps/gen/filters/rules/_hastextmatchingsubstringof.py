@@ -28,7 +28,7 @@ _ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from . import Rule
@@ -40,7 +40,7 @@ class HasTextMatchingSubstringOf(Rule):
     """Rule that checks for string matches in any textual information."""
 
     labels      = [ 'Substring:',
-                    'Case sensitive:', 
+                    'Case sensitive:',
                     'Regular-Expression matching:']
     name        = 'Objects with records containing <substring>'
     description = "Matches objects whose records contain text " \

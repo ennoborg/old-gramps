@@ -47,15 +47,15 @@ from gi.repository import Gtk
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 import gramps.gui.widgets.progressdialog as progressdlg
-from .lru import LRU
 from bisect import bisect_right
 from gramps.gen.filters import SearchFilter, ExactSearchFilter
+from .basemodel import BaseModel
 
 #-------------------------------------------------------------------------
 #
@@ -85,7 +85,7 @@ class Node(object):
     def __init__(self, ref, parent, sortkey, handle, secondary):
         if sortkey:
             self.name = sortkey
-            #sortkey must be localized sort, so 
+            #sortkey must be localized sort, so
             self.sortkey = glocale.sort_key(sortkey)
             if not self.sortkey:
                 self.sortkey = glocale.sort_key('')
@@ -145,7 +145,7 @@ class Node(object):
 
         else:
             self.children.append((node.sortkey, nodeid))
-            
+
     def remove_child(self, node, nodemap):
         """
         Remove a node from the list of children for this node, using nodemap.
@@ -191,7 +191,7 @@ class NodeMap(object):
 ##            item.parent = None
 ##            item.children = []
         self.id2node.clear()
-    
+
     def add_node(self, node):
         """
         Add a Node object to the map and return id of this node
@@ -199,7 +199,7 @@ class NodeMap(object):
         nodeid = id(node)
         self.id2node[nodeid] = node
         return nodeid
-    
+
     def del_node(self, node):
         """
         Remove a Node object from the map and return nodeid
@@ -207,7 +207,7 @@ class NodeMap(object):
         nodeid = id(node)
         del self.id2node[nodeid]
         return nodeid
-    
+
     def del_nodeid(self, nodeid):
         """
         Remove Node with id nodeid from the map
@@ -231,7 +231,7 @@ class NodeMap(object):
 # TreeBaseModel
 #
 #-------------------------------------------------------------------------
-class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
+class TreeBaseModel(GObject.GObject, Gtk.TreeModel, BaseModel):
     """
     The base class for all hierarchical treeview models.  The model defines the
     mapping between a unique node and a path. Paths are defined by a tuple.
@@ -247,26 +247,26 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
     handle2node A dictionary of gramps handles.  Each entry is a node object.
     nodemap     A NodeMap, mapping id's of the nodes to the node objects. Node
                 refer to other nodes via id's in a linked list form.
-    
+
     The model obtains data from database as needed and holds a cache of most
     recently used data.
-    As iter for generictreemodel, node is used. This will be the handle for 
+    As iter for generictreemodel, node is used. This will be the handle for
     database objects.
-    
+
     Creation:
     db      :   the database
     search         :  the search that must be shown
     skip           :  values not to show
     scol           :  column on which to sort
     order          :  order of the sort
-    sort_map       :  mapping from columns seen on the GUI and the columns 
+    sort_map       :  mapping from columns seen on the GUI and the columns
                       as defined here
-    nrgroups       :  maximum number of grouping level, 0 = no group, 
+    nrgroups       :  maximum number of grouping level, 0 = no group,
                       1= one group, .... Some optimizations can be for only
-                      one group. nrgroups=0 should never be used, as then a 
+                      one group. nrgroups=0 should never be used, as then a
                       flatbasemodel should be used
     group_can_have_handle :
-                      can groups have a handle. If False, this means groups 
+                      can groups have a handle. If False, this means groups
                       are only used to group subnodes, not for holding data and
                       showing subnodes
     has_secondary  :  If True, the model contains two Gramps object types.
@@ -274,9 +274,6 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
                       secondary object type.
     """
 
-    # LRU cache size
-    _CACHE_SIZE = 250
-   
     def __init__(self, db,
                     search=None, skip=set(),
                     scol=0, order=Gtk.SortType.ASCENDING, sort_map=None,
@@ -284,25 +281,26 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
                     group_can_have_handle = False,
                     has_secondary=False):
         cput = time.clock()
-        super(TreeBaseModel, self).__init__()
+        GObject.GObject.__init__(self)
+        BaseModel.__init__(self)
         #We create a stamp to recognize invalid iterators. From the docs:
-        #Set the stamp to be equal to your model's stamp, to mark the 
-        #iterator as valid. When your model's structure changes, you should 
-        #increment your model's stamp to mark all older iterators as invalid. 
-        #They will be recognised as invalid because they will then have an 
+        #Set the stamp to be equal to your model's stamp, to mark the
+        #iterator as valid. When your model's structure changes, you should
+        #increment your model's stamp to mark all older iterators as invalid.
+        #They will be recognised as invalid because they will then have an
         #incorrect stamp.
         self.stamp = 0
         #two unused attributes pesent to correspond to flatbasemodel
         self.prev_handle = None
         self.prev_data = None
-        
+
         self.__reverse = (order == Gtk.SortType.DESCENDING)
         self.scol = scol
         self.nrgroups = nrgroups
         self.group_can_have_handle = group_can_have_handle
         self.has_secondary = has_secondary
         self.db = db
-        
+
         self._set_base_data()
 
         # Initialise data structures
@@ -329,10 +327,8 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
             if self.has_secondary:
                 self.sort_func2 = self.smap2[scol]
             self.sort_col = scol
-    
+
         self._in_build = False
-        
-        self.lru_data  = LRU(TreeBaseModel._CACHE_SIZE)
 
         self.__total = 0
         self.__displayed = 0
@@ -350,13 +346,14 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
         """
         Unset all elements that prevent garbage collection
         """
+        BaseModel.destroy(self)
         self.db = None
         self.sort_func = None
         if self.has_secondary:
             self.sort_func2 = None
         if self.nodemap:
             self.nodemap.destroy()
-        
+
         self.nodemap = None
         self.rebuild_data = None
         self._build_data = None
@@ -364,14 +361,12 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
         self.search2 = None
         self.current_filter = None
         self.current_filter2 = None
-        self.clear_cache()
-        self.lru_data = None
 
     def _set_base_data(self):
         """
-        This method must be overwritten in the inheriting class, setting 
+        This method must be overwritten in the inheriting class, setting
         all needed information
-        
+
         gen_cursor   : func to create cursor to loop over objects in model
         number_items : func to obtain number of items that are shown if all
                         shown
@@ -380,14 +375,14 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
         fmap    : the map with functions to obtain value of a row with handle
         """
         self.gen_cursor = None
-        self.number_items = None   # function 
+        self.number_items = None   # function
         self.map = None
         self.smap = None
         self.fmap = None
 
         if self.has_secondary:
             self.gen_cursor2 = None
-            self.number_items2 = None   # function 
+            self.number_items2 = None   # function
             self.map2 = None
             self.smap2 = None
             self.fmap2 = None
@@ -397,7 +392,7 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
         Return the number of rows displayed.
         """
         return self.__displayed
-        
+
     def total(self):
         """
         Return the total number of rows without a filter or search condition.
@@ -410,22 +405,11 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
         """
         return None
 
-    def clear_cache(self, handle=None):
-        """
-        Clear the LRU cache.
-        """
-        if handle:
-            try:
-                del self.lru_data[handle]
-            except KeyError:
-                pass
-        else:
-            self.lru_data.clear()
-
     def clear(self):
         """
         Clear the data map.
         """
+        self.clear_cache()
         self.tree.clear()
         self.handle2node.clear()
         self.stamp += 1
@@ -437,9 +421,9 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
 
     def set_search(self, search):
         """
-        Change the search function that filters the data in the model. 
+        Change the search function that filters the data in the model.
         When this method is called, make sure:
-        # you call self.rebuild_data() to recalculate what should be seen 
+        # you call self.rebuild_data() to recalculate what should be seen
           in the model
         # you reattach the model to the treeview so that the treeview updates
           with the new entries
@@ -485,7 +469,7 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
                 self.search2 = search[2]
                 _LOG.debug("search2 no search parameter")
             self._build_data = self._rebuild_search
-            
+
         self.current_filter = self.search
         if self.has_secondary:
             self.current_filter2 = self.search2
@@ -493,7 +477,7 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
     def rebuild_data(self, data_filter=None, data_filter2=None, skip=[]):
         """
         Rebuild the data map.
-        
+
         When called externally (from listview), data_filter and data_filter2
         should be None; set_search will already have been called to establish
         the filter functions. When called internally (from __init__) both
@@ -530,24 +514,24 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
 
         items = self.number_items()
         _LOG.debug("rebuild search primary")
-        self.__rebuild_search(dfilter, skip, items, 
+        self.__rebuild_search(dfilter, skip, items,
                               self.gen_cursor, self.add_row)
 
         if self.has_secondary:
             _LOG.debug("rebuild search secondary")
             items = self.number_items2()
-            self.__rebuild_search(dfilter2, skip, items, 
+            self.__rebuild_search(dfilter2, skip, items,
                                   self.gen_cursor2, self.add_row2)
 
     def __rebuild_search(self, dfilter, skip, items, gen_cursor, add_func):
         """
-        Rebuild the data map for a single Gramps object type, where a search 
+        Rebuild the data map for a single Gramps object type, where a search
         condition is applied.
         """
-        pmon = progressdlg.ProgressMonitor(progressdlg.GtkProgressDialog, 
+        pmon = progressdlg.ProgressMonitor(progressdlg.GtkProgressDialog,
                                             popup_time=2)
         status = progressdlg.LongOpStatus(msg=_("Building View"),
-                            total_steps=items, interval=items//20, 
+                            total_steps=items, interval=items//20,
                             can_cancel=True)
         pmon.add_op(status)
         with gen_cursor() as cursor:
@@ -578,76 +562,51 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
             # The tree only has primary data
             items = self.number_items()
             _LOG.debug("rebuild filter primary")
-            self.__rebuild_filter(dfilter, skip, items, 
+            self.__rebuild_filter(dfilter, skip, items,
                                   self.gen_cursor, self.map, self.add_row)
         else:
             # The tree has both primary and secondary data. The navigation type
             # (navtype) which governs the filters that are offered, is for the
             # secondary data.
-                items = self.number_items2()
-                _LOG.debug("rebuild filter secondary")
-                self.__rebuild_filter(dfilter2, skip, items, 
-                                      self.gen_cursor2, self.map2, self.add_row2)
-            
-    def __rebuild_filter(self, dfilter, skip, items, gen_cursor, data_map, 
+            items = self.number_items2()
+            _LOG.debug("rebuild filter secondary")
+            self.__rebuild_filter(dfilter2, skip, items,
+                                    self.gen_cursor2, self.map2, self.add_row2)
+
+    def __rebuild_filter(self, dfilter, skip, items, gen_cursor, data_map,
                          add_func):
         """
-        Rebuild the data map for a single Gramps object type, where a filter 
+        Rebuild the data map for a single Gramps object type, where a filter
         is applied.
         """
-        pmon = progressdlg.ProgressMonitor(progressdlg.GtkProgressDialog, 
+        pmon = progressdlg.ProgressMonitor(progressdlg.GtkProgressDialog,
                                             popup_time=2)
         status = progressdlg.LongOpStatus(msg=_("Building View"),
                               total_steps=3, interval=1)
         pmon.add_op(status)
-        status_ppl = progressdlg.LongOpStatus(msg=_("Obtaining all rows"),
+        status_ppl = progressdlg.LongOpStatus(msg=_("Loading items..."),
                         total_steps=items, interval=items//10)
         pmon.add_op(status_ppl)
-        
+
         self.__total += items
 
-        def beat(key):
-            status_ppl.heartbeat()
-            # for python3 this returns a byte object, so conversion needed
-            if not isinstance(key, str):
-                key = key.decode('utf-8')
-            return key
-        
         with gen_cursor() as cursor:
-            handle_list = [beat(key) for key, data in cursor]
+            for handle, data in cursor:
+                if not isinstance(handle, str):
+                    handle = handle.decode('utf-8')
+                status_ppl.heartbeat()
+                if not handle in skip:
+                    if not dfilter or dfilter.match(handle, self.db):
+                        add_func(handle, data)
+                        self.__displayed += 1
         status_ppl.end()
-        status.heartbeat()
-
-        if dfilter:
-            _LOG.debug("rebuild filter %s" % dfilter)
-            _LOG.debug("    list before filter %s" % handle_list)
-            status_filter = progressdlg.LongOpStatus(msg=_("Applying filter"),
-                        total_steps=items, interval=items//10)
-            pmon.add_op(status_filter)
-            handle_list = dfilter.apply(self.db, handle_list, 
-                                        cb_progress=status_filter.heartbeat)
-            _LOG.debug("    list after filter %s" % handle_list)
-            status_filter.end()
-        status.heartbeat()
-
-        todisplay = len(handle_list)
-        status_col = progressdlg.LongOpStatus(msg=_("Constructing column data"),
-                total_steps=todisplay, interval=todisplay//10)
-        pmon.add_op(status_col)
-        for handle in handle_list:
-            status_col.heartbeat()
-            data = data_map(handle)
-            if not handle in skip:
-                add_func(handle, data)
-                self.__displayed += 1
-        status_col.end()
         status.end()
-        
+
     def add_node(self, parent, child, sortkey, handle, add_parent=True,
                  secondary=False):
         """
         Add a node to the map.
-        
+
         parent      The parent node for the child.  None for top level. If
                     this node does not exist, it will be added under the top
                     level if add_parent=True. For performance, if you have
@@ -657,9 +616,10 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
         sortkey     A key by which to sort child nodes of each parent.
         handle      The gramps handle of the object corresponding to the
                     node.  None if the node does not have a handle.
-        add_parent  Bool, if True, check if parent is present, if not add the 
+        add_parent  Bool, if True, check if parent is present, if not add the
                     parent as a top group with no handle
         """
+        self.clear_path_cache()
         if add_parent and not (parent in self.tree):
             #add parent to self.tree as a node with no handle, as the first
             #group level
@@ -692,12 +652,12 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
     def _add_dup_node(self, node, parent, child, sortkey, handle, secondary):
         """
         How to handle adding a node a second time
-        Default: if group nodes can have handles, it is allowed to add it 
+        Default: if group nodes can have handles, it is allowed to add it
             again, and this time setting the handle
         Otherwise, a node should never be added twice!
         """
         if not self.group_can_have_handle:
-            print ('WARNING: Attempt to add node twice to the model (%s: %s)' 
+            print ('WARNING: Attempt to add node twice to the model (%s: %s)'
                    % (str(parent), str(child)))
             return
         if handle:
@@ -710,6 +670,7 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
         """
         Remove a node from the map.
         """
+        self.clear_path_cache()
         if node.children:
             del self.handle2node[node.handle]
             node.set_handle(None)
@@ -726,24 +687,24 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
                 self.__total -= 1
             self.nodemap.del_node(node)
             del node
-            
+
             # emit row_deleted signal
             self.row_deleted(path)
-        
+
     def reverse_order(self):
         """
         Reverse the order of the map. Only for Gtk 3.9+ does this signal
         rows_reordered, so to propagate the change to the view, you need to
-        reattach the model to the view. 
+        reattach the model to the view.
         """
-        self.GTK38PLUS = (Gtk.get_major_version(), Gtk.get_minor_version()) >= (3,8)
+        self.clear_path_cache()
         self.__reverse = not self.__reverse
         top_node = self.tree[None]
         self._reverse_level(top_node)
 
     def _reverse_level(self, node):
         """
-        Reverse the order of a single level in the map and signal 
+        Reverse the order of a single level in the map and signal
         rows_reordered so the view is updated.
         If many changes are done, it is better to detach the model, do the
         changes to reverse the level, and reattach the model, so the view
@@ -758,8 +719,7 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
                 path = self.do_get_path(iternode)
             # activate when https://bugzilla.gnome.org/show_bug.cgi?id=684558
             # is resolved
-            if False and self.GTK38PLUS:
-                ##rows_reordered is only exposed in gi starting GTK 3.8
+            if False:
                 self.rows_reordered(path, iter, rows)
             if self.nrgroups > 1:
                 for child in node.children:
@@ -770,19 +730,20 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
         Return the headings of the levels in the hierarchy.
         """
         raise NotImplementedError
-        
+
     def add_row(self, handle, data):
         """
-        Add a row to the model.  In general this will add more then one node by
+        Add a row to the model.  In general this will add more than one node by
         using the add_node method.
         """
-        raise NotImplementedError
+        self.clear_path_cache()
 
     def add_row_by_handle(self, handle):
         """
         Add a row to the model.
         """
         assert isinstance(handle, str)
+        self.clear_path_cache()
         if self._get_node(handle) is not None:
             return # row already exists
         cput = time.clock()
@@ -798,7 +759,7 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
 
         _LOG.debug(self.__class__.__name__ + ' add_row_by_handle ' +
                     str(time.clock() - cput) + ' sec')
-        _LOG.debug("displayed %d / total: %d" % 
+        _LOG.debug("displayed %d / total: %d" %
                    (self.__displayed, self.__total))
 
     def delete_row_by_handle(self, handle):
@@ -807,14 +768,14 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
         """
         assert isinstance(handle, str)
         cput = time.clock()
+        self.clear_cache(handle)
         node = self._get_node(handle)
         if node is None:
             return # row not currently displayed
 
-        self.clear_cache(handle)
         parent = self.nodemap.node(node.parent)
         self.remove_node(node)
-        
+
         while parent is not None:
             next_parent = parent.parent and self.nodemap.node(parent.parent)
             if not parent.children:
@@ -826,10 +787,10 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
                 else:
                     self.remove_node(parent)
             parent = next_parent
-            
+
         _LOG.debug(self.__class__.__name__ + ' delete_row_by_handle ' +
                     str(time.clock() - cput) + ' sec')
-        _LOG.debug("displayed %d / total: %d" % 
+        _LOG.debug("displayed %d / total: %d" %
                    (self.__displayed, self.__total))
 
     def update_row_by_handle(self, handle):
@@ -837,12 +798,13 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
         Update a row in the model.
         """
         assert isinstance(handle, str)
+        self.clear_cache(handle)
         if self._get_node(handle) is None:
             return # row not currently displayed
 
         self.delete_row_by_handle(handle)
         self.add_row_by_handle(handle)
-        
+
         # If the node hasn't moved, all we need is to call row_changed.
         #self.row_changed(path, node)
 
@@ -853,7 +815,7 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
         iter = Gtk.TreeIter()
         iter.stamp = self.stamp
         #user data should be an object, so we store the long as str
-        
+
         iter.user_data = nodeid
         return iter
 
@@ -861,10 +823,10 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
         """
         Return an iter from the node.
         iters are always created afresh
-        
+
         Will raise IndexError if the maps are not filled yet, or if it is empty.
         Caller should take care of this if it allows calling with invalid path
-        
+
         :param path: node as it appears in the treeview
         :type path: Node
         """
@@ -881,14 +843,14 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
 
     def get_iter_from_handle(self, handle):
         """
-        Get the iter for a gramps handle. Should return None if iter not 
+        Get the iter for a gramps handle. Should return None if iter not
         visible
         """
         node = self._get_node(handle)
         if node is None:
             return None
         return self._get_iter(node)
-        
+
     def get_handle_from_iter(self, iter):
         """
         Get the gramps handle for an iter.  Return None if the iter does
@@ -949,7 +911,9 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
             val = self._get_value(node.handle, col, node.secondary)
         #GTK 3 should convert unicode objects automatically, but this
         # gives wrong column values, so convert for python 2.7
-        if not isinstance(val, str):
+        if val is None:
+            return ''
+        elif not isinstance(val, str):
             return val.encode('utf-8')
         else:
             return val
@@ -960,17 +924,19 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
         """
         if secondary is None:
             raise NotImplementedError
-        
-        if handle in self.lru_data:
-            data = self.lru_data[handle]
-        else:
+
+        cached, data = self.get_cached_value(handle, col)
+
+        if not cached:
             if not secondary:
                 data = self.map(handle)
             else:
                 data = self.map2(handle)
-            if not self._in_build:
-                self.lru_data[handle] = data
-                
+            if store_cache:
+                self.set_cached_value(handle, col, data)
+
+        if data is None:
+            return ''
         if not secondary:
             # None is used to indicate this column has no data
             if self.fmap[col] is None:
@@ -980,7 +946,7 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
             if self.fmap2[col] is None:
                 return ''
             value = self.fmap2[col](data)
-            
+
         return value
 
     def do_get_iter(self, path):
@@ -996,7 +962,13 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
             pathlist = path.get_indices()
         for index in pathlist:
             _index = (-index - 1) if self.__reverse else index
-            node = self.nodemap.node(node.children[_index][1])
+            try:
+                if len(node.children[_index]) > 0:
+                    node = self.nodemap.node(node.children[_index][1])
+                else:
+                    return False, Gtk.TreeIter()
+            except IndexError:
+                return False, Gtk.TreeIter()
         return True, self._get_iter(node)
 
     def get_node_from_iter(self, iter):
@@ -1004,13 +976,16 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
             return self.nodemap.node(iter.user_data)
         else:
             print ('Problem', iter, iter.user_data)
-            raise NotImplementedError
             return None
 
     def do_get_path(self, iter):
         """
         Returns a path from a given node.
         """
+        cached, path = self.get_cached_path(iter.user_data)
+        if cached:
+            (treepath, pathtup) = path
+            return treepath
         node = self.get_node_from_iter(iter)
         pathlist = []
         while node.parent is not None:
@@ -1019,16 +994,33 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
             while node is not None:
                 # Step backwards
                 nodeid = node.next if self.__reverse else node.prev
+                # Let's see if sibling is cached:
+                cached,  sib_path = self.get_cached_path(nodeid)
+                if cached:
+                    (sib_treepath, sib_pathtup) = sib_path
+                    # Does it have an actual path?
+                    if sib_pathtup:
+                        # Compute path to here from sibling:
+                        # parent_path + sib_path + offset
+                        newtup = (sib_pathtup[:-1] +
+                                  (sib_pathtup[-1] + index + 2, ) +
+                                  tuple(reversed(pathlist)))
+                        #print("computed path:", iter.user_data, newtup)
+                        retval = Gtk.TreePath(newtup)
+                        self.set_cached_path(iter.user_data, (retval, newtup))
+                        return retval
                 node = nodeid and self.nodemap.node(nodeid)
                 index += 1
             pathlist.append(index)
             node = parent
-
         if pathlist:
             pathlist.reverse()
-            return Gtk.TreePath(tuple(pathlist))
+            #print("actual path :", iter.user_data, tuple(pathlist))
+            retval = Gtk.TreePath(tuple(pathlist))
         else:
-            return None
+            retval = None
+        self.set_cached_path(iter.user_data, (retval, tuple(pathlist) if pathlist else None))
+        return retval
 
     def do_iter_next(self, iter):
         """
@@ -1058,7 +1050,7 @@ class TreeBaseModel(GObject.GObject, Gtk.TreeModel):
             else:
                 return False, None
         return True, self._new_iter(nodeid)
-        
+
     def do_iter_has_child(self, iter):
         """
         Find if the given node has any children.

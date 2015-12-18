@@ -31,7 +31,7 @@ _ = glocale.translation.gettext
 
 #------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #------------------------------------------------------------------------
 from gramps.plugins.lib.libmapservice import MapService
@@ -41,13 +41,13 @@ from gramps.gen.lib import PlaceType
 
 class OpensStreetMapService(MapService):
     """Map  service using http://openstreetmap.org
-        Resource: http://wiki.openstreetmap.org/index.php/Name_finder
+        Resource: http://wiki.openstreetmap.org/wiki/Nominatim
     """
     def __init__(self):
         MapService.__init__(self)
-    
+
     def calc_url(self):
-        """ Determine the url to use 
+        """ Determine the url to use
             Logic: use lat lon if present
                    otherwise use city and country if present
                    otherwise use description of the place
@@ -57,17 +57,17 @@ class OpensStreetMapService(MapService):
         if longitude and latitude:
             self.url = "http://www.openstreetmap.org/" \
                         "?lat=%s&lon=%s&zoom=15" % (latitude, longitude)
-                        
+
             return
-        
+
         location = get_main_location(self.database, place)
         city = location.get(PlaceType.CITY)
         country = location.get(PlaceType.COUNTRY)
         if city and country:
-            self.url = "http://open.mapquestapi.com/nominatim/v1/"\
+            self.url = "http://nominatim.openstreetmap.org/"\
                         "search.php?q=%s%%2C%s" % (city, country)
             return
-        
+
         titledescr = place_displayer.display(self.database, place)
-        self.url = "http://open.mapquestapi.com/nominatim/v1/"\
+        self.url = "http://nominatim.openstreetmap.org/"\
                         "search.php?q=%s" % '+'.join(titledescr.split())

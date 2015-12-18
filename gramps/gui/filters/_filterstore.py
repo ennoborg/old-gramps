@@ -27,13 +27,13 @@ Package providing filtering framework for GRAMPS.
 # GTK
 #
 #-------------------------------------------------------------------------
-from gi.repository import Gtk, GObject
+from gi.repository import Gtk
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from gramps.gen.filters import CustomFilters
@@ -46,7 +46,7 @@ from gramps.gen.filters import CustomFilters
 class FilterStore(Gtk.ListStore):
 
     def __init__(self, local_filters=[], namespace="generic", default=""):
-        GObject.GObject.__init__(self, str)
+        Gtk.ListStore.__init__(self, str)
         self.list_map = []
         self.def_index = 0
 

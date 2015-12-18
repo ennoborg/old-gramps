@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 """
-Tag editing module for Gramps. 
+Tag editing module for Gramps.
 """
 #-------------------------------------------------------------------------
 #
@@ -44,9 +44,8 @@ from ..listmodel import ListModel, TOGGLE
 # Constants
 #
 #-------------------------------------------------------------------------
-WIKI_HELP_PAGE = '%s_-_Entering_and_Editing_Data:_Detailed_-_part_3' % \
-                                                        URL_MANUAL_PAGE
-WIKI_HELP_SEC = _('manual|Tags')
+WIKI_HELP_PAGE = '%s_-_Filters' % URL_MANUAL_PAGE
+WIKI_HELP_SEC = _('manual|Tag_selection_dialog')
 
 #-------------------------------------------------------------------------
 #
@@ -66,7 +65,7 @@ class EditTagList(ManagedWindow):
 
         self.namemodel = None
         top = self._create_dialog()
-        self.set_window(top, None, _('Tag selection'))            
+        self.set_window(top, None, _('Tag selection'))
 
         for tag in full_list:
             self.namemodel.add([tag[0], tag in tag_list, tag[1]])
@@ -113,7 +112,7 @@ class EditTagList(ManagedWindow):
         slist.add(view)
         slist.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         top.vbox.pack_start(slist, 1, 1, 5)
-        
+
         top.add_button(_('_Help'), Gtk.ResponseType.HELP)
         top.add_button(_('_Cancel'), Gtk.ResponseType.CANCEL)
         top.add_button(_('_OK'), Gtk.ResponseType.OK)

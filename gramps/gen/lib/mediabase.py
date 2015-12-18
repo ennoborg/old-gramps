@@ -25,7 +25,7 @@ MediaBase class for Gramps.
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from .mediaref import MediaRef
@@ -40,11 +40,11 @@ class MediaBase(object):
     """
     Base class for storing media references.
     """
-    
+
     def __init__(self, source=None):
         """
         Create a new MediaBase, copying from source if not None.
-        
+
         :param source: Object used to initialize the new object
         :type source: MediaBase
         """
@@ -60,7 +60,7 @@ class MediaBase(object):
         """
         Convert the data held in this object to a structure (eg,
         struct) that represents all the data elements.
-        
+
         This method is used to recursively convert the object into a
         self-documenting form that can easily be used for various
         purposes, including diffs and queries.
@@ -153,7 +153,7 @@ class MediaBase(object):
 
         :param obj_handle: The media handle to be checked.
         :type obj_handle: str
-        :returns: Returns whether the object or any of it's child objects has 
+        :returns: Returns whether the object or any of it's child objects has
                   reference to this media handle.
         :rtype: bool
         """

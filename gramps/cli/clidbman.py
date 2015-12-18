@@ -30,10 +30,10 @@ creating, and deleting of databases.
 # Standard python modules
 #
 #-------------------------------------------------------------------------
+import re
 import os
 import sys
 import time
-import io
 from urllib.parse import urlparse
 from urllib.request import urlopen, url2pathname
 import tempfile
@@ -56,7 +56,7 @@ from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 from gramps.gen.plug import BasePluginManager
 from gramps.gen.config import config
-from gramps.gen.constfunc import win, conv_to_unicode
+from gramps.gen.constfunc import win
 #-------------------------------------------------------------------------
 #
 # constants
@@ -98,29 +98,29 @@ class CLIDbManager(object):
     IND_TVAL = 4
     IND_USE_ICON_BOOL = 5
     IND_STOCK_ID =6
-    
+
     ICON_NONE     = 0
     ICON_RECOVERY = 1
     ICON_LOCK     = 2
     ICON_OPEN     = 3
-    
+
     ICON_MAP = {
                 ICON_NONE : None,
                 ICON_RECOVERY : None,
                 ICON_LOCK : None,
                 ICON_OPEN : None,
                }
-    
+
     ERROR = _errordialog
     def __init__(self, dbstate):
         self.dbstate = dbstate
         self.msg = None
-        
+
         if dbstate:
             self.active  = dbstate.db.get_save_path()
         else:
             self.active = None
-        
+
         self.current_names = []
         if dbstate:
             self._populate_cli()
@@ -155,20 +155,40 @@ class CLIDbManager(object):
         dbid_path = os.path.join(dirpath, "database.txt")
         if os.path.isfile(dbid_path):
             dbid = open(dbid_path).read().strip()
-        try:
-            database = self.dbstate.make_database(dbid)
-            database.load(dirpath, None)
-            retval = database.get_summary()
-        except Exception as msg:
-            retval = {"Unavailable": str(msg)[:74] + "..."}
-        retval.update({
-            _("Family Tree"): name,
-            _("Path"): dirpath,
-            _("Database backend"): dbid,
-            _("Last accessed"): time_val(dirpath)[1],
-            _("Locked?"): self.is_locked(dirpath),
-        })
+        if not self.is_locked(dirpath):
+            try:
+                database = self.dbstate.make_database(dbid)
+                database.load(dirpath, None)
+                retval = database.get_summary()
+                database.close()
+            except Exception as msg:
+                retval = {_("Unavailable"): str(msg)[:74] + "..."}
+        else:
+            retval = {_("Unavailable"): "locked"}
+        retval.update({_("Family Tree"): name,
+                       _("Path"): dirpath,
+                       _("Database backend"): dbid,
+                       _("Last accessed"): time_val(dirpath)[1],
+                       _("Locked?"): self.is_locked(dirpath),
+                   })
         return retval
+
+    def print_family_tree_summaries(self):
+        """
+        Prints a detailed list of the known family trees.
+        """
+        print(_('Gramps Family Trees:'))
+        for item in self.current_names:
+            (name, dirpath, path_name, last,
+             tval, enable, stock_id) = item
+            summary = self.get_dbdir_summary(dirpath, name)
+            print(_("Family Tree \"%s\":") % summary[_("Family Tree")])
+            for item in sorted(summary):
+                if item != "Family Tree":
+                    # translators: needed for French, ignore otherwise
+                    print(_("   %(item)s: %(summary)s") % {
+                        'item' : item,
+                        'summary' : summary[item] } )
 
     def family_tree_summary(self):
         """
@@ -177,7 +197,7 @@ class CLIDbManager(object):
         # make the default directory if it does not exist
         summary_list = []
         for item in self.current_names:
-            (name, dirpath, path_name, last, 
+            (name, dirpath, path_name, last,
              tval, enable, stock_id) = item
             retval = self.get_dbdir_summary(dirpath, name)
             summary_list.append( retval )
@@ -197,12 +217,12 @@ class CLIDbManager(object):
                 dirpath = os.path.join(dbdir, dpath)
                 path_name = os.path.join(dirpath, NAME_FILE)
                 if os.path.isfile(path_name):
-                    file = io.open(path_name, 'r', encoding='utf8')
+                    file = open(path_name, 'r', encoding='utf8')
                     name = file.readline().strip()
                     file.close()
 
                     (tval, last) = time_val(dirpath)
-                    (enable, stock_id) = self.icon_values(dirpath, self.active, 
+                    (enable, stock_id) = self.icon_values(dirpath, self.active,
                                                      self.dbstate.db.is_open())
 
                     if (stock_id == 'gramps-lock'):
@@ -256,7 +276,7 @@ class CLIDbManager(object):
             name_list = [ name[0] for name in self.current_names ]
             title = find_next_db_name(name_list)
 
-        name_file = io.open(path_name, "w", encoding='utf8')
+        name_file = open(path_name, "w", encoding='utf8')
         name_file.write(title)
         name_file.close()
 
@@ -268,7 +288,7 @@ class CLIDbManager(object):
             newdb.write_version(new_path)
 
         (tval, last) = time_val(new_path)
-        
+
         self.current_names.append((title, new_path, path_name,
                                    last, tval, False, ""))
         return new_path, title
@@ -282,7 +302,7 @@ class CLIDbManager(object):
     def import_new_db(self, filename, user):
         """
         Attempt to import the provided file into a new database.
-        A new database will only be created if an appropriate importer was 
+        A new database will only be created if an appropriate importer was
         found.
 
         :param filename: a fully-qualified path, filename, and
@@ -290,7 +310,7 @@ class CLIDbManager(object):
 
         :param user: a :class:`.cli.user.User` or :class:`.gui.user.User`
                      instance for managing user interaction.
-        
+
         :returns: A tuple of (new_path, name) for the new database
                   or (None, None) if no import was performed.
         """
@@ -327,20 +347,21 @@ class CLIDbManager(object):
             if format == plugin.get_extension():
 
                 new_path, name = self._create_new_db(name)
-    
+
                 # Create a new database
                 self.__start_cursor(_("Importing data..."))
 
-                dbase = self.dbstate.make_database("bsddb")
+                dbid = config.get('behavior.database-backend')
+                dbase = self.dbstate.make_database(dbid)
                 dbase.load(new_path, user.callback)
-    
+
                 import_function = plugin.get_import_function()
                 import_function(dbase, filename, user)
-    
+
                 # finish up
                 self.__end_cursor()
                 dbase.close()
-                
+
                 return new_path, name
         return None, None
 
@@ -360,18 +381,50 @@ class CLIDbManager(object):
             return True
         return False
 
+    def remove_database(self, dbname, user=None):
+        """
+        Deletes a database folder given a pattenr that matches 
+        its proper name.
+        """
+        dbdir = os.path.expanduser(config.get('behavior.database-path'))
+        match_list = []
+        for dpath in os.listdir(dbdir):
+            dirpath = os.path.join(dbdir, dpath)
+            path_name = os.path.join(dirpath, NAME_FILE)
+            if os.path.isfile(path_name):
+                file = open(path_name, 'r', encoding='utf8')
+                name = file.readline().strip()
+                file.close()
+                if re.match("^" + dbname + "$", name): 
+                    match_list.append((name, dirpath))
+        if len(match_list) == 0:
+            CLIDbManager.ERROR("Family tree not found", 
+                               "No matching family tree found: '%s'" % dbname)
+        # now delete them:
+        for (name, directory) in match_list:
+            if user is None or user.prompt(
+                    _('Remove family tree warning'),
+                    _('Are you sure you want to remove the family tree named\n"%s"?' % name),
+                    _('Yes'), _('No'), None):
+                try:
+                    for (top, dirs, files) in os.walk(directory):
+                        for filename in files:
+                            os.unlink(os.path.join(top, filename))
+                    os.rmdir(directory)
+                except (IOError, OSError) as msg:
+                    CLIDbManager.ERROR(_("Could not delete Family Tree"),
+                                       str(msg))
+
     def rename_database(self, filepath, new_text):
         """
         Renames the database by writing the new value to the name.txt file
         Returns old_name, new_name if success, None, None if no success
         """
         try:
-            filepath = conv_to_unicode(filepath, 'utf8')
-            new_text = conv_to_unicode(new_text, 'utf8')
-            name_file = io.open(filepath, "r", encoding='utf8')
+            name_file = open(filepath, "r", encoding='utf8')
             old_text=name_file.read()
             name_file.close()
-            name_file = io.open(filepath, "w", encoding='utf8')
+            name_file = open(filepath, "w", encoding='utf8')
             name_file.write(new_text)
             name_file.close()
         except (OSError, IOError) as msg:
@@ -386,7 +439,7 @@ class CLIDbManager(object):
         """
         if os.path.exists(os.path.join(dbpath, "lock")):
             os.unlink(os.path.join(dbpath, "lock"))
-    
+
     def icon_values(self, dirpath, active, is_open):
         """
         If the directory path is the active path, then return values
@@ -424,7 +477,7 @@ def find_next_db_name(name_list):
     while True:
         title = "%s %d" % (DEFAULT_TITLE, i)
         if title not in name_list:
-            return conv_to_unicode(title)
+            return title
         i += 1
 
 def find_next_db_dir():
@@ -444,7 +497,7 @@ def find_next_db_dir():
 def time_val(dirpath):
     """
     Return the last modified time of the database. We do this by looking
-    at the modification time of the meta db file. If this file does not 
+    at the modification time of the meta db file. If this file does not
     exist, we indicate that database as never modified.
     """
     meta = os.path.join(dirpath, META_NAME)
@@ -473,7 +526,7 @@ def find_locker_name(dirpath):
     """
     try:
         fname = os.path.join(dirpath, "lock")
-        ifile = io.open(fname, 'r', encoding='utf8')
+        ifile = open(fname, 'r', encoding='utf8')
         username = ifile.read().strip()
         # feature request 2356: avoid genitive form
         last = _("Locked by %s") % username

@@ -35,7 +35,7 @@ from gi.repository import Gtk
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from gramps.gen.datehandler import format_time
@@ -99,19 +99,19 @@ class SourceModel(FlatBaseModel):
         return len(self.fmap)+1
 
     def column_title(self,data):
-        return str(data[2])
+        return data[2]
 
     def column_author(self,data):
-        return str(data[3])
+        return data[3]
 
     def column_abbrev(self,data):
-        return str(data[7])
+        return data[7]
 
     def column_id(self,data):
-        return str(data[1])
+        return data[1]
 
     def column_pubinfo(self,data):
-        return str(data[4])
+        return data[4]
 
     def column_private(self, data):
         if data[12]:
@@ -122,7 +122,7 @@ class SourceModel(FlatBaseModel):
 
     def column_change(self,data):
         return format_time(data[8])
-    
+
     def sort_change(self,data):
         return "%012x" % data[8]
 
@@ -130,22 +130,31 @@ class SourceModel(FlatBaseModel):
         """
         Return the tag name from the given tag handle.
         """
-        return self.db.get_tag_from_handle(tag_handle).get_name()
-        
+        cached, value = self.get_cached_value(tag_handle, "TAG_NAME")
+        if not cached:
+            value = self.db.get_tag_from_handle(tag_handle).get_name()
+            self.set_cached_value(tag_handle, "TAG_NAME", value)
+        return value
+
     def column_tag_color(self, data):
         """
         Return the tag color.
         """
-        tag_color = "#000000000000"
-        tag_priority = None
-        for handle in data[11]:
-            tag = self.db.get_tag_from_handle(handle)
-            if tag:
-                this_priority = tag.get_priority()
-                if tag_priority is None or this_priority < tag_priority:
-                    tag_color = tag.get_color()
-                    tag_priority = this_priority
-        return tag_color
+        tag_handle = data[0]
+        cached, value = self.get_cached_value(tag_handle, "TAG_COLOR")
+        if not cached:
+            tag_color = "#000000000000"
+            tag_priority = None
+            for handle in data[11]:
+                tag = self.db.get_tag_from_handle(handle)
+                if tag:
+                    this_priority = tag.get_priority()
+                    if tag_priority is None or this_priority < tag_priority:
+                        tag_color = tag.get_color()
+                        tag_priority = this_priority
+            value = tag_color
+            self.set_cached_value(tag_handle, "TAG_COLOR", value)
+        return value
 
     def column_tags(self, data):
         """

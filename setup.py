@@ -91,9 +91,13 @@ def intltool_version():
         except:
             return (0,0,0)
     else:
-        cmd = 'intltool-update --version | head -1 | cut -d" " -f3'
+        cmd = 'intltool-update --version 2> /dev/null' # pathological case
         retcode, version_str = subprocess.getstatusoutput(cmd)
         if retcode != 0:
+            return None
+        cmd = 'intltool-update --version 2> /dev/null | head -1 | cut -d" " -f3'
+        retcode, version_str = subprocess.getstatusoutput(cmd)
+        if retcode != 0: # unlikely but just barely imaginable, so leave it
             return None
     return tuple([int(num) for num in version_str.split('.')])
 
@@ -186,7 +190,8 @@ def build_intl(build_cmd):
     '''
     Merge translation files into desktop and mime files
     '''
-    if intltool_version() < (0, 25, 0):
+    i_v = intltool_version()
+    if i_v is None or i_v < (0, 25, 0):
         return
     data_files = build_cmd.distribution.data_files
     base = build_cmd.build_base
@@ -406,7 +411,7 @@ else:
 data_files_core = [('share/mime-info', ['data/gramps.mime']),
                    ('share/icons', ['images/gramps.png'])]
 DOC_FILES = ['AUTHORS', 'COPYING', 'FAQ', 'INSTALL', 'LICENSE', 'NEWS',
-             'README', 'TODO']
+             'README.md', 'TODO']
 GEDCOM_FILES = glob.glob(os.path.join('example', 'gedcom', '*.*'))
 GRAMPS_FILES = glob.glob(os.path.join('example', 'gramps', '*.*'))
 IMAGE_WEB = glob.glob(os.path.join('images', 'webstuff', '*.png'))
@@ -429,8 +434,12 @@ SVG_FILES = glob.glob(os.path.join('data', '*.svg'))
 data_files_core.append(('share/icons/gnome/48x48/mimetypes', PNG_FILES))
 data_files_core.append(('share/icons/gnome/scalable/mimetypes', SVG_FILES))
 
+DTD_FILES = glob.glob(os.path.join('data', '*.dtd'))
+RNG_FILES = glob.glob(os.path.join('data', '*.rng'))
 XML_FILES = glob.glob(os.path.join('data', '*.xml'))
 data_files_core.append(('share/gramps', XML_FILES))
+data_files_core.append(('share/gramps', DTD_FILES))
+data_files_core.append(('share/gramps', RNG_FILES))
 
 data_files_gui = []
 IMAGE_FILES = glob.glob(os.path.join('images', '*.*'))

@@ -39,7 +39,7 @@ from gi.repository import Gtk
 
 #------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #------------------------------------------------------------------------
 from gramps.gen.filters import GenericFilter, rules
@@ -59,7 +59,7 @@ from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.sgettext
 from gramps.gui.glade import Glade
 from gramps.gui.editors import FilterEditor
-from gramps.gen.constfunc import conv_to_unicode, get_curr_dir
+from gramps.gen.constfunc import get_curr_dir
 
 #-------------------------------------------------------------------------
 #
@@ -67,7 +67,7 @@ from gramps.gen.constfunc import conv_to_unicode, get_curr_dir
 #
 #-------------------------------------------------------------------------
 WIKI_HELP_PAGE = '%s_-_Tools' % URL_MANUAL_PAGE
-WIKI_HELP_SEC = _('manual|Compare_Individual_Events...')
+WIKI_HELP_SEC = _('manual|Compare_Individual_Events')
 
 #------------------------------------------------------------------------
 #
@@ -391,6 +391,7 @@ class DisplayChart(ManagedWindow):
 
     def on_write_table(self, obj):
         f = Gtk.FileChooserDialog(_("Select filename"),
+                                  parent=self.window,
                                   action=Gtk.FileChooserAction.SAVE,
                                   buttons=(_('_Cancel'),
                                            Gtk.ResponseType.CANCEL,
@@ -402,7 +403,7 @@ class DisplayChart(ManagedWindow):
         f.hide()
 
         if status == Gtk.ResponseType.OK:
-            name = conv_to_unicode(f.get_filename())
+            name = f.get_filename()
             doc = ODSTab(len(self.row_data))
             doc.creator(self.db.get_researcher().get_name())
 

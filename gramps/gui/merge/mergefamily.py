@@ -30,7 +30,7 @@ Provide merge capabilities for families.
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.sgettext
 from gramps.gen.display.name import displayer as name_displayer
-from gramps.gen.const import URL_MANUAL_PAGE
+from gramps.gen.const import URL_MANUAL_SECT3
 from ..display import display_help
 from gramps.gen.errors import MergeError
 from ..dialog import ErrorDialog
@@ -42,8 +42,7 @@ from gramps.gen.merge import MergePersonQuery, MergeFamilyQuery
 # Gramps constants
 #
 #-------------------------------------------------------------------------
-WIKI_HELP_PAGE = '%s_-_Entering_and_Editing_Data:_Detailed_-_part_3' % \
-    URL_MANUAL_PAGE
+WIKI_HELP_PAGE = URL_MANUAL_SECT3
 WIKI_HELP_SEC = _('manual|Merge_Families')
 _GLADE_FILE = 'mergefamily.glade'
 
@@ -148,8 +147,9 @@ class MergeFamily(ManagedWindow):
         rbutton1 = self.get_widget("handle_btn1")
         rbutton_label1 = self.get_widget("label_handle_btn1")
         rbutton_label2 = self.get_widget("label_handle_btn2")
-        rbutton_label1.set_label("%s and %s [%s]" %(father1, mother1, gramps1))
-        rbutton_label2.set_label("%s and %s [%s]" %(father2, mother2, gramps2))
+        add = _("and")
+        rbutton_label1.set_label("%s %s %s [%s]" %(father1, add, mother1, gramps1))
+        rbutton_label2.set_label("%s %s %s [%s]" %(father2, add, mother2, gramps2))
         rbutton1.connect("toggled", self.on_handle1_toggled)
 
         self.connect_button("family_help", self.cb_help)
@@ -161,7 +161,7 @@ class MergeFamily(ManagedWindow):
         """Preferred family changes"""
         if obj.get_active():
             father1_text = self.get_widget("father1").get_text()
-            if (father1_text != " []" or 
+            if (father1_text != " []" or
                 self.get_widget("father2").get_text() == " []"):
                     self.get_widget("father_btn1").set_active(True)
             mother1_text = self.get_widget("mother1").get_text()
@@ -198,7 +198,7 @@ class MergeFamily(ManagedWindow):
         else:
             phoenix = self.fy2
             titanic = self.fy1
-            # Add second handle to history so that when merge is complete, 
+            # Add second handle to history so that when merge is complete,
             # phoenix is the selected row.
             self.uistate.set_active(phoenix.get_handle(), 'Family')
 

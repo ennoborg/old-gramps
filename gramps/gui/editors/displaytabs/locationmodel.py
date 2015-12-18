@@ -27,7 +27,7 @@ from gi.repository import Gtk
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS classes
+# Gramps classes
 #
 #-------------------------------------------------------------------------
 
@@ -43,5 +43,5 @@ class LocationModel(Gtk.ListStore):
         Gtk.ListStore.__init__(self, str, str, str, str, str, str, object)
         self.db = db
         for obj in obj_list:
-            self.append(row=[obj.street, obj.locality, obj.city, obj.county, 
+            self.append(row=[obj.street, obj.locality, obj.city, obj.county,
                              obj.state, obj.country, obj, ])

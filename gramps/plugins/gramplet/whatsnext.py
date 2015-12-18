@@ -22,7 +22,7 @@
 
 #------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #------------------------------------------------------------------------
 from gramps.gen.lib import EventType, FamilyRelType
@@ -57,7 +57,7 @@ class WhatNextGramplet(Gramplet):
         name = _("Minimum number of items to display")
         opt = NumberOption(name, self.__todos_wanted, 1, 300)
         self.opts.append(opt)
-        
+
         # How many generations of descendants to process before we go up to the
         # next level of ancestors.
         name = _("Descendant generations per ancestor generation")

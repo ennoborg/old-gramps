@@ -30,8 +30,6 @@ mechanism for the user to edit attribute information.
 # Python modules
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
@@ -45,11 +43,23 @@ from gi.repository import Gtk
 # gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
 from .editsecondary import EditSecondary
 from gramps.gen.lib import NoteType
 from ..glade import Glade
 from .displaytabs import CitationEmbedList, NoteTab
 from ..widgets import MonitoredEntry, PrivacyButton, MonitoredDataType
+from gramps.gen.const import URL_MANUAL_SECT3
+
+#-------------------------------------------------------------------------
+#
+# Constants
+#
+#-------------------------------------------------------------------------
+
+WIKI_HELP_PAGE = URL_MANUAL_SECT3
+WIKI_HELP_SEC = _('manual|Attribute_Editor_dialog')
 
 #-------------------------------------------------------------------------
 #
@@ -80,22 +90,23 @@ class EditAttributeRoot(EditSecondary):
         self.width_key = 'interface.attribute-width'
         self.height_key = 'interface.attribute-height'
         self.top = Glade('editattribute.glade')
-        
+
         self.set_window(self.top.toplevel,
                         self.top.get_object('title'),
                         _('Attribute Editor'))
 
     def _connect_signals(self):
         self.define_cancel_button(self.top.get_object('cancel'))
-        self.define_help_button(self.top.get_object('help'))
         self.define_ok_button(self.top.get_object('ok'),self.save)
+        self.define_help_button(self.top.get_object('help'),
+                WIKI_HELP_PAGE, WIKI_HELP_SEC)
 
     def _setup_fields(self):
         self.value_field = MonitoredEntry(
             self.top.get_object("attr_value"),
             self.obj.set_value, self.obj.get_value,
             self.db.readonly)
-        
+
         self.priv = PrivacyButton(
             self.top.get_object("private"),
             self.obj, self.db.readonly)
@@ -111,11 +122,11 @@ class EditAttributeRoot(EditSecondary):
 
     def _create_tabbed_pages(self):
         notebook = Gtk.Notebook()
-        
+
         self._setup_notebook_tabs( notebook)
         notebook.show_all()
         self.top.get_object('vbox').pack_start(notebook, True, True, 0)
-        
+
     def build_menu_names(self, attrib):
         if not attrib:
             label = _("New Attribute")
@@ -132,7 +143,7 @@ class EditAttributeRoot(EditSecondary):
         form and updates the Attribute data structure.
         """
         t = self.obj.get_type()
-        
+
         if t.is_custom() and str(t) == '':
             from ..dialog import ErrorDialog
             ErrorDialog(
@@ -150,10 +161,10 @@ class EditAttributeRoot(EditSecondary):
 #-------------------------------------------------------------------------
 class EditSrcAttribute(EditAttributeRoot):
     """
-    Source attribute are minimal attributes. This Displays the editor to 
+    Source attribute are minimal attributes. This Displays the editor to
     edit these.
     """
-    
+
     def __init__(self, state, uistate, track, attrib, title, data_list, callback):
         """
         Displays the dialog box.
@@ -168,7 +179,7 @@ class EditSrcAttribute(EditAttributeRoot):
         """
         EditAttributeRoot.__init__(self, state, uistate, track, attrib, title,
                                    data_list, callback)
-    
+
 #-------------------------------------------------------------------------
 #
 # EditAttribute class
@@ -202,13 +213,13 @@ class EditAttribute(EditAttributeRoot):
                                              self.obj.get_citation_list())
         self._add_tab(notebook, self.srcref_list)
         self.track_ref_for_deletion("srcref_list")
-        
+
         self.note_tab = NoteTab(self.dbstate, self.uistate, self.track,
                     self.obj.get_note_list(),
                     notetype = NoteType.ATTRIBUTE)
         self._add_tab(notebook, self.note_tab)
         self.track_ref_for_deletion("note_tab")
-        
+
         self._setup_notebook_tabs( notebook)
         notebook.show_all()
         self.top.get_object('vbox').pack_start(notebook, True, True, 0)

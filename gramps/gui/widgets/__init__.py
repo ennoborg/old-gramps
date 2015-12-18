@@ -28,6 +28,7 @@ from .expandcollapsearrow import *
 from .labels import *
 from .linkbox import *
 from .photo import *
+from .placeentry import *
 from .monitoredwidgets import *
 from .selectionwidget import SelectionWidget, Region
 from .shortlistcomboentry import *
@@ -42,4 +43,4 @@ from .undoablestyledbuffer import *
 from .validatedcomboentry import *
 from .validatedmaskedentry import *
 from .valueaction import *
-from .valuetoolitem import * 
+from .valuetoolitem import *

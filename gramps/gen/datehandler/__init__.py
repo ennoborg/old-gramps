@@ -8,7 +8,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful, 
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
@@ -32,7 +32,7 @@ import logging
 from ..const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.sgettext
 # import prerequisites for localized handlers
-from ._datehandler import (LANG, LANG_SHORT, LANG_TO_PARSER, LANG_TO_DISPLAY, 
+from ._datehandler import (LANG, LANG_SHORT, LANG_TO_PARSER, LANG_TO_DISPLAY,
                           register_datehandler)
 from . import _datestrings
 
@@ -48,6 +48,7 @@ from . import _date_es
 from . import _date_fi
 from . import _date_fr
 from . import _date_hr
+from . import _date_hu
 from . import _date_it
 from . import _date_ja
 from . import _date_lt
@@ -103,6 +104,6 @@ if __name__ == "__main__":
             continue
         m = max(m, len(d.formats))
         print("{}: {} {} own dg: {}".format(
-            l, len(d.formats), d.formats, 
+            l, len(d.formats), d.formats,
             d._display_gregorian != DateDisplay._display_gregorian))
     print("MAX: ", m)

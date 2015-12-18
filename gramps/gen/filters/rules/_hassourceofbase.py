@@ -29,7 +29,7 @@ _ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from . import Rule
@@ -46,7 +46,7 @@ class HasSourceOfBase(Rule):
     name        = 'Object with the <source>'
     category    = _('Citation/source filters')
     description = 'Matches objects who have a particular source'
-    
+
     def prepare(self,db):
         if self.list[0] == '':
             self.source_handle = None

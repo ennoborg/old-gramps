@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-"""Ancestor Gramplet"""
+"""Ancestors Gramplet"""
 
 #-------------------------------------------------------------------------
 #
@@ -63,7 +63,7 @@ class Ancestor(Gramplet):
                   ('', NOSORT, 1),
                   ('', NOSORT, 1), # tooltip
                   ('', NOSORT, 100)] # handle
-        self.model = ListModel(self.view, titles, list_mode="tree", 
+        self.model = ListModel(self.view, titles, list_mode="tree",
                                event_func=self.cb_double_click)
         return self.view
 
@@ -73,14 +73,14 @@ class Ancestor(Gramplet):
         """
         if active_handle:
             person = self.dbstate.db.get_person_from_handle(active_handle)
-            if person:
-                family_handle = person.get_main_parents_family_handle()
+            family_handle = person.get_main_parents_family_handle()
+            if family_handle:
                 family = self.dbstate.db.get_family_from_handle(family_handle)
-                if family and (family.get_father_handle() or 
+                if family and (family.get_father_handle() or
                                family.get_mother_handle()):
                     return True
         return False
-        
+
     def cb_double_click(self, treeview):
         """
         Handle double click on treeview.
@@ -108,7 +108,7 @@ class Ancestor(Gramplet):
             self.set_has_data(self.get_has_data(active_handle))
         else:
             self.set_has_data(False)
-    
+
     def main(self):
         active_handle = self.get_active('Person')
         self.model.clear()
@@ -134,7 +134,7 @@ class Ancestor(Gramplet):
             birth_date = get_date(birth)
             birth_sort = '%012d' % birth.get_date_object().get_sort_value()
             birth_text = _('%(abbr)s %(date)s') % \
-                         {'abbr': birth.type.get_abbreviation(), 
+                         {'abbr': birth.type.get_abbreviation(),
                           'date': birth_date}
 
         death_date = death_sort = death_text = ''
@@ -142,21 +142,24 @@ class Ancestor(Gramplet):
             death_date = get_date(death)
             death_sort = '%012d' % death.get_date_object().get_sort_value()
             death_text = _('%(abbr)s %(date)s') % \
-                         {'abbr': death.type.get_abbreviation(), 
+                         {'abbr': death.type.get_abbreviation(),
                           'date': death_date}
 
         tooltip = name + '\n' + birth_text + '\n' + death_text
 
         label = _('%(depth)s. %(name)s') % {'depth': depth, 'name': name}
-        item_id = self.model.add([label, birth_date, birth_sort, 
+        item_id = self.model.add([label, birth_date, birth_sort,
                                   tooltip, person_handle], node=parent_id)
 
         family_handle = person.get_main_parents_family_handle()
-        family = self.dbstate.db.get_family_from_handle(family_handle)
-        if family:
-            if family.get_father_handle():
-                self.add_to_tree(depth + 1, item_id, family.get_father_handle())
-            if family.get_mother_handle():
-                self.add_to_tree(depth + 1, item_id, family.get_mother_handle())
+        if family_handle:
+            family = self.dbstate.db.get_family_from_handle(family_handle)
+            if family:
+                father_handle = family.get_father_handle()
+                if father_handle:
+                    self.add_to_tree(depth + 1, item_id, father_handle)
+                mother_handle = family.get_mother_handle()
+                if mother_handle:
+                    self.add_to_tree(depth + 1, item_id, mother_handle)
 
         return item_id

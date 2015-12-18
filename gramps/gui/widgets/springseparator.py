@@ -35,7 +35,6 @@ _LOG = logging.getLogger(".widgets.springseparator")
 # GTK modules
 #
 #-------------------------------------------------------------------------
-from gi.repository import GObject
 from gi.repository import Gtk
 
 #-------------------------------------------------------------------------
@@ -45,19 +44,19 @@ from gi.repository import Gtk
 #-------------------------------------------------------------------------
 class SpringSeparatorToolItem(Gtk.SeparatorToolItem):
     """Custom separator toolitem.
-    
+
     Its only purpose is to push following tool items to the right end
     of the toolbar.
-    
+
     """
     __gtype_name__ = "SpringSeparatorToolItem"
-    
+
     def __init__(self):
-        GObject.GObject.__init__(self)
-        
+        Gtk.SeparatorToolItem.__init__(self)
+
         self.set_draw(False)
         self.set_expand(True)
-        
+
 #-------------------------------------------------------------------------
 #
 # SpringSeparatorAction class
@@ -65,12 +64,12 @@ class SpringSeparatorToolItem(Gtk.SeparatorToolItem):
 #-------------------------------------------------------------------------
 class SpringSeparatorAction(Gtk.Action):
     """Custom Action to hold a SpringSeparatorToolItem."""
-    
+
     __gtype_name__ = "SpringSeparatorAction"
-    
+
     def __init__(self, name, label, tooltip, stock_id):
-        GObject.GObject.__init__(self, name=name, label=label,
-                                 tooltip=tooltip, stock_id=stock_id)
+        Gtk.Action.__init__(self, name=name, label=label,
+                            tooltip=tooltip, stock_id=stock_id)
 
 ## TODO GTK3, How to connect these? Used in styledtexteditor
 ##SpringSeparatorToolItem.set_related_action(SpringSeparatorAction)

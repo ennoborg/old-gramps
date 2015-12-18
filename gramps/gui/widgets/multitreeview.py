@@ -8,7 +8,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful, 
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
@@ -40,21 +40,9 @@ class MultiTreeView(Gtk.TreeView):
         Gtk.TreeView.__init__(self)
         self.connect('button_press_event', self.on_button_press)
         self.connect('button_release_event', self.on_button_release)
+        self.connect('grab_broken_event', self.on_grab_broken)
         self.connect('key_press_event', self.key_press_event)
         self.defer_select = False
-
-    if (Gtk.get_major_version(), Gtk.get_minor_version()) < (3, 8):
-        __grid_lines_remove_vertical = {
-            Gtk.TreeViewGridLines.NONE : Gtk.TreeViewGridLines.NONE,
-            Gtk.TreeViewGridLines.HORIZONTAL : Gtk.TreeViewGridLines.HORIZONTAL,
-            Gtk.TreeViewGridLines.VERTICAL : Gtk.TreeViewGridLines.NONE,
-            Gtk.TreeViewGridLines.BOTH : Gtk.TreeViewGridLines.HORIZONTAL
-        }
-        def set_grid_lines(self, grid_lines):
-            if self.get_direction() == Gtk.TextDirection.RTL:
-                # Work around a gtk RTL bug, see #6871
-                grid_lines = MultiTreeView.__grid_lines_remove_vertical[grid_lines]
-            super(MultiTreeView, self).set_grid_lines(grid_lines)
 
     def key_press_event(self, widget, event):
         if event.type == Gdk.EventType.KEY_PRESS:
@@ -75,7 +63,7 @@ class MultiTreeView(Gtk.TreeView):
         # Here we intercept mouse clicks on selected items so that we can
         # drag multiple items without the click selecting only one
         target = self.get_path_at_pos(int(event.x), int(event.y))
-        if (target 
+        if (target
             and event.type == Gdk.EventType.BUTTON_PRESS
             and not (event.get_state() & (Gdk.ModifierType.CONTROL_MASK|Gdk.ModifierType.SHIFT_MASK))
             and self.get_selection().path_is_selected(target[0])):
@@ -86,12 +74,16 @@ class MultiTreeView(Gtk.TreeView):
     def on_button_release(self, widget, event):
         # re-enable selection
         self.get_selection().set_select_function(lambda *ignore: True, None)
-        
-        target = self.get_path_at_pos(int(event.x), int(event.y))	
-        if (self.defer_select and target 
+
+        target = self.get_path_at_pos(int(event.x), int(event.y))
+        if (self.defer_select and target
             and self.defer_select == target[0]
             and not (event.x==0 and event.y==0)): # certain drag and drop
             self.set_cursor(target[0], target[1], False)
-            
+
         self.defer_select=False
 
+    def on_grab_broken(self, widget, event):
+        # re-enable selection
+        self.get_selection().set_select_function(lambda *ignore: True, None)
+        self.defer_select=False

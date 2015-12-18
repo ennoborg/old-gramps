@@ -18,7 +18,7 @@
 
 #------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #------------------------------------------------------------------------
 from gramps.gen.plug import Gramplet
@@ -55,7 +55,7 @@ class CalendarGramplet(Gramplet):
         year, month, day = self.gui.calendar.get_date()
         date = Date()
         date.set_yr_mon_day(year, month + 1, day)
-        run_quick_report_by_name(self.gui.dbstate, 
-                                 self.gui.uistate, 
-                                 'onthisday', 
+        run_quick_report_by_name(self.gui.dbstate,
+                                 self.gui.uistate,
+                                 'onthisday',
                                  date)

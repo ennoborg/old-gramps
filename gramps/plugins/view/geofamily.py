@@ -95,8 +95,8 @@ _UI_DEF = '''\
 </menubar>
 <toolbar name="ToolBar">
 <placeholder name="CommonNavigation">
-  <toolitem action="Back"/>  
-  <toolitem action="Forward"/>  
+  <toolitem action="Back"/>
+  <toolitem action="Forward"/>
 </placeholder>
 <placeholder name="CommonEdit">
   <toolitem action="PrintView"/>
@@ -117,7 +117,7 @@ class GeoFamily(GeoGraphyView):
 
     def __init__(self, pdata, dbstate, uistate, nav_group=0):
         GeoGraphyView.__init__(self, _('Family places map'),
-                                      pdata, dbstate, uistate, 
+                                      pdata, dbstate, uistate,
                                       FamilyBookmarks,
                                       nav_group)
         self.dbstate = dbstate
@@ -142,11 +142,11 @@ class GeoFamily(GeoGraphyView):
     def get_stock(self):
         """
         Returns the name of the stock icon to use for the display.
-        This assumes that this icon has already been registered 
+        This assumes that this icon has already been registered
         as a stock icon.
         """
         return 'geo-show-family'
-    
+
     def get_viewtype_stock(self):
         """Type of view in category
         """
@@ -298,7 +298,7 @@ class GeoFamily(GeoGraphyView):
                 'gramps_id' : family.gramps_id,
                 }
         return label
- 
+
     def _createmap_for_one_family(self, family):
         """
         Create all markers for one family : all event's places with a lat/lon.
@@ -355,20 +355,24 @@ class GeoFamily(GeoGraphyView):
                                 }
                 self._createpersonmarkers(dbstate, person, comment, family_id)
 
-    def _createmap(self, family_x):
+    def _createmap(self, handle):
         """
-        Create all markers for each people's event in the database which has 
+        Create all markers for each people's event in the database which has
         a lat/lon.
         """
+        if not handle:
+            return
         self.place_list = []
         self.place_without_coordinates = []
         self.minlat = self.maxlat = self.minlon = self.maxlon = 0.0
         self.minyear = 9999
         self.maxyear = 0
         self.message_layer.clear_messages()
-        family = self.dbstate.db.get_family_from_handle(family_x)
-        if family is None:
-            person = self.dbstate.db.get_person_from_handle(self.uistate.get_active('Person'))
+        if self.dbstate.db.has_family_handle(handle):
+            family = self.dbstate.db.get_family_from_handle(handle)
+            self._createmap_for_one_family(family)
+        else:
+            person = self.dbstate.db.get_person_from_handle(handle)
             if not person:
                 return
             family_list = person.get_family_handle_list()
@@ -376,8 +380,6 @@ class GeoFamily(GeoGraphyView):
                 family = self.dbstate.db.get_family_from_handle(family_hdl)
                 if family is not None:
                     self._createmap_for_one_family(family)
-        else:
-            self._createmap_for_one_family(family)
         self.sort = sorted(self.place_list,
                            key=operator.itemgetter(3, 4, 6)
                           )
@@ -450,10 +452,10 @@ class GeoFamily(GeoGraphyView):
                    None, event.button, event.time)
         return 1
 
-    def add_specific_menu(self, menu, event, lat, lon): 
-        """ 
+    def add_specific_menu(self, menu, event, lat, lon):
+        """
         Add specific entry to the navigation menu.
-        """ 
+        """
         return
 
     def get_default_gramplets(self):

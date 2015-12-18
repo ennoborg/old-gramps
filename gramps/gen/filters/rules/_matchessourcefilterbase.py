@@ -29,7 +29,7 @@ _ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from . import MatchesFilterBase
@@ -60,7 +60,7 @@ class MatchesSourceFilterBase(MatchesFilterBase):
     def apply(self, db, object):
         if self.MSF_filt is None :
             return False
-        
+
         for citation_handle in object.get_citation_list():
             citation = db.get_citation_from_handle(citation_handle)
             sourcehandle = citation.get_reference_handle()

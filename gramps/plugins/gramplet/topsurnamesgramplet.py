@@ -16,11 +16,17 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+#------------------------------------------------------------------------
+#
+# Python modules
+#
+#------------------------------------------------------------------------
+
 from collections import defaultdict
 
 #------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #------------------------------------------------------------------------
 from gramps.gen.plug import Gramplet
@@ -103,6 +109,6 @@ class TopSurnamesGramplet(Gramplet):
             line += 1
             if line >= self.top_size:
                 break
-        self.append_text(("\n" + _("Total unique surnames") + ": %d\n") % 
+        self.append_text(("\n" + _("Total unique surnames") + ": %d\n") %
                          total_surnames)
         self.append_text((_("Total people") + ": %d") % total_people, "begin")

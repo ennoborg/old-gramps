@@ -24,8 +24,6 @@
 # internationalization
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 from gi.repository import Gdk
 from gi.repository import Gtk
 
@@ -34,8 +32,30 @@ from gi.repository import Gtk
 # gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
 from ..views.treemodels import PeopleBaseModel, PersonTreeModel
 from .baseselector import BaseSelector
+from gramps.gui.display import display_help
+from gramps.gen.const import URL_MANUAL_SECT1
+
+#-------------------------------------------------------------------------
+#
+# Constants
+#
+#-------------------------------------------------------------------------
+
+# This dialog changes depending on the string pass for the title.
+# https://gramps-project.org/wiki/index.php?title=Gramps_4.2_Wiki_Manual_-_Entering_and_editing_data:_detailed_-_part_1#Select_Child_selector
+# https://gramps-project.org/wiki/index.php?title=Gramps_4.2_Wiki_Manual_-_Entering_and_editing_data:_detailed_-_part_1#Select_Father_selector
+# https://gramps-project.org/wiki/index.php?title=Gramps_4.2_Wiki_Manual_-_Entering_and_editing_data:_detailed_-_part_1#Select_Mother_selector
+
+WIKI_HELP_PAGE = URL_MANUAL_SECT1
+WIKI_HELP_SEC = _('manual|Select_Child_selector')
+WIKI_HELP_PAGE2 = URL_MANUAL_SECT1
+WIKI_HELP_SEC2 = _('manual|Select_Father_selector')
+WIKI_HELP_PAGE3 = URL_MANUAL_SECT1
+WIKI_HELP_SEC3 = _('manual|Select_Mother_selector')
 
 #-------------------------------------------------------------------------
 #
@@ -65,7 +85,7 @@ class SelectPerson(BaseSelector):
 
     def get_window_title(self):
         return _("Select Person")
-        
+
     def get_model_class(self):
         return PersonTreeModel
 
@@ -84,7 +104,7 @@ class SelectPerson(BaseSelector):
 
     def get_from_handle_func(self):
         return self.db.get_person_from_handle
-        
+
     def exact_search(self):
         """
         Returns a tuple indicating columns requiring an exact search

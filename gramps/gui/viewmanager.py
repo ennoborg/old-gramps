@@ -57,7 +57,7 @@ from gi.repository import Gtk
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
@@ -74,10 +74,10 @@ from .utils import AvailableUpdates
 from .pluginmanager import GuiPluginManager
 from gramps.gen.relationship import get_relationship_calculator
 from .displaystate import DisplayState, RecentDocsMenu
-from gramps.gen.const import (HOME_DIR, ICON, URL_BUGTRACKER, URL_HOMEPAGE, 
-                              URL_MAILINGLIST, URL_MANUAL_PAGE, URL_WIKISTRING, 
+from gramps.gen.const import (HOME_DIR, ICON, URL_BUGTRACKER, URL_HOMEPAGE,
+                              URL_MAILINGLIST, URL_MANUAL_PAGE, URL_WIKISTRING,
                               WIKI_EXTRAPLUGINS, URL_BUGHOME)
-from gramps.gen.constfunc import is_quartz, conv_to_unicode
+from gramps.gen.constfunc import is_quartz
 from gramps.gen.config import config
 from gramps.gen.errors import WindowActiveError
 from .dialog import ErrorDialog, WarningDialog, QuestionDialog2, InfoDialog
@@ -610,7 +610,7 @@ class ViewManager(CLIManager):
 
     def __gocat(self, action):
         """
-        Callback that is called on ctrl+number press. It moves to the 
+        Callback that is called on ctrl+number press. It moves to the
         requested category like __next_view/__prev_view. 0 is 10
         """
         cat = int(action.get_name()[-1])
@@ -625,7 +625,7 @@ class ViewManager(CLIManager):
     def __next_view(self, action):
         """
         Callback that is called when the next category action is selected.
-        It selects the next category as the active category. If we reach the end, 
+        It selects the next category as the active category. If we reach the end,
         we wrap around to the first.
         """
         curpage = self.notebook.get_current_page()
@@ -945,7 +945,7 @@ class ViewManager(CLIManager):
         from .views.pageview import DummyPage
         return DummyPage(pdata.name, pdata, self.dbstate, self.uistate,
                     _("View failed to load. Check error output."), error)
-    
+
     def __create_page(self, pdata, page_def):
         """
         Create a new page and set it as the current page.
@@ -1091,11 +1091,10 @@ class ViewManager(CLIManager):
         Called when the Open button is clicked, opens the DbManager
         """
         from .dbman import DbManager
-        dialog = DbManager(self.dbstate, self.window)
+        dialog = DbManager(self.uistate, self.dbstate, self.window)
         value = dialog.run()
         if value:
             (filename, title) = value
-            filename = conv_to_unicode(filename)
             self.db_loader.read_file(filename)
             self._post_load_newdb(filename, 'x-directory/normal', title)
 
@@ -1282,8 +1281,9 @@ class ViewManager(CLIManager):
         label.set_size_request(90, -1)
         label.set_halign(Gtk.Align.START)
         hbox.pack_start(label, False, True, 0)
-        include = Gtk.RadioButton(None, "%s (%s %s)" % (_("Include"),
-                                                        mbytes, _("Megabyte|MB")))
+        include = Gtk.RadioButton.new_with_mnemonic_from_widget(
+            None, "%s (%s %s)" % (_("Include"),
+                                  mbytes, _("Megabyte|MB")))
         exclude = Gtk.RadioButton.new_with_mnemonic_from_widget(include, _("Exclude"))
         include.connect("toggled", lambda widget: self.media_toggle(widget, file_entry))
         hbox.pack_start(include, False, True, 0)
@@ -1294,10 +1294,9 @@ class ViewManager(CLIManager):
         window.hide()
         if d == Gtk.ResponseType.APPLY:
             # if file exists, ask if overwrite; else abort
-            basefile = conv_to_unicode(file_entry.get_text())
+            basefile = file_entry.get_text()
             basefile = basefile.replace("/", r"-")
-            filename = os.path.join(conv_to_unicode(path_entry.get_text()),
-                                    basefile)
+            filename = os.path.join(path_entry.get_text(), basefile)
             if os.path.exists(filename):
                 question = QuestionDialog2(
                         _("Backup file already exists! Overwrite?"),
@@ -1626,8 +1625,8 @@ def run_plugin(pdata, dbstate, uistate):
         tool.gui_tool(dbstate = dbstate, user = User(uistate = uistate),
                       tool_class = getattr(mod, pdata.toolclass),
                       options_class = getattr(mod, pdata.optionclass),
-                      translated_name = pdata.name, 
-                      name = pdata.id, 
+                      translated_name = pdata.name,
+                      name = pdata.id,
                       category = pdata.category,
                       callback = dbstate.db.request_rebuild)
 

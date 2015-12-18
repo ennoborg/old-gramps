@@ -43,7 +43,7 @@ except ImportError:
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
@@ -56,7 +56,7 @@ from gramps.gui.widgets.fanchart import (FanChartWidget, FanChartGrampsGUI,
 
 class FanChartGramplet(FanChartGrampsGUI, Gramplet):
     """
-    The Gramplet code that realizes the FanChartWidget. 
+    The Gramplet code that realizes the FanChartWidget.
     """
 
     def __init__(self, gui, nav_group=0):

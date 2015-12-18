@@ -35,7 +35,6 @@ import pickle
 import os
 import time
 import bisect
-import io
 from functools import wraps
 import logging
 from sys import maxsize, getfilesystemencoding, version_info
@@ -63,9 +62,9 @@ from gramps.gen.lib.mediaobj import MediaObject
 from gramps.gen.lib.note import Note
 from gramps.gen.lib.tag import Tag
 from gramps.gen.lib.genderstats import GenderStats
-from gramps.gen.lib.researcher import Researcher 
+from gramps.gen.lib.researcher import Researcher
 
-from . import (DbBsddbRead, DbWriteBase, BSDDBTxn, 
+from . import (DbBsddbRead, DbWriteBase, BSDDBTxn,
                     DbTxn, BsddbBaseCursor, BsddbDowngradeError, DbVersionError,
                     DbEnvironmentError, DbUpgradeRequiredError, find_surname,
                     find_byte_surname, find_surname_name, DbUndoBSDDB as DbUndo)
@@ -73,12 +72,10 @@ from . import (DbBsddbRead, DbWriteBase, BSDDBTxn,
 from gramps.gen.db import exceptions
 from gramps.gen.db.dbconst import *
 from gramps.gen.utils.callback import Callback
-from gramps.gen.utils.cast import conv_dbstr_to_unicode
 from gramps.gen.utils.id import create_id
 from gramps.gen.updatecallback import UpdateCallback
-from gramps.gen.errors import DbError
-from gramps.gen.constfunc import (win, conv_to_unicode, handle2internal,
-                         get_env_var)
+from gramps.gen.errors import DbError, HandleError
+from gramps.gen.constfunc import win, get_env_var
 from gramps.gen.const import HOME_DIR, GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 
@@ -121,7 +118,7 @@ REF_MAP     = "reference_map"
 REF_PRI     = "primary_map"
 REF_REF     = "referenced_map"
 
-DBERRS      = (db.DBRunRecoveryError, db.DBAccessError, 
+DBERRS      = (db.DBRunRecoveryError, db.DBAccessError,
                db.DBPageNotFoundError, db.DBInvalidArgError)
 
 # The following two dictionaries provide fast translation
@@ -135,7 +132,7 @@ DBERRS      = (db.DBRunRecoveryError, db.DBAccessError,
 # Helper functions
 #
 #-------------------------------------------------------------------------
-    
+
 def find_idmap(key, data):
     """ return id for association of secondary index.
     returns a byte string
@@ -200,7 +197,7 @@ class DbBsddbAssocCursor(BsddbBaseCursor):
         BsddbBaseCursor.__init__(self, txn=txn, **kwargs)
         self.cursor = source.cursor(txn)
         self.source = source
-        
+
 #-------------------------------------------------------------------------
 #
 # DbBsddb
@@ -208,7 +205,7 @@ class DbBsddbAssocCursor(BsddbBaseCursor):
 #-------------------------------------------------------------------------
 class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
     """
-    Gramps database write access object. 
+    Gramps database write access object.
     """
 
     # Set up dictionary for callback signal handler
@@ -232,116 +229,126 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
     # 3. Special signal for change in home person
     __signals__['home-person-changed'] = None
-    
+
     # 4. Signal for change in person group name, parameters are
     __signals__['person-groupname-rebuild'] = (str, str)
 
     def __init__(self):
         """Create a new GrampsDB."""
-        
+
         self.txn = None
         DbBsddbRead.__init__(self)
         DbWriteBase.__init__(self)
         #UpdateCallback.__init__(self)
         self._tables['Person'].update(
             {
-                "handle_func": self.get_person_from_handle, 
+                "handle_func": self.get_person_from_handle,
                 "gramps_id_func": self.get_person_from_gramps_id,
                 "class_func": Person,
                 "cursor_func": self.get_person_cursor,
                 "handles_func": self.get_person_handles,
                 "add_func": self.add_person,
                 "commit_func": self.commit_person,
+                "count_func": self.get_number_of_people,
             })
         self._tables['Family'].update(
             {
-                "handle_func": self.get_family_from_handle, 
+                "handle_func": self.get_family_from_handle,
                 "gramps_id_func": self.get_family_from_gramps_id,
                 "class_func": Family,
                 "cursor_func": self.get_family_cursor,
                 "handles_func": self.get_family_handles,
                 "add_func": self.add_family,
                 "commit_func": self.commit_family,
+                "count_func": self.get_number_of_families,
             })
         self._tables['Source'].update(
             {
-                "handle_func": self.get_source_from_handle, 
+                "handle_func": self.get_source_from_handle,
                 "gramps_id_func": self.get_source_from_gramps_id,
                 "class_func": Source,
                 "cursor_func": self.get_source_cursor,
                 "handles_func": self.get_source_handles,
                 "add_func": self.add_source,
                 "commit_func": self.commit_source,
+                "count_func": self.get_number_of_sources,
                 })
         self._tables['Citation'].update(
             {
-                "handle_func": self.get_citation_from_handle, 
+                "handle_func": self.get_citation_from_handle,
                 "gramps_id_func": self.get_citation_from_gramps_id,
                 "class_func": Citation,
                 "cursor_func": self.get_citation_cursor,
                 "handles_func": self.get_citation_handles,
                 "add_func": self.add_citation,
                 "commit_func": self.commit_citation,
+                "count_func": self.get_number_of_citations,
             })
         self._tables['Event'].update(
             {
-                "handle_func": self.get_event_from_handle, 
+                "handle_func": self.get_event_from_handle,
                 "gramps_id_func": self.get_event_from_gramps_id,
                 "class_func": Event,
                 "cursor_func": self.get_event_cursor,
                 "handles_func": self.get_event_handles,
                 "add_func": self.add_event,
                 "commit_func": self.commit_event,
+                "count_func": self.get_number_of_events,
             })
         self._tables['Media'].update(
             {
-                "handle_func": self.get_object_from_handle, 
+                "handle_func": self.get_object_from_handle,
                 "gramps_id_func": self.get_object_from_gramps_id,
                 "class_func": MediaObject,
                 "cursor_func": self.get_media_cursor,
                 "handles_func": self.get_media_object_handles,
                 "add_func": self.add_object,
                 "commit_func": self.commit_media_object,
+                "count_func": self.get_number_of_media_objects,
             })
         self._tables['Place'].update(
             {
-                "handle_func": self.get_place_from_handle, 
+                "handle_func": self.get_place_from_handle,
                 "gramps_id_func": self.get_place_from_gramps_id,
                 "class_func": Place,
                 "cursor_func": self.get_place_cursor,
                 "handles_func": self.get_place_handles,
                 "add_func": self.add_place,
                 "commit_func": self.commit_place,
+                "count_func": self.get_number_of_places,
             })
         self._tables['Repository'].update(
             {
-                "handle_func": self.get_repository_from_handle, 
+                "handle_func": self.get_repository_from_handle,
                 "gramps_id_func": self.get_repository_from_gramps_id,
                 "class_func": Repository,
                 "cursor_func": self.get_repository_cursor,
                 "handles_func": self.get_repository_handles,
                 "add_func": self.add_repository,
                 "commit_func": self.commit_repository,
+                "count_func": self.get_number_of_repositories,
             })
         self._tables['Note'].update(
             {
-                "handle_func": self.get_note_from_handle, 
+                "handle_func": self.get_note_from_handle,
                 "gramps_id_func": self.get_note_from_gramps_id,
                 "class_func": Note,
                 "cursor_func": self.get_note_cursor,
                 "handles_func": self.get_note_handles,
                 "add_func": self.add_note,
                 "commit_func": self.commit_note,
+                "count_func": self.get_number_of_notes,
             })
         self._tables['Tag'].update(
             {
-                "handle_func": self.get_tag_from_handle, 
+                "handle_func": self.get_tag_from_handle,
                 "gramps_id_func": None,
                 "class_func": Tag,
                 "cursor_func": self.get_tag_cursor,
                 "handles_func": self.get_tag_handles,
                 "add_func": self.add_tag,
                 "commit_func": self.commit_tag,
+                "count_func": self.get_number_of_tags,
             })
 
         self.secondary_connected = False
@@ -391,7 +398,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
     def __all_handles(self, table):
         return table.keys(self.txn)
-    
+
     def __log_error(self):
         mypath = os.path.join(self.get_save_path(),DBRECOVFN)
         ofile = open(mypath, "w")
@@ -433,7 +440,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         """
         Returns a reference to a cursor over the reference map primary map
         """
-        return DbBsddbAssocCursor(self.reference_map_primary_map, 
+        return DbBsddbAssocCursor(self.reference_map_primary_map,
                                         self.txn)
 
     @catch_db_error
@@ -441,7 +448,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         """
         Returns a reference to a cursor over the reference map referenced map
         """
-        return DbBsddbAssocCursor(self.reference_map_referenced_map, 
+        return DbBsddbAssocCursor(self.reference_map_referenced_map,
                                         self.txn)
 
     @catch_db_error
@@ -469,21 +476,25 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
     @catch_db_error
     def get_default_person(self):
         """Return the default Person of the database."""
-        person = self.get_person_from_handle(self.get_default_handle())
-        if person:
-            return person
-        elif (self.metadata) and (not self.readonly):
-            # Start transaction
-            with BSDDBTxn(self.env, self.metadata) as txn:
-                txn.put(b'default', None)            
-        return None
+        person_handle = self.get_default_handle()
+        if person_handle:
+            person = self.get_person_from_handle(person_handle)
+            if person:
+                return person
+            elif (self.metadata) and (not self.readonly):
+                # Start transaction
+                with BSDDBTxn(self.env, self.metadata) as txn:
+                    txn.put(b'default', None)
+                return None
+        else:
+            return None
 
     def set_mediapath(self, path):
         """Set the default media path for database, path should be utf-8."""
         if self.metadata and not self.readonly:
             # Start transaction
             with BSDDBTxn(self.env, self.metadata) as txn:
-                txn.put(b'mediapath', path)            
+                txn.put(b'mediapath', path)
 
     def __make_zip_backup(self, dirname):
         import zipfile
@@ -493,7 +504,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         title = self.get_dbname()
         trans = title.maketrans(reserved_char, replace_char)
         title = title.translate(trans)
-        
+
         if not os.access(dirname, os.W_OK):
             _LOG.warning("Can't write technical DB backup for %s" % title)
             return
@@ -509,7 +520,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         _LOG.warning("If upgrade and loading the Family Tree works, you can "
                      "delete the zip file at %s" %
                      zippath)
-    
+
     def __check_bdb_version(self, name, force_bsddb_upgrade=False,
                             force_bsddb_downgrade=False):
         """Older version of Berkeley DB can't read data created by a newer
@@ -549,8 +560,8 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
                 _LOG.warning("Bsddb upgrade requested from %s to %s" %
                              (bsddb_version, str(bdb_version)))
                 self.update_env_version = True
-            # Make a backup of the database files anyway 
-            self.__make_zip_backup(name)   
+            # Make a backup of the database files anyway
+            self.__make_zip_backup(name)
         elif (env_version[0] > bdb_version[0]) or \
             (env_version[0] == bdb_version[0] and
              env_version[1] > bdb_version[1]):
@@ -571,8 +582,8 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
                 _LOG.warning("Bsddb downgrade requested from %s to %s" %
                              (bsddb_version, str(bdb_version)))
                 self.update_env_version = True
-            # Make a backup of the database files anyway 
-            self.__make_zip_backup(name)   
+            # Make a backup of the database files anyway
+            self.__make_zip_backup(name)
         elif env_version == bdb_version:
             # Bsddb version is OK
             pass
@@ -599,7 +610,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
                 db_python_version = int(version_file.read().strip())
         else:
             db_python_version = 2
-            
+
         if db_python_version == 3 and current_python_version == 2:
             clear_lock_file(name)
             raise exceptions.PythonDowngradeError(db_python_version,
@@ -616,11 +627,11 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
                 _LOG.warning("Python upgrade requested from %s to %s" %
                              (db_python_version, current_python_version))
                 self.update_python_version = True
-            # Make a backup of the database files anyway 
+            # Make a backup of the database files anyway
             self.__make_zip_backup(name)
         elif db_python_version == 2 and current_python_version == 2:
             pass
-    
+
     @catch_db_error
     def version_supported(self):
         dbversion = self.metadata.get(b'version', default=0)
@@ -642,7 +653,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
             return True
 
         # See if we lack write access to any files in the directory
-        for base in [FAMILY_TBL, PLACES_TBL, SOURCES_TBL, CITATIONS_TBL, 
+        for base in [FAMILY_TBL, PLACES_TBL, SOURCES_TBL, CITATIONS_TBL,
                      MEDIA_TBL,  EVENTS_TBL, PERSON_TBL, REPO_TBL,
                      NOTE_TBL, REF_MAP, META]:
             path = os.path.join(name, base + DBEXT)
@@ -660,7 +671,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         if self.__check_readonly(name):
             mode = DBMODE_R
         else:
-            write_lock_file(name)        
+            write_lock_file(name)
 
         if self.db_is_open:
             self.close()
@@ -681,7 +692,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         if not force_python_upgrade:
             self.__check_bdb_version(name, force_bsddb_upgrade,
                                      force_bsddb_downgrade)
-        
+
         self.__check_python_version(name, force_python_upgrade)
 
         # Check for pickle upgrade
@@ -694,7 +705,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
             _LOG.debug("Make backup in case there is a pickle upgrade")
             self.__make_zip_backup(name)
             self.update_pickle_version = True
-        
+
         # Check for schema upgrade
         versionpath = os.path.join(self.path, str(SCHVERSFN))
         if os.path.isfile(versionpath):
@@ -706,7 +717,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
                                  force_schema_upgrade:
             _LOG.debug("Make backup in case there is a schema upgrade")
             self.__make_zip_backup(name)
-        
+
         # Set up database environment
         self.env = db.DBEnv()
         self.env.set_cachesize(0, DBCACHE)
@@ -714,17 +725,17 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         # These env settings are only needed for Txn environment
         self.env.set_lk_max_locks(DBLOCKS)
         self.env.set_lk_max_objects(DBOBJECTS)
-        
+
         # Set to auto remove stale logs
         self.set_auto_remove()
 
-        # Set not to flush to disk synchronous, this greatly speeds up 
+        # Set not to flush to disk synchronous, this greatly speeds up
         # database changes, but comes at the cause of loss of durability, so
         # power loss might cause a need to run db recovery, see BSDDB manual
-        ## NOTE: due to pre 4.8 bsddb bug it is needed to set this flag before 
+        ## NOTE: due to pre 4.8 bsddb bug it is needed to set this flag before
         ## open of env, #16492 - http://download.oracle.com/docs/cd/E17076_02/html/installation/changelog_4_8.html
         self.env.set_flags(db.DB_TXN_WRITE_NOSYNC, 1)
-        
+
         # The DB_PRIVATE flag must go if we ever move to multi-user setup
         env_flags = db.DB_CREATE | db.DB_PRIVATE |\
                     db.DB_INIT_MPOOL |\
@@ -760,7 +771,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
             tree_vers = self.metadata.get(b'version', default=0)
             self.__close_early()
             raise DbVersionError(tree_vers, _MINVERSION, _DBVERSION)
-        
+
         gstats = self.metadata.get(b'gender_stats', default=None)
 
         # Ensure version info in metadata
@@ -776,7 +787,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
                     # Not new database, but the version is missing.
                     # Use 0, but it is likely to fail anyway.
                     txn.put(b'version', 0)
-            
+
         self.genderStats = GenderStats(gstats)
 
         # Open main tables in gramps database
@@ -807,8 +818,8 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
                               db.DB_HASH, db.DB_DUP)
 
         # We have now successfully opened the database, so if the BSDDB version
-        # has changed, we update the DBSDB version file. 
-        
+        # has changed, we update the DBSDB version file.
+
         if self.update_env_version:
             versionpath = os.path.join(name, BDBVERSFN)
             with open(versionpath, "w") as version_file:
@@ -822,7 +833,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
             _LOG.debug("Updated python version file to %s" % version)
             with open(versionpath, "w") as version_file:
                 version_file.write(version)
-            
+
         # Here we take care of any changes in the tables related to new code.
         # If secondary indices change, then they should removed
         # or rebuilt by upgrade as well. In any case, the
@@ -836,9 +847,9 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
                 version = "Yes"
                 version_file.write(version)
             _LOG.debug("Updated pickle version file to %s" % str(version))
-    
+
         self.__load_metadata()
-        
+
         if self.need_schema_upgrade():
             oldschema = self.metadata.get(b'version', default=0)
             newschema = _DBVERSION
@@ -872,7 +883,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
         if callback:
             callback(87)
-        
+
         self.abort_possible = True
         return 1
 
@@ -890,7 +901,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
             try:
                 self.undodb.close()
             except db.DBNoSuchFileError:
-                pass                
+                pass
 
     def get_undodb(self):
         """
@@ -907,7 +918,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
             if len(format) == 3:
                 format = format + (True,)
                 self.name_formats[format_ix] = format
-        
+
         # database owner
         try:
             owner_data = self.metadata.get(b'researcher')
@@ -917,11 +928,11 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
                 self.owner.unserialize(owner_data)
         except ImportError: #handle problems with pre-alpha 3.0
             pass
-        
+
         # bookmarks
         def meta(key):
             return self.metadata.get(key, default=[])
-        
+
         self.bookmarks.set(meta(b'bookmarks'))
         self.family_bookmarks.set(meta(b'family_bookmarks'))
         self.event_bookmarks.set(meta(b'event_bookmarks'))
@@ -957,14 +968,14 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
     def __connect_secondary(self):
         """
         Connect or creates secondary index tables.
-        
+
         It assumes that the tables either exist and are in the right
         format or do not exist (in which case they get created).
 
         It is the responsibility of upgrade code to either create
         or remove invalid secondary index tables.
         """
-        
+
         # index tables used just for speeding up searches
         self.surnames = self.__open_db(self.full_name, SURNAMES, db.DB_BTREE,
                             db.DB_DUP | db.DB_DUPSORT)
@@ -982,7 +993,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
             ("tag_trans", TAGTRANS, db.DB_HASH, 0),
             ("parents", PPARENT, db.DB_HASH, 0),
             ("reference_map_primary_map",    REF_PRI, db.DB_BTREE, 0),
-            ("reference_map_referenced_map", REF_REF, db.DB_BTREE, db.DB_DUPSORT),            
+            ("reference_map_referenced_map", REF_REF, db.DB_BTREE, db.DB_DUPSORT),
             ]
 
         for (dbmap, dbname, dbtype, dbflags) in db_maps:
@@ -1089,7 +1100,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
         while (ret is not None):
             (key, data) = ret
-            
+
             ### FIXME: this is a dirty hack that works without no
             ### sensible explanation. For some reason, for a readonly
             ### database, secondary index returns a primary table key
@@ -1108,7 +1119,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
     def find_backlink_handles(self, handle, include_classes=None):
         """
         Find all objects that hold a reference to the object handle.
-        
+
         Returns an interator over a list of (class_name, handle) tuples.
 
         :param handle: handle of the object to search for.
@@ -1135,7 +1146,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
         while (ret is not None):
             (key, data) = ret
-            
+
             # data values are of the form:
             #   ((primary_object_class_name, primary_object_handle),
             #    (referenced_object_class_name, referenced_object_handle))
@@ -1153,11 +1164,11 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
             key, handle = data[0][:2]
             name = KEY_TO_CLASS_MAP[key]
             assert name == KEY_TO_CLASS_MAP[data[0][0]]
-            assert handle == data[0][1]                
+            assert handle == data[0][1]
             if (include_classes is None or
                 name in include_classes):
                     yield (name, handle)
-                
+
             ret = referenced_cur.next_dup()
 
         referenced_cur.close()
@@ -1173,19 +1184,19 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
             ret = primary_cur.set(handle)
         except:
             ret = None
-        
+
         remove_list = set()
         while (ret is not None):
             (key, data) = ret
-            
+
             # data values are of the form:
             #   ((primary_object_class_name, primary_object_handle),
             #    (referenced_object_class_name, referenced_object_handle))
-            
+
             # so we need the second tuple give us a reference that we can
             # combine with the primary_handle to get the main key.
             main_key = (handle.decode('utf-8'), pickle.loads(data)[1][1])
-            
+
             # The trick is not to remove while inside the cursor,
             # but collect them all and remove after the cursor is closed
             remove_list.add(main_key)
@@ -1197,12 +1208,12 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         # Now that the cursor is closed, we can remove things
         for main_key in remove_list:
             self.__remove_reference(main_key, transaction, txn)
-        
+
     def update_reference_map(self, obj, transaction, txn=None):
         """
         If txn is given, then changes are written right away using txn.
         """
-        
+
         # Add references to the reference_map for all primary object referenced
         # from the primary object 'obj' or any of its secondary objects.
         handle = obj.handle
@@ -1241,7 +1252,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         no_longer_required_references = existing_references.difference(
                                                             current_references)
         new_references = current_references.difference(existing_references)
-            
+
         # handle addition of new references
         for (ref_class_name, ref_handle) in new_references:
             data = ((CLASS_TO_KEY_MAP[obj.__class__.__name__], handle),
@@ -1258,7 +1269,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
     def __remove_reference(self, key, transaction, txn):
         """
-        Remove the reference specified by the key, preserving the change in 
+        Remove the reference specified by the key, preserving the change in
         the passed transaction.
         """
         if isinstance(key, tuple):
@@ -1280,7 +1291,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
     def __add_reference(self, key, data, transaction, txn):
         """
-        Add the reference specified by the key and the data, preserving the 
+        Add the reference specified by the key and the data, preserving the
         change in the passed transaction.
         """
         if isinstance(key, tuple):
@@ -1290,7 +1301,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
             key = key.encode('utf-8')
         if self.readonly or not key:
             return
-        
+
         self.reference_map.put(key, data, txn=txn)
         if not transaction.batch:
             transaction.add(REFERENCE_KEY, TXNADD, key, None, data)
@@ -1300,7 +1311,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
     def reindex_reference_map(self, callback):
         """
         Reindex all primary records in the database.
-        
+
         This will be a slow process for large databases.
         """
 
@@ -1322,9 +1333,9 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
             callback(index+1)
 
         # Open reference_map and primary map
-        self.reference_map  = self.__open_shelf(self.full_name, REF_MAP, 
+        self.reference_map  = self.__open_shelf(self.full_name, REF_MAP,
                                   dbtype=db.DB_BTREE)
-        
+
         self.reference_map_primary_map = self.__open_db(self.full_name,
                                             REF_PRI, db.DB_BTREE, db.DB_DUP)
 
@@ -1350,10 +1361,10 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
                             (self.get_note_cursor, Note),
                             (self.get_tag_cursor, Tag),
                             )
-                         
+
             # Now we use the functions and classes defined above
             # to loop through each of the primary object tables.
-        
+
             for cursor_func, class_func in primary_table:
                 logging.info("Rebuilding %s reference map" %
                                 class_func.__name__)
@@ -1381,7 +1392,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
             # name display formats
                 txn.put(b'name_formats', self.name_formats)
-                
+
                 # database owner
                 owner_data = self.owner.serialize()
                 txn.put(b'researcher', owner_data)
@@ -1423,7 +1434,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
                 txn.put(b'surname_list', self.surname_list)
 
         self.metadata.close()
-    
+
     def __close_early(self):
         """
         Bail out if the incompatible version is discovered:
@@ -1435,7 +1446,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         self.metadata   = None
         self.env        = None
         self.db_is_open = False
-    
+
     @catch_db_error
     def close(self):
         if not self.db_is_open:
@@ -1493,9 +1504,9 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         self.metadata       = None
         self.db_is_open     = False
         self.surname_list = None
-        
+
         DbBsddbRead.close(self)
-        
+
         self.person_map = None
         self.family_map = None
         self.repository_map = None
@@ -1531,58 +1542,57 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         """
         Add a Person to the database, assigning internal IDs if they have
         not already been defined.
-        
+
         If not set_gid, then gramps_id is not set.
         """
-        handle = self.__add_object(person, transaction, 
-                    self.find_next_person_gramps_id if set_gid else None, 
+        handle = self.__add_object(person, transaction,
+                    self.find_next_person_gramps_id if set_gid else None,
                     self.commit_person)
-        self.genderStats.count_person(person)
         return handle
 
     def add_family(self, family, transaction, set_gid=True):
         """
         Add a Family to the database, assigning internal IDs if they have
         not already been defined.
-        
+
         If not set_gid, then gramps_id is not set.
         """
-        return self.__add_object(family, transaction, 
-                    self.find_next_family_gramps_id if set_gid else None, 
+        return self.__add_object(family, transaction,
+                    self.find_next_family_gramps_id if set_gid else None,
                     self.commit_family)
 
     def add_source(self, source, transaction, set_gid=True):
         """
         Add a Source to the database, assigning internal IDs if they have
         not already been defined.
-        
+
         If not set_gid, then gramps_id is not set.
         """
-        return self.__add_object(source, transaction, 
-                    self.find_next_source_gramps_id if set_gid else None, 
+        return self.__add_object(source, transaction,
+                    self.find_next_source_gramps_id if set_gid else None,
                     self.commit_source)
 
     def add_citation(self, citation, transaction, set_gid=True):
         """
         Add a Citation to the database, assigning internal IDs if they have
         not already been defined.
-        
+
         If not set_gid, then gramps_id is not set.
         """
-        return self.__add_object(citation, transaction, 
-                    self.find_next_citation_gramps_id if set_gid else None, 
+        return self.__add_object(citation, transaction,
+                    self.find_next_citation_gramps_id if set_gid else None,
                     self.commit_citation)
 
     def add_event(self, event, transaction, set_gid=True):
         """
         Add an Event to the database, assigning internal IDs if they have
         not already been defined.
-        
+
         If not set_gid, then gramps_id is not set.
         """
         if event.type.is_custom():
             self.event_names.add(str(event.type))
-        return self.__add_object(event, transaction, 
+        return self.__add_object(event, transaction,
                     self.find_next_event_gramps_id if set_gid else None,
                     self.commit_event)
 
@@ -1602,10 +1612,10 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         """
         Add a Place to the database, assigning internal IDs if they have
         not already been defined.
-        
+
         If not set_gid, then gramps_id is not set.
         """
-        return self.__add_object(place, transaction, 
+        return self.__add_object(place, transaction,
                     self.find_next_place_gramps_id if set_gid else None,
                     self.commit_place)
 
@@ -1613,10 +1623,10 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         """
         Add a MediaObject to the database, assigning internal IDs if they have
         not already been defined.
-        
+
         If not set_gid, then gramps_id is not set.
         """
-        return self.__add_object(obj, transaction, 
+        return self.__add_object(obj, transaction,
                     self.find_next_object_gramps_id if set_gid else None,
                     self.commit_media_object)
 
@@ -1624,10 +1634,10 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         """
         Add a Repository to the database, assigning internal IDs if they have
         not already been defined.
-        
+
         If not set_gid, then gramps_id is not set.
         """
-        return self.__add_object(obj, transaction, 
+        return self.__add_object(obj, transaction,
                     self.find_next_repository_gramps_id if set_gid else None,
                     self.commit_repository)
 
@@ -1635,10 +1645,10 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         """
         Add a Note to the database, assigning internal IDs if they have
         not already been defined.
-        
+
         If not set_gid, then gramps_id is not set.
         """
-        return self.__add_object(obj, transaction, 
+        return self.__add_object(obj, transaction,
                     self.find_next_note_gramps_id if set_gid else None,
                     self.commit_note)
 
@@ -1669,8 +1679,8 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
     def remove_person(self, handle, transaction):
         """
-        Remove the Person specified by the database handle from the database, 
-        preserving the change in the passed transaction. 
+        Remove the Person specified by the database handle from the database,
+        preserving the change in the passed transaction.
         """
 
         if self.readonly or not handle:
@@ -1681,7 +1691,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         if isinstance(handle, str):
             handle = handle.encode('utf-8')
         if transaction.batch:
-            with BSDDBTxn(self.env, self.person_map) as txn:            
+            with BSDDBTxn(self.env, self.person_map) as txn:
                 self.delete_primary_from_reference_map(handle, transaction,
                                                        txn=txn.txn)
                 txn.delete(handle)
@@ -1694,73 +1704,73 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
     def remove_source(self, handle, transaction):
         """
         Remove the Source specified by the database handle from the
-        database, preserving the change in the passed transaction. 
+        database, preserving the change in the passed transaction.
         """
-        self.__do_remove(handle, transaction, self.source_map, 
+        self.__do_remove(handle, transaction, self.source_map,
                               SOURCE_KEY)
 
     def remove_citation(self, handle, transaction):
         """
         Remove the Citation specified by the database handle from the
-        database, preserving the change in the passed transaction. 
+        database, preserving the change in the passed transaction.
         """
-        self.__do_remove(handle, transaction, self.citation_map, 
+        self.__do_remove(handle, transaction, self.citation_map,
                               CITATION_KEY)
 
     def remove_event(self, handle, transaction):
         """
         Remove the Event specified by the database handle from the
-        database, preserving the change in the passed transaction. 
+        database, preserving the change in the passed transaction.
         """
-        self.__do_remove(handle, transaction, self.event_map, 
+        self.__do_remove(handle, transaction, self.event_map,
                               EVENT_KEY)
 
     def remove_object(self, handle, transaction):
         """
         Remove the MediaObjectPerson specified by the database handle from the
-        database, preserving the change in the passed transaction. 
+        database, preserving the change in the passed transaction.
         """
-        self.__do_remove(handle, transaction, self.media_map, 
+        self.__do_remove(handle, transaction, self.media_map,
                               MEDIA_KEY)
 
     def remove_place(self, handle, transaction):
         """
         Remove the Place specified by the database handle from the
-        database, preserving the change in the passed transaction. 
+        database, preserving the change in the passed transaction.
         """
-        self.__do_remove(handle, transaction, self.place_map, 
+        self.__do_remove(handle, transaction, self.place_map,
                               PLACE_KEY)
 
     def remove_family(self, handle, transaction):
         """
         Remove the Family specified by the database handle from the
-        database, preserving the change in the passed transaction. 
+        database, preserving the change in the passed transaction.
         """
-        self.__do_remove(handle, transaction, self.family_map, 
+        self.__do_remove(handle, transaction, self.family_map,
                               FAMILY_KEY)
 
     def remove_repository(self, handle, transaction):
         """
         Remove the Repository specified by the database handle from the
-        database, preserving the change in the passed transaction. 
+        database, preserving the change in the passed transaction.
         """
-        self.__do_remove(handle, transaction, self.repository_map, 
+        self.__do_remove(handle, transaction, self.repository_map,
                               REPOSITORY_KEY)
 
     def remove_note(self, handle, transaction):
         """
         Remove the Note specified by the database handle from the
-        database, preserving the change in the passed transaction. 
+        database, preserving the change in the passed transaction.
         """
-        self.__do_remove(handle, transaction, self.note_map, 
+        self.__do_remove(handle, transaction, self.note_map,
                               NOTE_KEY)
 
     def remove_tag(self, handle, transaction):
         """
         Remove the Tag specified by the database handle from the
-        database, preserving the change in the passed transaction. 
+        database, preserving the change in the passed transaction.
         """
-        self.__do_remove(handle, transaction, self.tag_map, 
+        self.__do_remove(handle, transaction, self.tag_map,
                               TAG_KEY)
 
     @catch_db_error
@@ -1787,12 +1797,11 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
     def build_surname_list(self):
         """
         Build surname list for use in autocompletion
-        This is a list of unicode objects, which are decoded from the utf-8 in 
+        This is a list of unicode objects, which are decoded from the utf-8 in
         bsddb
         """
-        #TODO GTK3: Why double conversion? Convert to a list of str objects!
         self.surname_list = sorted(
-                        map(conv_dbstr_to_unicode, set(self.surnames.keys())), 
+                        [s.decode('utf-8') for s in self.surnames.keys()],
                         key=glocale.sort_key)
 
     def add_to_surname_list(self, person, batch_transaction):
@@ -1801,8 +1810,8 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         """
         if batch_transaction:
             return
-        name = conv_to_unicode(find_surname_name(person.handle, 
-                            person.get_primary_name().serialize()), 'utf-8')
+        name = find_surname_name(person.handle,
+                                 person.get_primary_name().serialize())
         i = bisect.bisect(self.surname_list, name)
         if 0 < i <= len(self.surname_list):
             if self.surname_list[i-1] != name:
@@ -1814,12 +1823,12 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
     def remove_from_surname_list(self, person):
         """
         Check whether there are persons with the same surname left in
-        the database. 
-        
+        the database.
+
         If not then we need to remove the name from the list.
         The function must be overridden in the derived class.
         """
-        name = find_surname_name(person.handle, 
+        name = find_surname_name(person.handle,
                                      person.get_primary_name().serialize())
         if isinstance(name, str):
             uname = name
@@ -1842,14 +1851,14 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         finally:
             if 'cursor' in locals():
                 cursor.close()
-        
+
     def commit_base(self, obj, data_map, key, transaction, change_time):
         """
-        Commit the specified object to the database, storing the changes as 
+        Commit the specified object to the database, storing the changes as
         part of the transaction.
         """
         if self.readonly or not obj or not obj.handle:
-            return 
+            return
 
         obj.change = int(change_time or time.time())
         handle = obj.handle
@@ -1866,10 +1875,10 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
             transaction.add(key, op, handle, old_data, new_data)
         data_map.put(handle, new_data, txn=self.txn)
         return old_data
-        
+
     def commit_person(self, person, transaction, change_time=None):
         """
-        Commit the specified Person to the database, storing the changes as 
+        Commit the specified Person to the database, storing the changes as
         part of the transaction.
         """
         old_data = self.commit_base(
@@ -1887,8 +1896,8 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
                 self.genderStats.count_person(person)
 
             # Update surname list if necessary
-            if (find_surname_name(old_person.handle, 
-                                  old_person.primary_name.serialize()) != 
+            if (find_surname_name(old_person.handle,
+                                  old_person.primary_name.serialize()) !=
                     find_surname_name(person.handle,
                                   person.primary_name.serialize())):
                 self.remove_from_surname_list(old_person)
@@ -1910,7 +1919,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
                                              + person.alternate_names)
                                 if name.type.is_custom()])
         all_surn = []  # new list we will use for storage
-        all_surn += person.primary_name.get_surname_list() 
+        all_surn += person.primary_name.get_surname_list()
         for asurname in person.alternate_names:
             all_surn += asurname.get_surname_list()
         self.origin_types.update([str(surn.origintype) for surn in all_surn
@@ -1937,18 +1946,18 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         self.media_attributes.update(
             [str(attr.type) for attr in obj.attribute_list
              if attr.type.is_custom() and str(attr.type)])
-            
+
     def commit_source(self, source, transaction, change_time=None):
         """
-        Commit the specified Source to the database, storing the changes as 
+        Commit the specified Source to the database, storing the changes as
         part of the transaction.
         """
-        self.commit_base(source, self.source_map, SOURCE_KEY, 
+        self.commit_base(source, self.source_map, SOURCE_KEY,
                           transaction, change_time)
 
         self.source_media_types.update(
             [str(ref.media_type) for ref in source.reporef_list
-             if ref.media_type.is_custom()])       
+             if ref.media_type.is_custom()])
 
         attr_list = []
         for mref in source.media_list:
@@ -1962,10 +1971,10 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
     def commit_citation(self, citation, transaction, change_time=None):
         """
-        Commit the specified Citation to the database, storing the changes as 
+        Commit the specified Citation to the database, storing the changes as
         part of the transaction.
         """
-        self.commit_base(citation, self.citation_map, CITATION_KEY, 
+        self.commit_base(citation, self.citation_map, CITATION_KEY,
                           transaction, change_time)
 
         attr_list = []
@@ -1980,10 +1989,10 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
     def commit_place(self, place, transaction, change_time=None):
         """
-        Commit the specified Place to the database, storing the changes as 
+        Commit the specified Place to the database, storing the changes as
         part of the transaction.
         """
-        self.commit_base(place, self.place_map, PLACE_KEY, 
+        self.commit_base(place, self.place_map, PLACE_KEY,
                           transaction, change_time)
 
         if place.get_type().is_custom():
@@ -2012,10 +2021,10 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
     def commit_event(self, event, transaction, change_time=None):
         """
-        Commit the specified Event to the database, storing the changes as 
+        Commit the specified Event to the database, storing the changes as
         part of the transaction.
         """
-        self.commit_base(event, self.event_map, EVENT_KEY, 
+        self.commit_base(event, self.event_map, EVENT_KEY,
                   transaction, change_time)
 
         self.event_attributes.update(
@@ -2033,10 +2042,10 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
     def commit_family(self, family, transaction, change_time=None):
         """
-        Commit the specified Family to the database, storing the changes as 
+        Commit the specified Family to the database, storing the changes as
         part of the transaction.
         """
-        self.commit_base(family, self.family_map, FAMILY_KEY, 
+        self.commit_base(family, self.family_map, FAMILY_KEY,
                           transaction, change_time)
 
         self.family_attributes.update(
@@ -2069,7 +2078,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         Commit the specified Repository to the database, storing the changes
         as part of the transaction.
         """
-        self.commit_base(repository, self.repository_map, REPOSITORY_KEY, 
+        self.commit_base(repository, self.repository_map, REPOSITORY_KEY,
                           transaction, change_time)
 
         if repository.type.is_custom():
@@ -2080,39 +2089,36 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
     def commit_note(self, note, transaction, change_time=None):
         """
-        Commit the specified Note to the database, storing the changes as part 
+        Commit the specified Note to the database, storing the changes as part
         of the transaction.
         """
-        self.commit_base(note, self.note_map, NOTE_KEY, 
+        self.commit_base(note, self.note_map, NOTE_KEY,
                           transaction, change_time)
 
         if note.type.is_custom():
-            self.note_types.add(str(note.type))        
+            self.note_types.add(str(note.type))
 
     def commit_tag(self, tag, transaction, change_time=None):
         """
-        Commit the specified Tag to the database, storing the changes as part 
+        Commit the specified Tag to the database, storing the changes as part
         of the transaction.
         """
-        self.commit_base(tag, self.tag_map, TAG_KEY, 
+        self.commit_base(tag, self.tag_map, TAG_KEY,
                           transaction, change_time)
 
     def get_from_handle(self, handle, class_type, data_map):
         if isinstance(handle, str):
             handle = handle.encode('utf-8')
-        try:
-            data = data_map.get(handle, txn=self.txn)
-        except:
-            data = None
-            # under certain circumstances during a database reload,
-            # data_map can be none. If so, then don't report an error
-            if data_map:
-                _LOG.error("Failed to get from handle", exc_info=True)
+        if handle is None:
+            raise HandleError('Handle is None')
+        if not handle:
+            raise HandleError('Handle is empty')
+        data = data_map.get(handle, txn=self.txn)
         if data:
             newobj = class_type()
             newobj.unserialize(data)
             return newobj
-        return None
+        raise HandleError('Handle %s not found' % handle.decode('utf-8'))
 
     @catch_db_error
     def transaction_begin(self, transaction):
@@ -2204,10 +2210,10 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         """
         if (obj_type, trans_type) in transaction:
             if trans_type == TXNDEL:
-                handles = [handle2internal(handle) for handle, data in
+                handles = [handle.decode('utf-8') for handle, data in
                             transaction[(obj_type, trans_type)]]
             else:
-                handles = [handle2internal(handle) for handle, data in
+                handles = [handle.decode('utf-8') for handle, data in
                             transaction[(obj_type, trans_type)]
                             if (handle, None) not in transaction[(obj_type,
                                                                   TXNDEL)]]
@@ -2219,7 +2225,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         Revert the changes made to the database so far during the transaction.
         """
         if self._LOG_ALL:
-            _LOG.debug("%s: Transaction abort '%s'\n" % 
+            _LOG.debug("%s: Transaction abort '%s'\n" %
                     (self.__class__.__name__, transaction.get_description()))
 
         if self.readonly:
@@ -2279,7 +2285,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         if self.redo_callback:
             self.redo_callback(None)
         if self.undo_history_callback:
-            self.undo_history_callback()            
+            self.undo_history_callback()
 
     def undo(self, update_history=True):
         return self.undodb.undo(update_history)
@@ -2289,11 +2295,11 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
     def gramps_upgrade(self, callback=None):
         UpdateCallback.__init__(self, callback)
-        
+
         version = self.metadata.get(b'version', default=_MINVERSION)
 
         t = time.time()
-        
+
         from . import upgrade
 
         if version < 14:
@@ -2306,7 +2312,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
             upgrade.gramps_upgrade_17(self)
         if version < 18:
             upgrade.gramps_upgrade_18(self)
-            
+
             self.reset()
             self.set_total(6)
             self.__connect_secondary()
@@ -2371,11 +2377,11 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         self.env.txn_checkpoint()
 
         self.metadata  = self.__open_shelf(full_name, META)
-        
+
         _LOG.debug("Write schema version %s" % _DBVERSION)
         with BSDDBTxn(self.env, self.metadata) as txn:
             txn.put(b'version', _DBVERSION)
-        
+
         versionpath = os.path.join(name, BDBVERSFN)
         version = str(db.version())
         _LOG.debug("Write bsddb version %s" % version)
@@ -2407,7 +2413,7 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
         self.metadata.close()
         self.env.close()
-  
+
     def get_dbid(self):
         """
         In BSDDB, we use the file directory name as the unique ID for
@@ -2425,10 +2431,10 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         """
         Exports the database to a set of backup files. These files consist
         of the pickled database tables, one file for each table.
-        
+
         The heavy lifting is done by the private :py:func:`__do__export` function.
         The purpose of this function is to catch any exceptions that occur.
-        
+
         :param database: database instance to backup
         :type database: DbDir
         """
@@ -2441,10 +2447,10 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         """
         Restores the database to a set of backup files. These files consist
         of the pickled database tables, one file for each table.
-        
+
         The heavy lifting is done by the private :py:func:`__do__restore` function.
         The purpose of this function is to catch any exceptions that occur.
-        
+
         :param database: database instance to restore
         :type database: DbDir
         """
@@ -2471,27 +2477,24 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
             bsddb_version = _("Unknown")
         return {
             _("Number of people"): self.get_number_of_people(),
+            _("Number of families"): self.get_number_of_families(),
+            _("Number of sources"): self.get_number_of_sources(),
+            _("Number of citations"): self.get_number_of_citations(),
+            _("Number of events"): self.get_number_of_events(),
+            _("Number of media"): self.get_number_of_media_objects(),
+            _("Number of places"): self.get_number_of_places(),
+            _("Number of repositories"): self.get_number_of_repositories(),
+            _("Number of notes"): self.get_number_of_notes(),
+            _("Number of tags"): self.get_number_of_tags(),
             _("Schema version"): schema_version,
             _("Version"): bsddb_version,
         }
-
-    def prepare_import(self):
-        """
-        Initialization before imports
-        """
-        pass
-
-    def commit_import(self):
-        """
-        Post process after imports
-        """
-        pass
 
 def mk_backup_name(database, base):
     """
     Return the backup name of the database table
 
-    :param database: database instance 
+    :param database: database instance
     :type database: DbDir
     :param base: base name of the table
     :type base: str
@@ -2502,7 +2505,7 @@ def mk_tmp_name(database, base):
     """
     Return the temporary backup name of the database table
 
-    :param database: database instance 
+    :param database: database instance
     :type database: DbDir
     :param base: base name of the table
     :type base: str
@@ -2521,7 +2524,7 @@ def do_export(database):
         for (base, tbl) in build_tbl_map(database):
             backup_name = mk_tmp_name(database, base)
             backup_table = open(backup_name, 'wb')
-    
+
             cursor = tbl.cursor()
             data = cursor.first()
             while data:
@@ -2558,7 +2561,7 @@ def load_tbl_txn(database, backup_table, tbl):
     """
     Return the temporary backup name of the database table
 
-    :param database: database instance 
+    :param database: database instance
     :type database: DbDir
     :param backup_table: file containing the backup data
     :type backup_table: file
@@ -2607,7 +2610,7 @@ def clear_lock_file(name):
 def write_lock_file(name):
     if not os.path.isdir(name):
         os.mkdir(name)
-    f = io.open(os.path.join(name, DBLOCKFN), "w", encoding='utf8')
+    f = open(os.path.join(name, DBLOCKFN), "w", encoding='utf8')
     if win():
         user = get_env_var('USERNAME')
         host = get_env_var('USERDOMAIN')
@@ -2625,7 +2628,7 @@ def write_lock_file(name):
     if host:
         text = "%s@%s" % (user, host)
     else:
-        text = user     
+        text = user
     # Save only the username and host, so the massage can be
     # printed with correct locale in DbManager.py when a lock is found
     f.write(text)
@@ -2642,7 +2645,7 @@ def upgrade_researcher(owner_data):
 if __name__ == "__main__":
 
     import os, sys, pdb
-    
+
     d = DbBsddb()
     if len(sys.argv) > 1:
         db_name = sys.argv[1]

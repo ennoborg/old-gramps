@@ -40,11 +40,21 @@ from gi.repository import GObject
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from .dialog import QuestionDialog
 from .managedwindow import ManagedWindow
+from .display import display_help
+from gramps.gen.const import URL_MANUAL_PAGE
+
+#-------------------------------------------------------------------------
+#
+# Constants
+#
+#-------------------------------------------------------------------------
+WIKI_HELP_PAGE = '%s_-_Keybindings' % URL_MANUAL_PAGE
+WIKI_HELP_SEC = _('11')
 
 #-------------------------------------------------------------------------
 #
@@ -57,7 +67,7 @@ class UndoHistory(ManagedWindow):
     steps available for undo/redo. Selecting a line in the list
     will revert/advance to the appropriate step in editing history.
     """
-    
+
     def __init__(self, dbstate, uistate):
 
         self.title = _("Undo History")
@@ -69,6 +79,8 @@ class UndoHistory(ManagedWindow):
         window = Gtk.Dialog("", uistate.window,
                             Gtk.DialogFlags.DESTROY_WITH_PARENT, None)
 
+        self.help_button = window.add_button(_('_Help'),
+                                             Gtk.ResponseType.HELP)
         self.undo_button = window.add_button(_('_Undo'),
                                              Gtk.ResponseType.REJECT)
         self.redo_button = window.add_button(_('_Redo'),
@@ -77,16 +89,16 @@ class UndoHistory(ManagedWindow):
                                               Gtk.ResponseType.APPLY)
         self.close_button = window.add_button(_('_Close'),
                                               Gtk.ResponseType.CLOSE)
-     
+
         self.set_window(window, None, self.title)
         self.window.set_size_request(400, 200)
         self.window.connect('response', self._response)
 
         scrolled_window = Gtk.ScrolledWindow()
-        scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, 
+        scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC,
                                    Gtk.PolicyType.AUTOMATIC)
         self.tree = Gtk.TreeView()
-        self.model = Gtk.ListStore(GObject.TYPE_STRING, GObject.TYPE_STRING, 
+        self.model = Gtk.ListStore(GObject.TYPE_STRING, GObject.TYPE_STRING,
                                    GObject.TYPE_STRING, GObject.TYPE_STRING)
         self.selection = self.tree.get_selection()
 
@@ -111,7 +123,7 @@ class UndoHistory(ManagedWindow):
 
         self._build_model()
         self._update_ui()
-        
+
         self.selection.connect('changed', self._selection_changed)
         self.show()
 
@@ -146,7 +158,7 @@ class UndoHistory(ManagedWindow):
             the_iter = self.model.get_iter( (idx,) )
             self.model.set(the_iter, 2, fg)
             self.model.set(the_iter, 3, bg)
-            
+
     def _response(self, obj, response_id):
         if response_id == Gtk.ResponseType.CLOSE:
             self.close(obj)
@@ -173,6 +185,10 @@ class UndoHistory(ManagedWindow):
             self._clear_clicked()
         elif response_id == Gtk.ResponseType.DELETE_EVENT:
             self.close(obj)
+
+        elif response_id == Gtk.ResponseType.HELP:
+            display_help(webpage=WIKI_HELP_PAGE,
+                                section=WIKI_HELP_SEC)
 
     def build_menu_names(self, obj):
         return (self.title, None)
@@ -219,7 +235,7 @@ class UndoHistory(ManagedWindow):
                 mod_text = _('Database opened')
             else:
                 mod_text = _('History cleared')
-            time_text = time.ctime(self.undodb.undo_history_timestamp)           
+            time_text = time.ctime(self.undodb.undo_history_timestamp)
             self.model.append(row=[time_text, mod_text, fg, bg])
 
         # Add the undo and redo queues to the model
@@ -238,9 +254,9 @@ def gdk_color_to_str(color):
     """
     Convert a Gdk.Color into a #rrggbb string.
     """
-    color_str = "#%02x%02x%02x" % (color.red * 255,
-                                    color.green * 255,
-                                    color.blue * 255)
+    color_str = "#%02x%02x%02x" % (int(color.red * 255),
+                                   int(color.green * 255),
+                                   int(color.blue * 255))
     return color_str
 
 def get_colors(obj, state):
@@ -255,7 +271,7 @@ def get_colors(obj, state):
 def bug_fix(column, renderer, model, iter_, data):
     """
     Cell data function to set the column colors.
-    
+
     There is a bug in pygobject which prevents us from setting a value to
     None using the TreeModel set_value method.  Instead we set it to an empty
     string and convert it to None here.

@@ -19,7 +19,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-# Written by Alex Roitman, 
+# Written by Alex Roitman,
 # largely based on the MediaView and SelectPerson by Don Allingham
 
 #-------------------------------------------------------------------------
@@ -28,8 +28,6 @@
 #
 #-------------------------------------------------------------------------
 import gc
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
@@ -43,11 +41,23 @@ from gi.repository import Gtk
 # gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
 from gramps.gen.const import THUMBSCALE
 from gramps.gen.utils.file import media_path_full
-from ..thumbnails import get_thumbnail_image
+from gramps.gen.utils.thumbnails import get_thumbnail_image
 from ..views.treemodels import MediaModel
 from .baseselector import BaseSelector
+from gramps.gui.display import display_help
+from gramps.gen.const import URL_MANUAL_SECT1
+
+#-------------------------------------------------------------------------
+#
+# Constants
+#
+#-------------------------------------------------------------------------
+WIKI_HELP_PAGE = URL_MANUAL_SECT1
+WIKI_HELP_SEC = _('manual|Select_Media_Object_selector')
 
 #-------------------------------------------------------------------------
 #
@@ -58,13 +68,13 @@ class SelectObject(BaseSelector):
 
     def get_window_title(self):
         return _("Select Media Object")
-        
+
     def get_model_class(self):
         return MediaModel
 
     def get_from_handle_func(self):
         return self.db.get_object_from_handle
-        
+
     def get_column_titles(self):
         return [
             (_('Title'), 350, BaseSelector.TEXT, 0),

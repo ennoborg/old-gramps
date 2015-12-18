@@ -23,7 +23,7 @@
 import os
 from gi.repository import Gtk
 from gi.repository import GObject
-from gramps.gen.constfunc import conv_to_unicode, get_curr_dir
+from gramps.gen.constfunc import get_curr_dir
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 
@@ -56,7 +56,7 @@ class FileEntry(Gtk.Box):
             my_action = Gtk.FileChooserAction.SELECT_FOLDER
         else:
             my_action = Gtk.FileChooserAction.SAVE
-        
+
         dialog = Gtk.FileChooserDialog(self.title,
                                        self.parent,
                                        action=my_action,
@@ -65,7 +65,7 @@ class FileEntry(Gtk.Box):
                                                 _('_Open'),
                                                 Gtk.ResponseType.OK))
 
-        name = os.path.basename(conv_to_unicode(self.entry.get_text()))
+        name = os.path.basename(self.entry.get_text())
         if self.dir:
             if os.path.isdir(name):
                 dialog.set_current_name(name)
@@ -77,7 +77,7 @@ class FileEntry(Gtk.Box):
         dialog.present()
         status = dialog.run()
         if status == Gtk.ResponseType.OK:
-            self.set_filename(conv_to_unicode(dialog.get_filename()))
+            self.set_filename(dialog.get_filename())
         dialog.destroy()
 
     def set_filename(self, path):
@@ -97,8 +97,8 @@ class FileEntry(Gtk.Box):
         return self.entry.get_text()
 
     def set_directory_entry(self, opt):
-        """ 
-        Configure the FileEntry to either select a directory or a file. 
+        """
+        Configure the FileEntry to either select a directory or a file.
         Set it to True to select a directory.
         Set it to False to select a file.
         """

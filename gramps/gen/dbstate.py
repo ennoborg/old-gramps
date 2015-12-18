@@ -9,7 +9,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful, 
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
@@ -24,7 +24,6 @@ Provide the database state class
 """
 import sys
 import os
-import io
 
 from .db import DbReadBase
 from .proxy.proxybase import ProxyDbBase
@@ -45,8 +44,8 @@ class DbState(Callback):
     """
 
     __signals__ = {
-        'database-changed' : ((DbReadBase, ProxyDbBase), ), 
-        'no-database' :  None, 
+        'database-changed' : ((DbReadBase, ProxyDbBase), ),
+        'no-database' :  None,
         }
 
     def __init__(self):
@@ -85,7 +84,6 @@ class DbState(Callback):
             config.get('preferences.rprefix'),
             config.get('preferences.nprefix') )
         self.open = True
-        self.signal_change()
 
     def signal_change(self):
         """
@@ -103,7 +101,7 @@ class DbState(Callback):
         self.db.db_is_open = False
         self.open = False
         self.emit('database-changed', (self.db, ))
-        
+
     def get_database(self):
         """
         Get a reference to the current database.
@@ -115,13 +113,21 @@ class DbState(Callback):
         Add a proxy to the current database. Use pop_proxy() to
         revert to previous db.
 
-        >>> dbstate.apply_proxy(gen.proxy.LivingProxyDb, 1)
-        >>> dbstate.apply_proxy(gen.proxy.PrivateProxyDb)
+        >>> dbstate.apply_proxy(gramps.gen.proxy.LivingProxyDb, 0)
+        >>> dbstate.apply_proxy(gramps.gen.proxy.PrivateProxyDb)
+
+        >>> from gramps.gen.filters.rules.person import IsDescendantOf, IsAncestorOf
+        >>> from gramps.gen.filters import GenericFilter
+        >>> filter = GenericFilter()
+        >>> filter.set_logical_op("or")
+        >>> filter.add_rule(IsDescendantOf([db.get_default_person().gramps_id, True]))
+        >>> filter.add_rule(IsAncestorOf([db.get_default_person().gramps_id, True]))
+        >>> dbstate.apply_proxy(gramps.gen.proxy.FilterProxyDb, filter)
         """
         self.stack.append(self.db)
         self.db = proxy(self.db, *args, **kwargs)
         self.emit('database-changed', (self.db, ))
-        
+
     def pop_proxy(self):
         """
         Remove the previously applied proxy.
@@ -143,7 +149,7 @@ class DbState(Callback):
 
         pmgr = BasePluginManager.get_instance()
         pdata = pmgr.get_plugin(id)
-        
+
         if not pdata:
             # This might happen if using gramps from outside, and
             # we haven't loaded plugins yet
@@ -183,7 +189,7 @@ class DbState(Callback):
             dirpath = os.path.join(dbdir, dpath)
             path_name = os.path.join(dirpath, "name.txt")
             if os.path.isfile(path_name):
-                file = io.open(path_name, 'r', encoding='utf8')
+                file = open(path_name, 'r', encoding='utf8')
                 name = file.readline().strip()
                 file.close()
                 if dbname == name:
@@ -192,14 +198,14 @@ class DbState(Callback):
                     backend = None
                     fname = os.path.join(dirpath, "database.txt")
                     if os.path.isfile(fname):
-                        ifile = io.open(fname, 'r', encoding='utf8')
+                        ifile = open(fname, 'r', encoding='utf8')
                         backend = ifile.read().strip()
                         ifile.close()
                     else:
                         backend = "bsddb"
                     try:
                         fname = os.path.join(dirpath, "lock")
-                        ifile = io.open(fname, 'r', encoding='utf8')
+                        ifile = open(fname, 'r', encoding='utf8')
                         locked_by = ifile.read().strip()
                         locked = True
                         ifile.close()

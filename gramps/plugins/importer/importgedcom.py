@@ -31,7 +31,7 @@ LOG = logging.getLogger(".GedcomImport")
 
 #------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
@@ -51,7 +51,7 @@ import imp
 imp.reload(module)
 
 from gramps.gen.config import config
-    
+
 #-------------------------------------------------------------------------
 #
 # importData
@@ -116,24 +116,22 @@ def importData(database, filename, user):
                 database, ifile, filename, user, stage_one, None, None)
         else:
             gedparse = libgedcom.GedcomParser(
-                database, ifile, filename, user, stage_one, 
+                database, ifile, filename, user, stage_one,
                 config.get('preferences.default-source'),
-                (config.get('preferences.tag-on-import-format') if 
+                (config.get('preferences.tag-on-import-format') if
                  config.get('preferences.tag-on-import') else None))
     except IOError as msg:
         user.notify_error(_("%s could not be opened\n") % filename, str(msg))
         return
     except GedcomError as msg:
-        user.notify_error(_("Invalid GEDCOM file"), 
+        user.notify_error(_("Invalid GEDCOM file"),
                           _("%s could not be imported") % filename + "\n" + str(msg))
         return
 
     try:
         read_only = database.readonly
         database.readonly = False
-        database.prepare_import()
         gedparse.parse_gedcom_file(False)
-        database.commit_import()
         database.readonly = read_only
         ifile.close()
     except IOError as msg:

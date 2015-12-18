@@ -45,11 +45,10 @@ from gi.repository import Gdk
 #-------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.sgettext
-from gramps.gen.constfunc import conv_to_unicode
 from ..utils import open_file_with_default_application
 from gramps.gen.const import THUMBSCALE
 from gramps.gen.mime import get_description, get_type
-from ..thumbnails import get_thumbnail_image, find_mime_type_pixbuf
+from gramps.gen.utils.thumbnails import get_thumbnail_image, find_mime_type_pixbuf
 from gramps.gen.utils.file import (media_path_full, find_file, create_checksum)
 from gramps.gen.lib import NoteType
 from gramps.gen.db import DbTxn
@@ -60,6 +59,16 @@ from ..widgets import (MonitoredSpinButton, MonitoredEntry, PrivacyButton,
                        MonitoredDate, MonitoredTagList, SelectionWidget, Region)
 from .editreference import RefTab, EditReference
 from .addmedia import AddMediaObject
+from gramps.gen.const import URL_MANUAL_SECT2
+
+#-------------------------------------------------------------------------
+#
+# Constants
+#
+#-------------------------------------------------------------------------
+
+WIKI_HELP_PAGE = URL_MANUAL_SECT2
+WIKI_HELP_SEC = _('manual|Media_Reference_Editor_dialog')
 
 #-------------------------------------------------------------------------
 #
@@ -73,7 +82,7 @@ class EditMediaRef(EditReference):
                                media_ref, update)
         if not self.source.get_handle():
             #show the addmedia dialog immediately, with track of parent.
-            AddMediaObject(state, self.uistate, self.track, self.source, 
+            AddMediaObject(state, self.uistate, self.track, self.source,
                            self._update_addmedia)
 
     def _local_init(self):
@@ -93,7 +102,7 @@ class EditMediaRef(EditReference):
         self.track_ref_for_deletion("notebook_ref")
         #recreate start page as GrampsTab
         self.notebook_ref.remove_page(0)
-        self.reftab = RefTab(self.dbstate, self.uistate, self.track, 
+        self.reftab = RefTab(self.dbstate, self.uistate, self.track,
                               _('General'), tblref)
         self.track_ref_for_deletion("reftab")
         tblref =  self.top.get_object('table2')
@@ -101,7 +110,7 @@ class EditMediaRef(EditReference):
         #recreate start page as GrampsTab
         self.notebook_shared.remove_page(0)
         self.track_ref_for_deletion("notebook_shared")
-        self.primtab = RefTab(self.dbstate, self.uistate, self.track, 
+        self.primtab = RefTab(self.dbstate, self.uistate, self.track,
                               _('_General'), tblref)
         self.track_ref_for_deletion("primtab")
         self.rect_pixbuf = None
@@ -152,18 +161,18 @@ class EditMediaRef(EditReference):
             self.selection.load_image('')
 
     def _setup_fields(self):
-        
+
         ebox_shared = self.top.get_object('eventbox')
         ebox_shared.connect('button-press-event', self.button_press_event)
         self.pixmap = self.top.get_object("pixmap")
         self.mimetext = self.top.get_object("type")
         self.track_ref_for_deletion("mimetext")
-        
+
         coord = self.source_ref.get_rectangle()
         #upgrade path: set invalid (from eg old db) to none
 
         if coord is not None and coord in (
-                (None,)*4,  
+                (None,)*4,
                 (0, 0, 100, 100),
                 (coord[0], coord[1])*2
             ):
@@ -173,7 +182,7 @@ class EditMediaRef(EditReference):
             self.rectangle = coord
         else:
             self.rectangle = (0, 0, 100, 100)
-        
+
         self.selection = SelectionWidget()
         self.selection.set_multiple_selection(False)
         self.selection.connect("region-modified", self.region_modified)
@@ -185,7 +194,7 @@ class EditMediaRef(EditReference):
 
         self.setup_filepath()
         self.determine_mime()
-        
+
         corners = ["corner1_x", "corner1_y", "corner2_x", "corner2_y"]
 
         if coord and isinstance(coord, tuple):
@@ -194,11 +203,11 @@ class EditMediaRef(EditReference):
         else:
             for corner, value in zip(corners, [0, 0, 100, 100]):
                 self.top.get_object(corner).set_value(value)
-            
+
         if self.dbstate.db.readonly:
             for corner in corners:
                 self.top.get_object(corner).set_sensitive(False)
-        
+
         self.corner1_x_spinbutton = MonitoredSpinButton(
             self.top.get_object("corner1_x"),
             self.set_corner1_x,
@@ -254,18 +263,18 @@ class EditMediaRef(EditReference):
             self.source.set_path,
             self.source.get_path,
             self.db.readonly)
-            
+
         self.date_field = MonitoredDate(
             self.top.get_object("date_entry"),
             self.top.get_object("date_edit"),
             self.source.get_date_object(),
             self.uistate, self.track,
             self.db.readonly)
-            
+
         self.tags = MonitoredTagList(
-            self.top.get_object("tag_label"), 
-            self.top.get_object("tag_button"), 
-            self.source.set_tag_list, 
+            self.top.get_object("tag_label"),
+            self.top.get_object("tag_button"),
+            self.source.set_tag_list,
             self.source.get_tag_list,
             self.db,
             self.uistate, self.track,
@@ -283,10 +292,10 @@ class EditMediaRef(EditReference):
         Callback for the signal handling of the spinbutton for the first
         corner x coordinate of the subsection.
         Updates the subsection thumbnail using the given value
-        
+
         @param value: the first corner x coordinate of the subsection in int
         """
-        
+
         self.rectangle = (value,) + self.rectangle[1:]
         self.update_region()
 
@@ -295,10 +304,10 @@ class EditMediaRef(EditReference):
         Callback for the signal handling of the spinbutton for the first
         corner y coordinate of the subsection.
         Updates the subsection thumbnail using the given value
-        
+
         @param value: the first corner y coordinate of the subsection in int
         """
-        
+
         self.rectangle = self.rectangle[:1] + (value,) + self.rectangle[2:]
         self.update_region()
 
@@ -307,10 +316,10 @@ class EditMediaRef(EditReference):
         Callback for the signal handling of the spinbutton for the second
         corner x coordinate of the subsection.
         Updates the subsection thumbnail using the given value
-        
+
         @param value: the second corner x coordinate of the subsection in int
         """
-        
+
         self.rectangle = self.rectangle[:2] + (value,) + self.rectangle[3:]
         self.update_region()
 
@@ -319,29 +328,29 @@ class EditMediaRef(EditReference):
         Callback for the signal handling of the spinbutton for the second
         corner y coordinate of the subsection.
         Updates the subsection thumbnail using the given value
-        
+
         @param value: the second corner y coordinate of the subsection in int
         """
-        
+
         self.rectangle = self.rectangle[:3] + (value,)
         self.update_region()
 
     def get_corner1_x(self):
         """
-        Callback for the signal handling of the spinbutton for the first corner 
+        Callback for the signal handling of the spinbutton for the first corner
         x coordinate of the subsection.
-        
-        @returns: the first corner x coordinate of the subsection or 0 if 
+
+        @returns: the first corner x coordinate of the subsection or 0 if
                   there is no selection
         """
         return self.rectangle[0]
 
     def get_corner1_y(self):
         """
-        Callback for the signal handling of the spinbutton for the first corner 
+        Callback for the signal handling of the spinbutton for the first corner
         y coordinate of the subsection.
-        
-        @returns: the first corner y coordinate of the subsection or 0 if 
+
+        @returns: the first corner y coordinate of the subsection or 0 if
                   there is no selection
         """
         return self.rectangle[1]
@@ -350,8 +359,8 @@ class EditMediaRef(EditReference):
         """
         Callback for the signal handling of the spinbutton for the second
         corner x coordinate of the subsection.
-        
-        @returns: the second corner x coordinate of the subsection or 100 if 
+
+        @returns: the second corner x coordinate of the subsection or 100 if
                   there is no selection
         """
         return self.rectangle[2]
@@ -360,8 +369,8 @@ class EditMediaRef(EditReference):
         """
         Callback for the signal handling of the spinbutton for the second
         corner x coordinate of the subsection.
-        
-        @returns: the second corner x coordinate of the subsection or 100 if 
+
+        @returns: the second corner x coordinate of the subsection or 100 if
                   there is no selection
         """
         return self.rectangle[3]
@@ -398,7 +407,7 @@ class EditMediaRef(EditReference):
         else:
             submenu_label = _('New Media')
         return (_('Media Reference Editor'),submenu_label)
-    
+
     def button_press_event(self, obj, event):
         if event.button==1 and event.type == Gdk.EventType._2BUTTON_PRESS:
             photo_path = media_path_full(self.db, self.source.get_path())
@@ -415,7 +424,7 @@ class EditMediaRef(EditReference):
         self.determine_mime()
         self.update_checksum()
         self.draw_preview()
-        
+
     def update_checksum(self):
         self.uistate.set_busy_cursor(True)
         media_path = media_path_full(self.dbstate.db, self.source.get_path())
@@ -425,17 +434,20 @@ class EditMediaRef(EditReference):
     def select_file(self, val):
         self.determine_mime()
         path = self.file_path.get_text()
-        self.source.set_path(conv_to_unicode(path))
-        AddMediaObject(self.dbstate, self.uistate, self.track, self.source, 
+        self.source.set_path(path)
+        AddMediaObject(self.dbstate, self.uistate, self.track, self.source,
                        self._update_addmedia)
 
     def _connect_signals(self):
         self.define_cancel_button(self.top.get_object('button84'))
         self.define_ok_button(self.top.get_object('button82'),self.save)
+        # TODO help button (rename glade button name)
+        self.define_help_button(self.top.get_object('button104'),
+                WIKI_HELP_PAGE, WIKI_HELP_SEC)
 
     def _connect_db_signals(self):
         """
-        Connect any signals that need to be connected. 
+        Connect any signals that need to be connected.
         Called by the init routine of the base class (_EditPrimary).
         """
         self._add_db_signal('media-rebuild', self.close)
@@ -479,7 +491,7 @@ class EditMediaRef(EditReference):
 
         self.src_srcref_list = CitationEmbedList(self.dbstate,
                                              self.uistate,
-                                             self.track, 
+                                             self.track,
                                              self.source.get_citation_list())
         self._add_tab(notebook_src, self.src_srcref_list)
         self.track_ref_for_deletion("src_srcref_list")
@@ -508,7 +520,7 @@ class EditMediaRef(EditReference):
         else:
             if self.check_for_duplicate_id('Media'):
                 return
-            with DbTxn(_("Add Media Object (%s)") % 
+            with DbTxn(_("Add Media Object (%s)") %
                        self.source.get_description(), self.db) as trans:
                 self.db.add_object(self.source, trans)
 
@@ -523,7 +535,7 @@ class EditMediaRef(EditReference):
         #do not set unset or invalid coord
 
         if coord is not None and coord in (
-                (None,)*4,  
+                (None,)*4,
                 (0, 0, 100, 100),
                 (coord[0], coord[1])*2
             ):

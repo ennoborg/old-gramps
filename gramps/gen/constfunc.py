@@ -47,17 +47,6 @@ WINDOWS = ["Windows", "win32"]
 
 #-------------------------------------------------------------------------
 #
-# Public Functions
-#
-#-------------------------------------------------------------------------
-def conv_to_unicode(x, y='utf8'):
-    return x if x is None or isinstance(x, str) else str(x, y) if y else str(x)
-
-# handle in database is bytes, while internally Gramps wants unicode for py3
-handle2internal = lambda x: conv_to_unicode(x, 'utf-8')
-
-#-------------------------------------------------------------------------
-#
 # Platform determination functions
 #
 #-------------------------------------------------------------------------
@@ -70,7 +59,7 @@ def lin():
     if platform.system() in LINUX:
         return True
     return False
-    
+
 def mac():
     """
     Return True if a Macintosh system
@@ -93,7 +82,7 @@ def win():
 
 def is_quartz():
     """
-    Tests to see if Python is currently running with gtk and 
+    Tests to see if Python is currently running with gtk and
     windowing system is Mac OS-X's "quartz".
     """
     if mac():
@@ -107,7 +96,7 @@ def is_quartz():
 
 def has_display():
     """
-    Tests to see if Python is currently running with gtk 
+    Tests to see if Python is currently running with gtk
     """
     # FIXME: currently, Gtk.init_check() requires all strings
     # in argv, and we might have unicode.

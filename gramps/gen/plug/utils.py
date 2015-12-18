@@ -53,7 +53,7 @@ from ..utils.configmanager import safe_eval
 from ..config import config
 from ..const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.sgettext
-from ..constfunc import conv_to_unicode
+from ..constfunc import mac
 
 #-------------------------------------------------------------------------
 #
@@ -112,7 +112,7 @@ class Zipfile(object):
         names = self.zip_obj.namelist()
         for name in self.get_paths(names):
             fullname = os.path.join(path, name)
-            if not os.path.exists(fullname): 
+            if not os.path.exists(fullname):
                 os.mkdir(fullname)
         for name in self.get_files(names):
             fullname = os.path.join(path, name)
@@ -173,9 +173,29 @@ class Zipfile(object):
         """
         return os.path.split(name)[1]
 
+def urlopen_maybe_no_check_cert(URL):
+    """
+    Similar to urllib.request.urlopen, but disables certificate
+    verification on Mac.
+    """
+    context = None
+    from urllib.request import urlopen
+    if mac():
+        from ssl import create_default_context, CERT_NONE
+        context = create_default_context()
+        context.check_hostname = False
+        context.verify_mode = CERT_NONE
+    timeout = 10 # seconds
+    fp = None
+    try:
+        fp = urlopen(URL, timeout=timeout, context=context)
+    except TypeError:
+        fp = urlopen(URL, timeout=timeout)
+    return fp
+
 def available_updates():
     whattypes = config.get('behavior.check-for-update-types')
-    from urllib.request import urlopen
+
     LOG.debug("Checking for updated addons...")
     langs = glocale.get_language_list()
     langs.append("en")
@@ -186,12 +206,12 @@ def available_updates():
                (config.get("behavior.addons-url"), lang))
         LOG.debug("   trying: %s" % URL)
         try:
-            fp = urlopen(URL, timeout=10) # seconds
+            fp = urlopen_maybe_no_check_cert(URL)
         except:
             try:
                 URL = ("%s/listings/addons-%s.txt" %
                        (config.get("behavior.addons-url"), lang[:2]))
-                fp = urlopen(URL, timeout=10)
+                fp = urlopen_maybe_no_check_cert(URL)
             except Exception as err: # some error
                 LOG.warning("Failed to open addon metadata for {lang} {url}: {err}".
 						format(lang=lang, url=URL, err=err))
@@ -266,7 +286,7 @@ def load_addon_file(path, callback=None):
         path.startswith("https://") or
         path.startswith("ftp://")):
         try:
-            fp = urlopen(path)
+            fp = urlopen_maybe_no_check_cert(path)
         except:
             if callback:
                 callback(_("Unable to open '%s'") % path)
@@ -307,18 +327,18 @@ def load_addon_file(path, callback=None):
             callback((_("Examining '%s'...") % gpr_file) + "\n")
         contents = file_obj.extractfile(gpr_file).read()
         # Put a fake register and _ function in environment:
-        env = make_environment(register=register, 
-                               newplugin=newplugin, 
+        env = make_environment(register=register,
+                               newplugin=newplugin,
                                _=lambda text: text)
         # clear out the result variable:
         globals()["register_results"] = []
         # evaluate the contents:
         try:
             exec(contents, env)
-        except:
+        except Exception as exp:
             if callback:
                 msg = _("Error in '%s' file: cannot load.") % gpr_file
-                callback("   " + msg + "\n")
+                callback("   " + msg + "\n" + str(exp))
             continue
         # There can be multiple addons per gpr file:
         for results in globals()["register_results"]:
@@ -362,9 +382,8 @@ def load_addon_file(path, callback=None):
         gpr_files = set([os.path.split(os.path.join(USER_PLUGINS, name))[0]
                          for name in good_gpr])
         for gpr_file in gpr_files:
-            u_gpr_file = conv_to_unicode(gpr_file)
             if callback:
-                callback("   " + (_("Registered '%s'") % u_gpr_file) + "\n")
+                callback("   " + (_("Registered '%s'") % gpr_file) + "\n")
             registered_count += 1
     file_obj.close()
     if registered_count:
@@ -379,13 +398,16 @@ def load_addon_file(path, callback=None):
 #-------------------------------------------------------------------------
 class OpenFileOrStdout:
     """Context manager to open a file or stdout for writing."""
-    def __init__(self, filename):
+    def __init__(self, filename, encoding=None):
         self.filename = filename
         self.filehandle = None
+        self.encoding = encoding
 
     def __enter__(self):
         if self.filename == '-':
             self.filehandle = sys.stdout
+        elif self.encoding:
+            self.filehandle = open(self.filename, 'w', encoding=self.encoding)
         else:
             self.filehandle = open(self.filename, 'w')
         return self.filehandle
@@ -402,14 +424,17 @@ class OpenFileOrStdout:
 #-------------------------------------------------------------------------
 class OpenFileOrStdin:
     """Context manager to open a file or stdin for reading."""
-    def __init__(self, filename, add_mode=''):
+    def __init__(self, filename, add_mode='', encoding=None):
         self.filename = filename
         self.mode = 'r%s' % add_mode
         self.filehandle = None
+        self.encoding = encoding
 
     def __enter__(self):
         if self.filename == '-':
             self.filehandle = sys.stdin
+        elif self.encoding:
+            self.filehandle = open(self.filename, self.mode, encoding=self.encoding)
         else:
             self.filehandle = open(self.filename, self.mode)
         return self.filehandle
@@ -418,4 +443,3 @@ class OpenFileOrStdin:
         if self.filename != '-':
             self.filehandle.close()
         return False
-

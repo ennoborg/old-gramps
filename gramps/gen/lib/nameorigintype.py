@@ -32,7 +32,7 @@ _ = glocale.translation.sgettext
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from .grampstype import GrampsType
@@ -40,7 +40,7 @@ from .grampstype import GrampsType
 class NameOriginType(GrampsType):
     """
     Name Origin Types
-    
+
     .. attribute UNKNOWN:    Unknown origin
     .. attribute CUSTOM:     Custom user defined origin
     .. attribute NONE:       no given origin

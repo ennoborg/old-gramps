@@ -33,7 +33,7 @@ from gi.repository import GObject
 
 #------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
@@ -56,7 +56,7 @@ from gramps.gen.db import DbTxn
 #
 #-------------------------------------------------------------------------
 WIKI_HELP_PAGE = '%s_-_Tools' % URL_MANUAL_PAGE
-WIKI_HELP_SEC = _('manual|Not_Related...')
+WIKI_HELP_SEC = _('manual|Not_Related')
 
 #------------------------------------------------------------------------
 #
@@ -81,9 +81,9 @@ class NotRelated(tool.ActivePersonTool, ManagedWindow) :
         self.dbstate = dbstate
         self.uistate = uistate
         self.db = dbstate.db
-        
+
         topDialog = Glade()
-        
+
         topDialog.connect_signals({
             "destroy_passed_object" : self.close,
             "on_help_clicked"       : self.on_help_clicked,
@@ -107,7 +107,8 @@ class NotRelated(tool.ActivePersonTool, ManagedWindow) :
         self.tagapply.connect('clicked', self.applyTagClicked)
 
         # start the progress indicator
-        self.progress = ProgressMeter(self.title,_('Starting'))
+        self.progress = ProgressMeter(self.title,_('Starting'),
+                                      parent=self.window)
 
         # setup the columns
         self.model = Gtk.TreeStore(
@@ -228,7 +229,7 @@ class NotRelated(tool.ActivePersonTool, ManagedWindow) :
 
     def on_help_clicked(self, obj):
         """Display the relevant portion of GRAMPS manual"""
-        display_help(WIKI_HELP_PAGE , WIKI_HELP_SEC)    
+        display_help(WIKI_HELP_PAGE , WIKI_HELP_SEC)
 
 
     def applyTagClicked(self, button) :
@@ -251,23 +252,24 @@ class NotRelated(tool.ActivePersonTool, ManagedWindow) :
 
             # if more than 1 person is selected, use a progress indicator
             if rows > 1:
-                progress = ProgressMeter(self.title,_('Starting'))
+                progress = ProgressMeter(self.title,_('Starting'),
+                                         parent=self.window)
                 progress.set_pass(
                     # translators: leave all/any {...} untranslated
                     #TRANS: no singular form needed, as rows is always > 1
                     ngettext("Setting tag for {number_of} person",
-                             "Setting tag for {number_of} people", 
+                             "Setting tag for {number_of} people",
                              rows).format(number_of=rows),
                     rows)
 
-    
+
             # iterate through all of the selected rows
             (model, paths) = self.treeSelection.get_selected_rows()
 
             for path in paths:
                 if progress:
                     progress.step()
-    
+
                 # for the current row, get the GID and the person from the database
                 iter        = self.model.get_iter(path)
                 personGid   = self.model.get_value(iter, 1)
@@ -473,7 +475,7 @@ class NotRelated(tool.ActivePersonTool, ManagedWindow) :
 
     def get_tag_list(self, person):
         """
-        Return a sorted list of tag names for the given person. 
+        Return a sorted list of tag names for the given person.
         """
         tags = []
         for handle in person.get_tag_list():

@@ -28,7 +28,7 @@ _ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from ._isdescendantof import IsDescendantOf
@@ -48,7 +48,7 @@ class IsDescendantOfFilterMatch(IsDescendantOf):
     category    = _('Descendant filters')
     description = _("Matches people that are descendants "
                     "of anybody matched by a filter")
-    
+
     def prepare(self,db):
         self.db = db
         self.map = set()

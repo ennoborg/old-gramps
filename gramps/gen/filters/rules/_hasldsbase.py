@@ -31,7 +31,7 @@ _ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 
@@ -49,10 +49,10 @@ class HasLDSBase(Rule):
     name        = 'Objects with LDS events'
     description = "Matches objects with LDS events"
     category    = _('General filters')
-    
+
     def prepare(self, db):
         # things we want to do just once, not for every handle
-        if  self.list[1] == 'lesser than':
+        if  self.list[1] == 'less than':
             self.count_type = 0
         elif self.list[1] == 'greater than':
             self.count_type = 2
@@ -60,10 +60,10 @@ class HasLDSBase(Rule):
             self.count_type = 1 # "equal to"
 
         self.userSelectedCount = int(self.list[0])
-        
+
     def apply(self, db, obj):
         count = len( obj.get_lds_ord_list())
-        if self.count_type == 0:     # "lesser than"
+        if self.count_type == 0:     # "less than"
             return count < self.userSelectedCount
         elif self.count_type == 2:   # "greater than"
             return count > self.userSelectedCount

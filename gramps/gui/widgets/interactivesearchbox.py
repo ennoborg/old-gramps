@@ -8,7 +8,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful, 
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
@@ -162,11 +162,7 @@ class InteractiveSearchBox():
         vbox.set_border_width(3)
 
         """ add entry """
-        # To be change by Gtk 3.10 SearchEntry when agreed
-        if (Gtk.get_major_version(), Gtk.get_minor_version()) >= (3, 6):
-            self._search_entry = Gtk.SearchEntry()
-        else:
-            self._search_entry = Gtk.Entry()
+        self._search_entry = Gtk.SearchEntry()
         self._search_entry.show()
         self._search_entry.connect("populate-popup", self._disable_popdown)
         self._search_entry.connect("activate", self._activate)
@@ -196,7 +192,8 @@ class InteractiveSearchBox():
         self._search_entry.grab_focus()
         self._search_entry.set_position(-1)
         # send focus-in event
-        event = Gdk.Event(Gdk.EventType.FOCUS_CHANGE)
+        event = Gdk.Event()
+        event.type = Gdk.EventType.FOCUS_CHANGE
         event.focus_change.in_ = True
         event.focus_change.window = self._search_window.get_window()
         self._search_entry.emit('focus-in-event', event)
@@ -207,7 +204,8 @@ class InteractiveSearchBox():
         return True
 
     def cb_entry_flush_timeout(self):
-        event = Gdk.Event(Gdk.EventType.FOCUS_CHANGE)
+        event = Gdk.Event()
+        event.type = Gdk.EventType.FOCUS_CHANGE
         event.focus_change.in_ = True
         event.focus_change.window = self._treeview.get_window()
         self._dialog_hide(event)
@@ -305,7 +303,8 @@ class InteractiveSearchBox():
         if not obj:
             return
         # keyb_device = event.device
-        event = Gdk.Event(Gdk.EventType.FOCUS_CHANGE)
+        event = Gdk.Event()
+        event.type = Gdk.EventType.FOCUS_CHANGE
         event.focus_change.in_ = True
         event.focus_change.window = self._treeview.get_window()
         self._dialog_hide(event)
@@ -491,7 +490,7 @@ class InteractiveSearchBox():
         """
         Search among the currently set search-column for a cell starting with
         text
-        It assumes that this column is currently sorted, and as 
+        It assumes that this column is currently sorted, and as
         a LIST_ONLY view it therefore contains index2hndl = model.node_map._index2hndl
         which is a _sorted_ list of (sortkey, handle) tuples
         """
@@ -508,7 +507,7 @@ class InteractiveSearchBox():
             # TODO: explicitely announce the data->sortkey func in models
             # sort_key = model.sort_func(text)
             sort_key = glocale.sort_key(text.lower())
-            srtkey_hndl = (sort_key, None)
+            srtkey_hndl = (sort_key, "")
             lo_bound = 0  # model.get_path(cur_iter)
             found_index = bisect.bisect_left(index2hndl, srtkey_hndl, lo=lo_bound)
             # if insert position is at tail, no match

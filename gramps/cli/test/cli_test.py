@@ -20,13 +20,15 @@
 
 """ CLI tests for gramps """
 
+import sys
 import os
 import unittest
 import re
-import io
 import subprocess
 
 from gramps.gen.const import TEMP_DIR
+from gramps.gen.dbstate import DbState
+from gramps.test.test_util import Gramps
 
 test_ged = """0 HEAD
 1 SOUR min1r.ged min 1-rec
@@ -42,6 +44,9 @@ test_ged = """0 HEAD
 ddir = os.path.dirname(__file__)
 min1r = os.path.join(ddir, "min1r.ged")
 out_ged = os.path.join(ddir, "test_out.ged")
+example_copy = os.path.join(ddir, "copy.gramps")
+example = os.path.join(ddir, "..", "..", "..",
+                       "example", "gramps", "data.gramps")
 
 class Test(unittest.TestCase):
     def setUp(self):
@@ -54,7 +59,7 @@ class Test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not os.path.exists(min1r):
-            with io.open(min1r, "w") as f:
+            with open(min1r, "w") as f:
                 f.write(test_ged)
 
     @classmethod
@@ -66,16 +71,17 @@ class Test(unittest.TestCase):
     def test1_setup_works(self):
         self.assertTrue(os.path.exists(ddir), "data dir %r exists" % ddir)
         self.assertTrue(os.path.exists(min1r), "data file %r exists" % min1r)
-        self.assertFalse(os.path.exists(out_ged), 
+        self.assertFalse(os.path.exists(out_ged),
             "NO out file %r yet" % out_ged)
- 
+
     # This tests the fix for bug #1331-1334
     # read trivial gedcom input, write gedcom output
     def test2_exec_CLI(self):
+        pyexec = sys.executable
         ifile = min1r
         ofile = out_ged
         gcmd = "Gramps.py -i %s -e %s" % (ifile, ofile)
-        process = subprocess.Popen("python3 %s" % gcmd,
+        process = subprocess.Popen("%s %s" % (pyexec, gcmd),
                                    stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
@@ -84,12 +90,12 @@ class Test(unittest.TestCase):
                          "executed CLI command %r" % gcmd)
         # simple validation o output
         self.assertTrue(os.path.isfile(ofile), "output file created")
-        with io.open(ofile) as f:
+        with open(ofile) as f:
             content = f.read()
         g = re.search("INDI", content)
         self.assertTrue(g, "found 'INDI' in output file")
 
-    # this verifies that files in the temporary "import dir" 
+    # this verifies that files in the temporary "import dir"
     # get cleaned before (and after) running a CLI
     # (eg cleanout stale files from prior crash-runs)
     def test3_files_in_import_dir(self):
@@ -100,14 +106,15 @@ class Test(unittest.TestCase):
             pass
         bogofiles = [os.path.join(ddir, fn) for fn in ("family.db", "lock")]
         for fn in bogofiles:
-            with io.open(fn, "w") as f:
+            with open(fn, "w") as f:
                 f.write("garbage")
-        
+
         # ~same as test 2
+        pyexec = sys.executable
         ifile = min1r
         ofile = out_ged
         gcmd = "Gramps.py -i %s -e %s" % (ifile, ofile)
-        process = subprocess.Popen("python3 %s" % gcmd,
+        process = subprocess.Popen("%s %s" % (pyexec, gcmd),
                                    stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
@@ -153,6 +160,24 @@ class UnicodeTest(unittest.TestCase):
         self.assertEqual(self.newtitle, title, "Compare titles %s and %s" %
                           (repr(self.newtitle), repr(title)))
 
+class CLITest(unittest.TestCase):
+    def tearDown(self):
+        if os.path.exists(example_copy):
+            os.remove(example_copy)
+        self.call("--remove", "Test: test1_cli")
+
+    def setUp(self):
+        self.gramps = Gramps()
+        self.tearDown()
+
+    def call(self, *args, stdin=None):
+        self.gramps.run(*args, stdin=stdin)
+
+    def test1a_cli(self):
+        self.call("-C", "Test: test1_cli", "--import", example)
+
+    def test1b_cli(self):
+        self.call("-O", "Test: test1_cli", "--export", example_copy)
 
 if __name__ == "__main__":
     unittest.main()

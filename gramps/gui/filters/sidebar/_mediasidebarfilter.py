@@ -36,14 +36,14 @@ from gi.repository import Gtk
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from ... import widgets
 from .. import build_filter_model
 from . import SidebarFilter
 from gramps.gen.filters import GenericFilterFactory, rules
-from gramps.gen.filters.rules.media import (RegExpIdOf, HasMedia, HasTag, 
+from gramps.gen.filters.rules.media import (RegExpIdOf, HasMedia, HasTag,
                                             HasNoteRegexp, MatchesFilter)
 
 GenericMediaFilter = GenericFilterFactory('Media')
@@ -127,7 +127,7 @@ class MediaSidebarFilter(SidebarFilter):
 
             rule = HasMedia([title, mime, path, date], use_regex=regex)
             generic_filter.add_rule(rule)
-                
+
             if note:
                 rule = HasNoteRegexp([note], use_regex=regex)
                 generic_filter.add_rule(rule)

@@ -8,7 +8,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful, 
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
@@ -36,7 +36,6 @@ _LOG = logging.getLogger(".widgets.buttons")
 # GTK/Gnome modules
 #
 #-------------------------------------------------------------------------
-from gi.repository import GObject
 from gi.repository import Gdk
 from gi.repository import Gtk
 
@@ -48,7 +47,7 @@ from gi.repository import Gtk
 class IconButton(Gtk.Button):
 
     def __init__(self, func, handle, icon='gtk-edit', size=Gtk.IconSize.MENU):
-        GObject.GObject.__init__(self)
+        Gtk.Button.__init__(self)
         image = Gtk.Image()
         image.set_from_icon_name(icon, size)
         image.show()
@@ -73,7 +72,7 @@ class IconButton(Gtk.Button):
 #-------------------------------------------------------------------------
 class WarnButton(Gtk.Button):
     def __init__(self):
-        GObject.GObject.__init__(self)
+        Gtk.Button.__init__(self)
 
         image = Gtk.Image()
         image.set_from_icon_name('dialog-information', Gtk.IconSize.MENU)
@@ -108,7 +107,7 @@ class WarnButton(Gtk.Button):
 class SimpleButton(Gtk.Button):
 
     def __init__(self, image, func):
-        GObject.GObject.__init__(self)
+        Gtk.Button.__init__(self)
         self.set_relief(Gtk.ReliefStyle.NONE)
         self.add(Gtk.Image.new_from_icon_name(image, Gtk.IconSize.BUTTON))
         self.connect('clicked', func)
@@ -119,7 +118,7 @@ class SimpleButton(Gtk.Button):
 ##        Unset all elements that can prevent garbage collection
 ##        """
 ##        Gtk.Button.destroy(self)
-        
+
 #-------------------------------------------------------------------------
 #
 # PrivacyButton class

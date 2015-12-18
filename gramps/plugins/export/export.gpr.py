@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-MODULE_VERSION="5.0" 
+MODULE_VERSION="5.0"
 
 #------------------------------------------------------------------------
 #
@@ -107,7 +107,7 @@ plg.extension = "gw"
 
 #------------------------------------------------------------------------
 #
-# GRAMPS package (portable XML)
+# Gramps package (portable XML)
 #
 #------------------------------------------------------------------------
 
@@ -129,7 +129,7 @@ plg.extension = "gpkg"
 
 #------------------------------------------------------------------------
 #
-# GRAMPS XML database
+# Gramps XML database
 #
 #------------------------------------------------------------------------
 
@@ -137,7 +137,7 @@ plg = newplugin()
 plg.id    = 'ex_gramps'
 plg.name  = _('Gramps XML (family tree)')
 plg.name_accell  = _('Gramps _XML (family tree)')
-plg.description =  _('Gramps XML export is a complete archived XML backup of a' 
+plg.description =  _('Gramps XML export is a complete archived XML backup of a'
                  ' Gramps family tree without the media object files.'
                  ' Suitable for backup purposes.')
 plg.version = '1.0'

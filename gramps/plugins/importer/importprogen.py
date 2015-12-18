@@ -42,16 +42,16 @@ log = logging.getLogger('.ImportProGen')
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 from gramps.gen.utils.id import create_id
 from gramps.gui.utils import ProgressMeter
-from gramps.gen.lib import (Attribute, AttributeType, ChildRef, Date, Event, 
-                            EventRef, EventType, Family, FamilyRelType, Name, 
-                            NameType, Note, NoteType, Person, Place, Source, 
+from gramps.gen.lib import (Attribute, AttributeType, ChildRef, Date, Event,
+                            EventRef, EventType, Family, FamilyRelType, Name,
+                            NameType, Note, NoteType, Person, Place, Source,
                             Surname, Citation, Location, NameOriginType)
 from gramps.gen.db import DbTxn
 from gramps.gen.utils.libformatting import ImportInfo
@@ -75,9 +75,7 @@ def _importData(database, filename, user):
         return
 
     try:
-        database.prepare_import()
         status = g.parse_progen_file()
-        database.commit_import()
     except ProgenError as msg:
         user.notify_error(_("Pro-Gen data error"), str(msg))
         return
@@ -89,11 +87,11 @@ def _importData(database, filename, user):
 
 def _find_from_handle(progen_id, table):
     """
-    Find a handle corresponding to the specified Pro-Gen ID. 
-    
-    The passed table contains the mapping. If the value is found, we return 
+    Find a handle corresponding to the specified Pro-Gen ID.
+
+    The passed table contains the mapping. If the value is found, we return
     it, otherwise we create a new handle, store it, and return it.
-    
+
     """
     intid = table.get(progen_id)
     if not intid:
@@ -470,10 +468,8 @@ class PG30_Def:
             raise ProgenError(_("Cannot find DEF file: %(deffname)s") % locals())
 
         # This can throw a IOError
-        import io
         lines = None
-        with io.open(fname, buffering=1,
-                     encoding='cp437', errors='strict') as f:
+        with open(fname, buffering=1, encoding='cp437', errors='strict') as f:
             lines = f.readlines()
         lines = [l.strip() for l in lines]
         content = '\n'.join(lines).encode('utf-8')
@@ -548,7 +544,7 @@ class ProgenParser(object):
     def __find_or_create_person(self, progen_id):
         """
         Finds or creates a person based on the Pro-Gen ID. If the ID is
-        already used (is in the db), we return the item in the db. Otherwise, 
+        already used (is in the db), we return the item in the db. Otherwise,
         we create a new person, assign the handle and GRAMPS ID.
         """
         person = Person()
@@ -567,7 +563,7 @@ class ProgenParser(object):
     def __find_or_create_family(self, progen_id):
         """
         Finds or creates a family based on the Pro-Gen ID. If the ID is
-        already used (is in the db), we return the item in the db. Otherwise, 
+        already used (is in the db), we return the item in the db. Otherwise,
         we create a new family, assign the handle and GRAMPS ID.
         """
         family = Family()
@@ -616,7 +612,7 @@ class ProgenParser(object):
             self.db.add_source(source, self.trans)
             self.db.commit_source(source, self.trans)
             self.skeys[source_name] = source.get_handle()
-            
+
         citation = Citation()
         citation.set_reference_handle(source.get_handle())
         if aktenr:
@@ -662,7 +658,7 @@ class ProgenParser(object):
             note.set(note_text)
             self.db.add_note(note, self.trans)
             event.add_note(note.handle)
-            
+
         self.db.add_event(event, self.trans)
         self.db.commit_event(event, self.trans)
         event_ref = EventRef()
@@ -852,7 +848,7 @@ class ProgenParser(object):
                 first_name = recflds[first_name_ix]
                 surname_prefix, surname = _split_surname(recflds[surname_ix])
                 patronym = recflds[patron_ix]       # INDI _PATR
-                alias = recflds[alias_ix]           # INDI NAME _ALIA/INDI NAME COMM 
+                alias = recflds[alias_ix]           # INDI NAME _ALIA/INDI NAME COMM
                 title1 = recflds[title1_ix]         # INDI TITL
                 title2 = recflds[title2_ix]         # INDI _TITL2
                 title3 = recflds[title3_ix]         # INDI _TITL3
@@ -918,7 +914,7 @@ class ProgenParser(object):
                         name.add_surname(sname)
                         name.set_first_name(' '.join(aname[0:-1]))
                         name.set_type(NameType.AKA)
-                        person.add_alternate_name(name)                    
+                        person.add_alternate_name(name)
 
                 if recflds[occu_ix]:
                     event, event_ref = self.__create_event_and_ref(EventType.OCCUPATION, recflds[occu_ix])

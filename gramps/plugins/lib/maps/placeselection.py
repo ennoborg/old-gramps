@@ -124,7 +124,8 @@ class PlaceSelection(ManagedWindow, OsmGps):
                             ' oval depending on the latitude.'))
         label.set_valign(Gtk.Align.END)
         self.window.vbox.pack_start(label, False, True, 0)
-        adj = Gtk.Adjustment(1.0, 0.1, 3.0, 0.1, 0, 0)
+        adj = Gtk.Adjustment(value=1.0, lower=0.1, upper=3.0,
+                             step_increment=0.1, page_increment=0, page_size=0)
         # default value is 1.0, minimum is 0.1 and max is 3.0
         slider = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL,
                            adjustment=adj)
@@ -152,7 +153,7 @@ class PlaceSelection(ManagedWindow, OsmGps):
         self.window.vbox.pack_start(self.scroll, True, True, 0)
         self.label2 = Gtk.Label()
         self.label2.set_markup('<span background="green" foreground="black"'
-                               '>%s</span>' % 
+                               '>%s</span>' %
              _('The green values in the row correspond '
                'to the current place values.'))
         self.label2.set_valign(Gtk.Align.END)
@@ -193,7 +194,10 @@ class PlaceSelection(ManagedWindow, OsmGps):
                                self.oldvalue)
                              )
         for place in self.places:
-            p = (place[0].value, place[1].value, place[2].value, place[3])
+            if not place[0]:
+                _LOG.info('No hierarchy yet: %s' % place)
+                continue
+            p = (place[0].value, place[1], place[2], place[3])
             self.plist.append(p)
         # here, we could add value from geography names services ...
 
@@ -224,23 +228,24 @@ class PlaceSelection(ManagedWindow, OsmGps):
         parent_place = None
         country = state = county = ''
         place = self.dbstate.db.get_place_from_gramps_id(gramps_id)
+        place_name = place.name.get_value()
         parent_list = place.get_placeref_list()
         while len(parent_list) > 0:
             place = self.dbstate.db.get_place_from_handle(parent_list[0].ref)
             parent_list = place.get_placeref_list()
             if int(place.get_type()) == PlaceType.COUNTY:
-                county = place.name
+                county = place.name.get_value()
                 if parent_place is None:
                     parent_place = place.get_handle()
             elif int(place.get_type()) == PlaceType.STATE:
-                state = place.name
+                state = place.name.get_value()
                 if parent_place is None:
                     parent_place = place.get_handle()
             elif int(place.get_type()) == PlaceType.COUNTRY:
                 country = place.name
                 if parent_place is None:
                     parent_place = place.get_handle()
-        return(country, state, county, parent_place)
+        return(country, state, county, place_name)
 
     def selection(self, obj, index, column, function):
         """

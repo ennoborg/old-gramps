@@ -8,7 +8,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful, 
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
@@ -24,11 +24,10 @@ Helper class for importing places.
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from gramps.gen.lib import Place, PlaceName, PlaceType, PlaceRef
-from gramps.gen.constfunc import handle2internal
 
 #-------------------------------------------------------------------------
 #
@@ -70,7 +69,7 @@ class PlaceImport(object):
             for type_num, name in enumerate(location):
                 if name:
                     break
-            
+
             loc = list(location)
             loc[type_num] = ''
 
@@ -97,7 +96,7 @@ class PlaceImport(object):
             if parent:
                 place = self.db.get_place_from_handle(handle)
                 placeref = PlaceRef()
-                placeref.ref = handle2internal(parent)
+                placeref.ref = parent.decode('utf-8')
                 place.set_placeref_list([placeref])
                 self.db.commit_place(place, trans, place.get_change_time())
 
@@ -113,7 +112,7 @@ class PlaceImport(object):
         place.place_type = PlaceType(7-type_num)
         if parent is not None:
             placeref = PlaceRef()
-            placeref.ref = handle2internal(parent)
+            placeref.ref = parent.decode('utf-8')
             place.set_placeref_list([placeref])
         handle = self.db.add_place(place, trans)
         self.db.commit_place(place, trans)

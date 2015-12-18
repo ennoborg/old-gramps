@@ -41,21 +41,16 @@ from bsddb3 import db
 #-------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
-from gramps.gen.constfunc import handle2internal
 from gramps.gen.lib.markertype import MarkerType
 from gramps.gen.lib.nameorigintype import NameOriginType
-from gramps.gen.lib.place import Place
-from gramps.gen.lib.placeref import PlaceRef
-from gramps.gen.lib.placetype import PlaceType
-from gramps.gen.lib.placename import PlaceName
 from gramps.gen.lib.eventtype import EventType
 from gramps.gen.lib.tag import Tag
 from gramps.gen.utils.file import create_checksum
 from gramps.gen.utils.id import create_id
 from . import BSDDBTxn
 from .write import _mkname, SURNAMES
-from gramps.gen.db.dbconst import (PERSON_KEY, FAMILY_KEY, EVENT_KEY, 
-                                   MEDIA_KEY, PLACE_KEY, REPOSITORY_KEY, 
+from gramps.gen.db.dbconst import (PERSON_KEY, FAMILY_KEY, EVENT_KEY,
+                                   MEDIA_KEY, PLACE_KEY, REPOSITORY_KEY,
                                    SOURCE_KEY)
 from gramps.gui.dialog import (InfoDialog)
 
@@ -96,14 +91,10 @@ def gramps_upgrade_18(self):
     for handle in self.place_map.keys():
         place = self.place_map[handle]
         new_place = list(place)
-        name = PlaceName()
-        name.set_value(new_place[6])
-        new_place[6] = name.serialize()
+        new_place[6] = (new_place[6], None, '')
         alt_names = []
         for name in new_place[7]:
-            alt_name = PlaceName()
-            alt_name.set_value(name)
-            alt_names.append(alt_name.serialize())
+            alt_names.append((name, None, ''))
         new_place[7] = alt_names
         new_place = tuple(new_place)
         with BSDDBTxn(self.env, self.place_map) as txn:
@@ -118,9 +109,9 @@ def gramps_upgrade_18(self):
 
 def gramps_upgrade_17(self):
     """
-    Upgrade database from version 16 to 17. 
+    Upgrade database from version 16 to 17.
 
-    1. This upgrade adds tags to event, place, repository, source and 
+    1. This upgrade adds tags to event, place, repository, source and
        citation objects.
     2. Data of Source becomes SourceAttributes Secondary Object
     3. Create a place hierarchy.
@@ -181,7 +172,7 @@ def gramps_upgrade_17(self):
         for level, name in enumerate(main_loc):
             if name:
                 break
-        
+
         loc = list(main_loc[:])
         loc[level] = ''
 
@@ -205,15 +196,17 @@ def gramps_upgrade_17(self):
             n -= 1
 
         if parent_handle is not None:
-            placeref = PlaceRef()
-            placeref.ref = handle2internal(parent_handle)
-            placeref_list = [placeref.serialize()]
+            placeref_list = [(parent_handle.decode('utf-8'), None)]
         else:
             placeref_list = []
 
-        type_num = 7 - level if name else PlaceType.UNKNOWN
+        if name:
+            type_num = 7 - level
+        else:
+            name = new_place[2]
+            type_num = -1
         new_place = new_place[:5] + [placeref_list, name, [],
-                    PlaceType(type_num).serialize(), zip_code] + \
+                    (type_num, ''), zip_code] + \
                     new_place[6:12] + [[]] + new_place[12:]
         new_place = tuple(new_place)
         with BSDDBTxn(self.env, self.place_map) as txn:
@@ -287,10 +280,10 @@ def gramps_upgrade_17(self):
 
     for handle in self.citation_map.keys():
         citation = self.citation_map[handle]
-        (handle, gramps_id, datelist, page, confidence, source_handle, 
+        (handle, gramps_id, datelist, page, confidence, source_handle,
             notelist, medialist, datamap, change, taglist, private) = citation
         srcattributelist = upgrade_datamap_17(datamap)
-        new_citation = (handle, gramps_id, datelist, page, confidence, source_handle, 
+        new_citation = (handle, gramps_id, datelist, page, confidence, source_handle,
             notelist, medialist, srcattributelist, change, taglist, private)
         with BSDDBTxn(self.env, self.citation_map) as txn:
             if isinstance(handle, str):
@@ -336,21 +329,19 @@ def get_location(loc):
 
 def add_place(self, name, level, parent, title):
     handle = create_id()
-    place = Place()
-    place.handle = handle
     self.max_id += 1
-    place.gramps_id = self.place_prefix % self.max_id
-    place.set_name(name)
-    place.set_title(title)
-    place.set_type(PlaceType(7-level))
+    gid = self.place_prefix % self.max_id
+    placetype = (7-level, '')
     if parent is not None:
-        placeref = PlaceRef()
-        placeref.ref = handle2internal(parent)
-        place.set_placeref_list([placeref])
+        placeref_list = [(parent.decode('utf-8'), None)]
+    else:
+        placeref_list = []
+    place = (handle, gid, title, '', '', placeref_list, name, [], placetype,
+             '', [], [], [], [], [], 0, [], False)
     with BSDDBTxn(self.env, self.place_map) as txn:
         if isinstance(handle, str):
             handle = handle.encode('utf-8')
-        txn.put(handle, place.serialize())
+        txn.put(handle, place)
     return handle
 
 def upgrade_datamap_17(datamap):
@@ -370,15 +361,15 @@ def gramps_upgrade_16(self):
     """
     Upgrade database from version 15 to 16. This upgrade converts all
     SourceRef child objects to Citation Primary objects.
-       
-    For each primary object that has a sourceref, what we have to do is: 
+
+    For each primary object that has a sourceref, what we have to do is:
 
         (1) create each citation
         (2) update the object to reference the Citations
         (3) remove backlinks for references from object to Source
         (4) add backlinks for references from object to Citations
         (5) add backlinks for references from Citation to Source
-        
+
     the backlinks are all updated at the end by calling
     :py:meth:`reindex_reference_map <.write.DbBsddb.reindex_reference_map>`
     """
@@ -392,16 +383,16 @@ def gramps_upgrade_16(self):
     self.set_total(length)
 
     # Setup data for upgrade statistics information dialogue
-    keyorder = [PERSON_KEY, FAMILY_KEY, EVENT_KEY, MEDIA_KEY, 
+    keyorder = [PERSON_KEY, FAMILY_KEY, EVENT_KEY, MEDIA_KEY,
                 PLACE_KEY, REPOSITORY_KEY, SOURCE_KEY]
     key2data = {
             PERSON_KEY : 0,
             FAMILY_KEY : 1,
-            EVENT_KEY: 2, 
-            MEDIA_KEY: 3, 
+            EVENT_KEY: 2,
+            MEDIA_KEY: 3,
             PLACE_KEY: 4,
             REPOSITORY_KEY: 5,
-            SOURCE_KEY : 6, 
+            SOURCE_KEY : 6,
             }
     key2string = {
         PERSON_KEY      : _('%(n1)6d  People        upgraded with %(n2)6d citations in %(n3)6d secs\n'),
@@ -433,10 +424,10 @@ def gramps_upgrade_16(self):
                       " ".join([name[0] for name in person[3][5]])))
         except:
             pass
-        (handle, gramps_id, gender, primary_name, alternate_names, 
-         death_ref_index, birth_ref_index, event_ref_list, family_list, 
-         parent_family_list, media_list, address_list, attribute_list, 
-         urls, lds_seal_list, source_list, note_list, change, tag_list, 
+        (handle, gramps_id, gender, primary_name, alternate_names,
+         death_ref_index, birth_ref_index, event_ref_list, family_list,
+         parent_family_list, media_list, address_list, attribute_list,
+         urls, lds_seal_list, source_list, note_list, change, tag_list,
          private, person_ref_list) = person
         if primary_name:
             primary_name = upgrade_name_16(self, primary_name)
@@ -468,12 +459,12 @@ def gramps_upgrade_16(self):
         if primary_name or alternate_names  or address_list or \
            media_list or attribute_list or lds_seal_list or source_list or \
            person_ref_list or event_ref_list:
-            new_person = (handle, gramps_id, gender, primary_name, 
-                          alternate_names, death_ref_index, 
-                          birth_ref_index, event_ref_list, family_list, 
-                          parent_family_list, media_list, address_list, 
-                          attribute_list, urls, lds_seal_list, 
-                          new_citation_list, note_list, change, tag_list, 
+            new_person = (handle, gramps_id, gender, primary_name,
+                          alternate_names, death_ref_index,
+                          birth_ref_index, event_ref_list, family_list,
+                          parent_family_list, media_list, address_list,
+                          attribute_list, urls, lds_seal_list,
+                          new_citation_list, note_list, change, tag_list,
                           private, person_ref_list)
             LOG.debug("      upgrade new_person %s" % [new_person])
             with BSDDBTxn(self.env, self.person_map) as txn:
@@ -482,9 +473,9 @@ def gramps_upgrade_16(self):
                 txn.put(handle, new_person)
         self.update()
 
-    LOG.debug("%d persons upgraded with %d citations in %d seconds. " % 
-              (len(list(self.person_map.keys())), 
-               self.cmap_index - start_num_citations, 
+    LOG.debug("%d persons upgraded with %d citations in %d seconds. " %
+              (len(list(self.person_map.keys())),
+               self.cmap_index - start_num_citations,
                time.time() - start_time))
     data_upgradeobject[key2data[PERSON_KEY]] = (len(list(self.person_map.keys())),
                                        self.cmap_index - start_num_citations,
@@ -505,9 +496,9 @@ def gramps_upgrade_16(self):
                                    self, source_list)
         new_attribute_list = upgrade_attribute_list_16(
                                    self, attribute_list)
-            
+
         new_media = (handle, gramps_id, path, mime, desc,
-                     new_attribute_list, new_citation_list, note_list, 
+                     new_attribute_list, new_citation_list, note_list,
                      change, date, tag_list, private)
         LOG.debug("      upgrade new_media %s" % [new_media])
         with BSDDBTxn(self.env, self.media_map) as txn:
@@ -516,9 +507,9 @@ def gramps_upgrade_16(self):
             txn.put(handle, new_media)
         self.update()
 
-    LOG.debug("%d media objects upgraded with %d citations in %d seconds" % 
+    LOG.debug("%d media objects upgraded with %d citations in %d seconds" %
               (len(self.media_map.keys()),
-               self.cmap_index - start_num_citations, 
+               self.cmap_index - start_num_citations,
                int(time.time() - start_time)))
     data_upgradeobject[key2data[MEDIA_KEY]] = (len(list(self.media_map.keys())),
                                        self.cmap_index - start_num_citations,
@@ -544,9 +535,9 @@ def gramps_upgrade_16(self):
             media_list = upgrade_media_list_16(
                                     self, media_list)
         if source_list or media_list:
-            new_place = (handle, gramps_id, title, 
+            new_place = (handle, gramps_id, title,
                          longi, lat, main_loc, alt_loc, urls,
-                         media_list, new_citation_list, note_list, 
+                         media_list, new_citation_list, note_list,
                          change, private)
             LOG.debug("      upgrade new_place %s" % [new_place])
             with BSDDBTxn(self.env, self.place_map) as txn:
@@ -555,9 +546,9 @@ def gramps_upgrade_16(self):
                 txn.put(handle, new_place)
         self.update()
 
-    LOG.debug("%d places upgraded with %d citations in %d seconds. " % 
-              (len(list(self.place_map.keys())), 
-               self.cmap_index - start_num_citations, 
+    LOG.debug("%d places upgraded with %d citations in %d seconds. " %
+              (len(list(self.place_map.keys())),
+               self.cmap_index - start_num_citations,
                time.time() - start_time))
     data_upgradeobject[key2data[PLACE_KEY]] = (len(list(self.place_map.keys())),
                                        self.cmap_index - start_num_citations,
@@ -598,7 +589,7 @@ def gramps_upgrade_16(self):
             attribute_list or lds_seal_list or event_ref_list:
             new_family = (handle, gramps_id, father_handle, mother_handle,
                           child_ref_list, the_type, event_ref_list, media_list,
-                          attribute_list, lds_seal_list, new_citation_list, 
+                          attribute_list, lds_seal_list, new_citation_list,
                           note_list, change, tag_list, private)
             LOG.debug("      upgrade new_family %s" % [new_family])
             with BSDDBTxn(self.env, self.family_map) as txn:
@@ -607,9 +598,9 @@ def gramps_upgrade_16(self):
                 txn.put(handle, new_family)
         self.update()
 
-    LOG.debug("%d families upgraded with %d citations in %d seconds. " % 
-              (len(list(self.family_map.keys())), 
-               self.cmap_index - start_num_citations, 
+    LOG.debug("%d families upgraded with %d citations in %d seconds. " %
+              (len(list(self.family_map.keys())),
+               self.cmap_index - start_num_citations,
                time.time() - start_time))
     data_upgradeobject[key2data[FAMILY_KEY]] = (len(list(self.family_map.keys())),
                                        self.cmap_index - start_num_citations,
@@ -622,7 +613,7 @@ def gramps_upgrade_16(self):
     for event_handle in self.event_map.keys():
         event = self.event_map[event_handle]
         LOG.debug("upgrade event %s" % event[4])
-        (handle, gramps_id, the_type, date, description, place, 
+        (handle, gramps_id, the_type, date, description, place,
          source_list, note_list, media_list, attribute_list,
          change, private) = event
         if source_list:
@@ -639,7 +630,7 @@ def gramps_upgrade_16(self):
         if source_list or attribute_list or media_list:
             new_event = (handle, gramps_id, the_type, date, description, place,
                          new_citation_list, note_list, media_list,
-                         attribute_list, 
+                         attribute_list,
                          change, private)
             LOG.debug("      upgrade new_event %s" % [new_event])
             with BSDDBTxn(self.env, self.event_map) as txn:
@@ -648,9 +639,9 @@ def gramps_upgrade_16(self):
                 txn.put(handle, new_event)
         self.update()
 
-    LOG.debug("%d events upgraded with %d citations in %d seconds. " % 
-              (len(self.event_map.keys()), 
-               self.cmap_index - start_num_citations, 
+    LOG.debug("%d events upgraded with %d citations in %d seconds. " %
+              (len(self.event_map.keys()),
+               self.cmap_index - start_num_citations,
                time.time() - start_time))
     data_upgradeobject[key2data[EVENT_KEY]] = (len(list(self.event_map.keys())),
                                        self.cmap_index - start_num_citations,
@@ -679,9 +670,9 @@ def gramps_upgrade_16(self):
                 txn.put(handle, new_repository)
         self.update()
 
-    LOG.debug("%d repositories upgraded with %d citations in %d seconds. " % 
-              (len(list(self.repository_map.keys())), 
-               self.cmap_index - start_num_citations, 
+    LOG.debug("%d repositories upgraded with %d citations in %d seconds. " %
+              (len(list(self.repository_map.keys())),
+               self.cmap_index - start_num_citations,
                time.time() - start_time))
     data_upgradeobject[key2data[REPOSITORY_KEY]] = (len(list(self.repository_map.keys())),
                                        self.cmap_index - start_num_citations,
@@ -702,7 +693,7 @@ def gramps_upgrade_16(self):
         if media_list:
             media_list = upgrade_media_list_16(
                                         self, media_list)
-            
+
         new_source = (handle, gramps_id, title, author,
                       pubinfo, note_list, media_list,
                       abbrev, change, datamap, reporef_list,
@@ -714,9 +705,9 @@ def gramps_upgrade_16(self):
             txn.put(handle, new_source)
         self.update()
 
-    LOG.debug("%d sources upgraded with %d citations in %d seconds" % 
-              (len(self.source_map.keys()), 
-               self.cmap_index - start_num_citations, 
+    LOG.debug("%d sources upgraded with %d citations in %d seconds" %
+              (len(self.source_map.keys()),
+               self.cmap_index - start_num_citations,
                int(time.time() - start_time)))
     data_upgradeobject[key2data[SOURCE_KEY]] = (len(self.source_map.keys()),
                                        self.cmap_index - start_num_citations,
@@ -724,18 +715,18 @@ def gramps_upgrade_16(self):
 
     # ---------------------------------
 
-    
+
     # ---------------------------------
     # Example database from repository took:
     # 3403 events upgraded with 8 citations in 23 seconds. Backlinks took 1071 seconds
     # actually 4 of these citations were from:
-    # Media upgrade 4 citations upgraded in 4 seconds         
+    # Media upgrade 4 citations upgraded in 4 seconds
     # by only doing the backlinks when there might be something to do,
     # improved to:
     # 3403 events upgraded with 8 citations in 19 seconds. Backlinks took 1348 seconds
     # further improved by skipping debug logging:
     # 3403 events upgraded with 8 citations in 2 seconds. Backlinks took 167 seconds
-    
+
     #Number of new objects upgraded:
 #  2090  People        upgraded with   2092 citations in 2148 secs
 #   734  Families      upgraded with    735 citations in 768 secs
@@ -793,7 +784,7 @@ def gramps_upgrade_16(self):
     # Bump up database version. Separate transaction to save metadata.
     with BSDDBTxn(self.env, self.metadata) as txn:
         txn.put(b'version', 16)
-        
+
     LOG.debug([data_upgradeobject])
     txt = _("Number of new objects upgraded:\n")
     for key in keyorder:
@@ -818,7 +809,7 @@ def upgrade_media_list_16(self, media_list):
                                         self, source_list)
         new_attribute_list = upgrade_attribute_list_16(
                                         self, attribute_list)
-        new_media = (privacy, new_citation_list, note_list, new_attribute_list, 
+        new_media = (privacy, new_citation_list, note_list, new_attribute_list,
                      ref, rect)
         new_media_list.append((new_media))
     return new_media_list
@@ -826,15 +817,15 @@ def upgrade_media_list_16(self, media_list):
 def upgrade_attribute_list_16(self, attribute_list):
     new_attribute_list = []
     for attribute in attribute_list:
-        (privacy, source_list, note_list, the_type, 
+        (privacy, source_list, note_list, the_type,
          value) = attribute
         new_citation_list = convert_source_list_to_citation_list_16(
                                 self, source_list)
-        new_attribute = (privacy, new_citation_list, note_list, 
+        new_attribute = (privacy, new_citation_list, note_list,
                          the_type, value)
         new_attribute_list.append((new_attribute))
     return new_attribute_list
-    
+
 def upgrade_child_ref_list_16(self, child_ref_list):
     new_child_ref_list = []
     for child_ref in child_ref_list:
@@ -875,13 +866,13 @@ def upgrade_name_list_16(self, name_list):
     return new_name_list
 
 def upgrade_name_16(self, name):
-    (privacy, source_list, note, date, first_name, surname_list, suffix, 
-     title, name_type, group_as, sort_as, display_as, call, nick, 
+    (privacy, source_list, note, date, first_name, surname_list, suffix,
+     title, name_type, group_as, sort_as, display_as, call, nick,
      famnick) = name
     new_citation_list = convert_source_list_to_citation_list_16(
                                     self, source_list)
-    new_name = (privacy, new_citation_list, note, date, first_name, 
-                surname_list, suffix, title, name_type, group_as, sort_as, 
+    new_name = (privacy, new_citation_list, note, date, first_name,
+                surname_list, suffix, title, name_type, group_as, sort_as,
                 display_as, call, nick, famnick)
     return new_name
 
@@ -1140,7 +1131,7 @@ def convert_marker(self, marker_field):
     marker = MarkerType()
     marker.unserialize(marker_field)
     tag_name = str(marker)
-    
+
     if tag_name != '':
         if tag_name not in self.tags:
             tag = Tag()
@@ -1161,7 +1152,7 @@ def convert_marker(self, marker_field):
 def convert_locbase(loc):
     """Convert location base to include an empty locality field."""
     return tuple([loc[0], ''] + list(loc[1:]))
-    
+
 def convert_location(loc):
     """Convert a location into the new format."""
     return (convert_locbase(loc[0]), loc[1])
@@ -1171,15 +1162,15 @@ def convert_address(addr):
     return (addr[0], addr[1], addr[2], addr[3], convert_locbase(addr[4]))
 
 def convert_name_15(name):
-    (privacy, source_list, note_list, date, 
+    (privacy, source_list, note_list, date,
      first_name, surname, suffix, title,
      name_type, prefix, patronymic,
      group_as, sort_as, display_as, call) = name
-    
+
     connector = ""
     origintype = (NameOriginType.NONE, "")
     patorigintype = (NameOriginType.PATRONYMIC, "")
-    
+
     if patronymic.strip() == "":
         #no patronymic, create a single surname
         surname_list = [(surname, prefix, True, origintype, connector)]
@@ -1191,7 +1182,7 @@ def convert_name_15(name):
             #two surnames, first patronymic, then surname which is primary
             surname_list = [(patronymic, "", False, patorigintype, ""),
                             (surname, prefix, True, origintype, connector)]
-    
+
     #return new value, add two empty strings for nick and family nick
     return (privacy, source_list, note_list, date,
          first_name, surname_list, suffix, title, name_type,
@@ -1229,7 +1220,7 @@ def gramps_upgrade_14(self):
     # update dates with newyear
     for handle in self.event_map.keys():
         event = self.event_map[handle]
-        (junk_handle, gramps_id, the_type, date, description, place, 
+        (junk_handle, gramps_id, the_type, date, description, place,
          source_list, note_list, media_list, attribute_list,
          change, marker, private) = event
         new_date = convert_date_14(date)
@@ -1237,7 +1228,7 @@ def gramps_upgrade_14(self):
         new_media_list = new_media_list_14(media_list)
         new_attribute_list = new_attribute_list_14(attribute_list)
         new_event = (junk_handle, gramps_id, the_type, new_date,
-                     description, place, new_source_list, note_list, 
+                     description, place, new_source_list, note_list,
                      new_media_list, new_attribute_list, change,marker,private)
         with BSDDBTxn(self.env, self.event_map) as txn:
             if isinstance(handle, str):
@@ -1279,7 +1270,7 @@ def gramps_upgrade_14(self):
             (privacy, asource_list, anote_list, date, location) = address
             new_date = convert_date_14(date)
             new_asource_list = new_source_list_14(asource_list)
-            new_address_list.append((privacy, new_asource_list, anote_list, 
+            new_address_list.append((privacy, new_asource_list, anote_list,
                                      new_date, location))
         new_ord_list = []
         for ldsord in lds_ord_list:
@@ -1287,14 +1278,14 @@ def gramps_upgrade_14(self):
              famc, temple, status, lprivate) = ldsord
             new_date = convert_date_14(date)
             new_lsource_list = new_source_list_14(lsource_list)
-            new_ord_list.append( (new_lsource_list, lnote_list, new_date, type, 
+            new_ord_list.append( (new_lsource_list, lnote_list, new_date, type,
                                   place, famc, temple, status, lprivate))
 
         new_primary_name = convert_name_14(primary_name)
 
-        new_alternate_names = [convert_name_14(name) for name 
+        new_alternate_names = [convert_name_14(name) for name
                                in alternate_names]
-        
+
         new_media_list = new_media_list_14(media_list)
         new_psource_list = new_source_list_14(psource_list)
         new_attribute_list = new_attribute_list_14(attribute_list)
@@ -1349,7 +1340,7 @@ def gramps_upgrade_14(self):
              famc, temple, status, lprivate) = ldsord
             new_date = convert_date_14(date)
             new_lsource_list = new_source_list_14(lsource_list)
-            new_seal_list.append( (new_lsource_list, lnote_list, new_date, type, 
+            new_seal_list.append( (new_lsource_list, lnote_list, new_date, type,
                                    place, famc, temple, status, lprivate))
 
         new_family = (junk_handle, gramps_id, father_handle, mother_handle,
@@ -1378,7 +1369,7 @@ def gramps_upgrade_14(self):
             (privacy, asource_list, anote_list, date, location) = address
             new_date = convert_date_14(date)
             new_asource_list = new_source_list_14(asource_list)
-            new_address_list.append((privacy, new_asource_list, anote_list, 
+            new_address_list.append((privacy, new_asource_list, anote_list,
                                      new_date, location))
 
         new_repository = (junk_handle, gramps_id, the_type, name, note_list,
@@ -1421,8 +1412,8 @@ def gramps_upgrade_14(self):
         new_media_list = new_media_list_14(media_list)
         new_source_list = new_source_list_14(source_list)
         new_place = (handle, gramps_id, title, longi, lat,
-                     main_loc, alt_loc, urls, new_media_list, 
-                     new_source_list, note_list, change, marker, private) 
+                     main_loc, alt_loc, urls, new_media_list,
+                     new_source_list, note_list, change, marker, private)
 
         with BSDDBTxn(self.env, self.place_map) as txn:
             if isinstance(handle, str):
@@ -1507,13 +1498,13 @@ def convert_date_14(date):
         return None
 
 def convert_name_14(name):
-    (privacy, source_list, note_list, date, 
+    (privacy, source_list, note_list, date,
      first_name, surname, suffix, title,
      name_type, prefix, patronymic,
      group_as, sort_as, display_as, call) = name
     new_date = convert_date_14(date)
     new_source_list = new_source_list_14(source_list)
-    return (privacy, new_source_list, note_list, new_date, 
+    return (privacy, new_source_list, note_list, new_date,
             first_name, surname, suffix, title,
             name_type, prefix, patronymic,
             group_as, sort_as, display_as, call)

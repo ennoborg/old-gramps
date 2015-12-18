@@ -28,7 +28,7 @@ _ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from ...datehandler import parser
@@ -46,16 +46,16 @@ class HasEventBase(Rule):
     """Rule that checks for an event with a particular value."""
 
 
-    labels      = [ 'Event type:', 
-                    'Date:', 
-                    'Place:', 
+    labels      = [ 'Event type:',
+                    'Date:',
+                    'Place:',
                     'Description:',
                     'Main Participants:' ]
     name        =  'Events matching parameters'
     description =  "Matches events with particular parameters"
     category    = _('Event filters')
     allow_regex = True
-    
+
     def prepare(self, db):
         self.date = None
         if self.list[0]:

@@ -37,13 +37,17 @@ from ..widgets import MonitoredDate, MonitoredEntry
 from ..dialog import ErrorDialog
 from gramps.gen.errors import ValidationError
 from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
+_ = glocale.translation.sgettext
+from gramps.gen.const import URL_MANUAL_SECT2
 
 #-------------------------------------------------------------------------
 #
 # Constants
 #
 #-------------------------------------------------------------------------
+WIKI_HELP_PAGE = URL_MANUAL_SECT2
+WIKI_HELP_SEC = _('manual|Place_Name_Editor_dialog')
+
 ISO_CODES = (
 'aa', 'ab', 'ae', 'af', 'ak', 'am', 'an', 'ar', 'as', 'av', 'ay', 'az',
 'ba', 'be', 'bg', 'bh', 'bi', 'bm', 'bn', 'bo', 'br', 'bs',
@@ -121,7 +125,8 @@ class EditPlaceName(EditSecondary):
             return ValidationError(_("Invalid ISO code"))
 
     def _connect_signals(self):
-        self.define_help_button(self.top.get_object('help'))
+        self.define_help_button(self.top.get_object('help'),
+                WIKI_HELP_PAGE, WIKI_HELP_SEC)
         self.define_cancel_button(self.top.get_object('cancel'))
         self.define_ok_button(self.top.get_object('ok'),self.save)
 

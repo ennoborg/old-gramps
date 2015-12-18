@@ -1,8 +1,11 @@
+# -*- coding: utf-8 -*-
+#
 # Gramps - a GTK+/GNOME based genealogy program
 #
 # Copyright (C) 2000-2007  Donald N. Allingham
 # Copyright (C) 2008-2009  Brian G. Matherly
 # Copyright (C) 2009       Rob G. Healey <robhealey1@gmail.com>
+# Copyright (C) 2014       Vlada Perić <vlada.peric@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,7 +33,7 @@ import os
 
 #------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
@@ -45,7 +48,7 @@ from gramps.gen.lib.gcalendar import (gregorian_ymd, hebrew_sdn)
 #------------------------------------------------------------------------
 def g2iso(dow):
     """ Converst GRAMPS day of week to ISO day of week """
-    # GRAMPS: SUN = 1
+    # Gramps: SUN = 1
     # ISO: MON = 1
     return (dow + 5) % 7 + 1
 
@@ -56,18 +59,17 @@ def easter(year):
     to the Astronomical Almanac", ed. P. K.  Seidelmann (1992).  Note:
     Ash Wednesday is 46 days before Easter Sunday.
     """
-    c = year / 100
-    n = year - 19 * (year / 19)
-    k = (c - 17) / 25
-    i = c - c / 4 - (c - k) / 3 + 19 * n + 15
-    i = i - 30 * (i / 30)
-    i = i - (i / 28) * (1 - (i / 28) * (29 / (i + 1))
-                           * ((21 - n) / 11))
-    j = year + year / 4 + i + 2 - c + c / 4
-    j = j - 7 * (j / 7)
+    c = year // 100
+    n = year - 19 * (year // 19)
+    k = (c - 17) // 25
+    i = c - c // 4 - (c - k) // 3 + 19 * n + 15
+    i = i - 30 * (i // 30)
+    i = i - (i // 28) * (1 - (i // 28) * (29 // (i + 1)) * ((21 - n) // 11) )
+    j = year + year // 4 + i + 2 - c + c // 4
+    j = j - 7 * (j // 7)
     l = i - j
-    month = 3 + (l + 40) / 44
-    day = l + 28 - 31 * (month / 4)
+    month = 3 + (l + 40) // 44
+    day = l + 28 - 31 * (month // 4)
     return "%d/%d/%d" % (year, month, day)
 
 def julian_easter(year):
@@ -136,43 +138,49 @@ def dow(y, m, d):
     """ Return the ISO day of week for the given year, month and day. """
     return datetime.date(y, m, d).isoweekday()
 
+def cmp(a, b):
+    """
+    Replacement for older Python's cmp.
+    """
+    return (a > b) - (a < b)
+
 #------------------------------------------------------------------------
 #
 # HolidayTable
 #
 #------------------------------------------------------------------------
 class HolidayTable(object):
-    """ 
-    HolidayTable is a class which provides holidays for various 
+    """
+    HolidayTable is a class which provides holidays for various
     countries and years.
     """
     __holiday_files = []
     __countries = []
 
     def __init__(self):
-        """ 
-        Find the holiday files and load the countries if it has not already 
+        """
+        Find the holiday files and load the countries if it has not already
         been done.
-        """ 
+        """
         if( not HolidayTable.__holiday_files ):
             self.__find_holiday_files()
-            
+
         if( not HolidayTable.__countries ):
             self.__build_country_list()
 
         # Initialize the holiday table to be empty
         self.__holidays = {}
-        self.__init_table()             
-     
+        self.__init_table()
+
     def __find_holiday_files(self):
         """
-        Looks in multiple places for holidays.xml files 
+        Looks in multiple places for holidays.xml files
         It will search for the file in user;s plugin directories first,
         then it will search in program's plugins directories.
         """
 
         holiday_file = 'holidays.xml'
-        
+
         # Look for holiday files in the user plugins directory and all
         # subdirectories.
         for (dirpath, dirnames, filenames) in os.walk(USER_PLUGINS):
@@ -186,7 +194,7 @@ class HolidayTable(object):
             holiday_full_path = os.path.join(dirpath, holiday_file)
             if os.path.exists(holiday_full_path):
                 HolidayTable.__holiday_files.append(holiday_full_path)
-            
+
     def __build_country_list(self):
         """ Generate the list of countries that have holiday information. """
         for holiday_file_path in HolidayTable.__holiday_files:
@@ -197,27 +205,27 @@ class HolidayTable(object):
                     country_name = country_element.get_attribute("name")
                     if country_name not in HolidayTable.__countries:
                         HolidayTable.__countries.append(_(country_name))
-                        
+
     def __init_table(self):
         """ Initialize the holiday table structure. """
         for month in range(1, 13):
             self.__holidays[month] = {}
             for day in range(1, 32):
-                self.__holidays[month][day] = []   
+                self.__holidays[month][day] = []
 
     def get_countries(self):
-        """ 
+        """
         Get all the country names that holidays are available for.
-        
+
         @return: nothing
         """
         return HolidayTable.__countries
 
     def load_holidays(self, year, country):
-        """ 
-        Load the holiday table for the specified year and country. 
+        """
+        Load the holiday table for the specified year and country.
         This must be called before get_holidays().
-        
+
         @param year: The year for which the holidays should be loaded.
             Example: 2010
         @type year: int
@@ -229,7 +237,7 @@ class HolidayTable(object):
         self.__init_table()
         for holiday_file_path in HolidayTable.__holiday_files:
             parser = _Xml2Obj()
-            element = parser.parse(holiday_file_path) 
+            element = parser.parse(holiday_file_path)
             calendar = _Holidays(element, country)
             date = datetime.date(year, 1, 1)
             while date.year == year:
@@ -237,11 +245,11 @@ class HolidayTable(object):
                 for text in holidays:
                     self.__holidays[date.month][date.day].append(_(text))
                 date = date.fromordinal(date.toordinal() + 1)
-    
+
     def get_holidays(self, month, day):
-        """ 
+        """
         Get the holidays for the given day of the year.
-        
+
         @param month: The month for the requested holidays.
             Example: 1
         @type month: int
@@ -268,23 +276,23 @@ class _Element:
         self.__attributes = attributes
         # The element's child element list (sequence)
         self.__children = []
-        
+
     def add_child(self, element):
         'Add a reference to a child element'
         self.__children.append(element)
-        
+
     def get_attribute(self, key):
         'Get an attribute value'
         return self.__attributes.get(key)
-    
+
     def get_attributes(self):
         'Get all the attributes'
         return self.__attributes
-    
+
     def get_name(self):
         """ Get the name of this element. """
         return self.__name
-    
+
     def get_children(self):
         """ Get the children elements for this element. """
         return self.__children
@@ -299,11 +307,11 @@ class _Xml2Obj:
     def __init__(self):
         self.root = None
         self.nodeStack = []
-        
+
     def start_element(self, name, attributes):
         'SAX start element even handler'
         # Instantiate an Element object
-        element = _Element(name.encode(), attributes)
+        element = _Element(name, attributes)
         # Push element onto the stack and make it a child of parent
         if len(self.nodeStack) > 0:
             parent = self.nodeStack[-1]
@@ -311,7 +319,7 @@ class _Xml2Obj:
         else:
             self.root = element
         self.nodeStack.append(element)
-        
+
     def end_element(self, name):
         'SAX end element event handler'
         self.nodeStack = self.nodeStack[:-1]
@@ -323,7 +331,8 @@ class _Xml2Obj:
         parser.StartElementHandler = self.start_element
         parser.EndElementHandler = self.end_element
         # Parse the XML File
-        parser.Parse(open(filename, 'rb').read(), 1)
+        with open(filename, 'rb') as xml_file:
+            parser.ParseFile(xml_file)
         return self.root
 
 #------------------------------------------------------------------------
@@ -333,7 +342,7 @@ class _Xml2Obj:
 #------------------------------------------------------------------------
 class _Holidays:
     """ Class used to read XML holidays to add to calendar. """
-    MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 
+    MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun',
               'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
     DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
     WORKDAY = list(range(5)) # indexes into above
@@ -344,13 +353,13 @@ class _Holidays:
         self.country = country
         self.dates = []
         self.initialize()
-        
+
     def set_country(self, country):
         """ Set the contry of holidays to read """
         self.country = country
         self.dates = []
         self.initialize()
-                
+
     def initialize(self):
         """ Parse the holiday date XML items """
         for country_set in self.elements.get_children():
@@ -358,21 +367,21 @@ class _Holidays:
                _(country_set.get_attribute("name")) == self.country:
                 for date in country_set.get_children():
                     if date.get_name() == "date":
-                        data = {"value" : "", 
-                                "name" : "", 
-                                "offset": "", 
-                                "type": "", 
+                        data = {"value" : "",
+                                "name" : "",
+                                "offset": "",
+                                "type": "",
                                 "if": "",
                                 } # defaults
                         for attr in date.get_attributes():
                             data[attr] = date.get_attribute(attr)
                         self.dates.append(data)
-                        
+
     def get_daynames(self, year, month, dayname):
         """ Get the items for a particular year/month and day of week """
-        if self.debug: 
+        if self.debug:
             print("%s's in %d %d..." % (dayname, month, year))
-             
+
         retval = [0]
         day_of_week = self.DAYS.index(dayname)
         for day in range(1, 32):
@@ -382,20 +391,20 @@ class _Holidays:
                 continue
             if date.weekday() == day_of_week:
                 retval.append(day)
-                
-        if self.debug: 
+
+        if self.debug:
             print("day_of_week=", day_of_week, "days=", retval)
-            
+
         return retval
-    
+
     def check_date(self, date):
         """ Return items that match rules """
         retval = []
         for rule in self.dates:
-            
-            if self.debug: 
+
+            if self.debug:
                 print("Checking ", rule["name"], "...")
-                
+
             offset = 0
             if rule["offset"] != "":
                 if rule["offset"].isdigit():
@@ -412,7 +421,7 @@ class _Holidays:
                 y, m, d = date.year, date.month, date.day
                 rule["value"] = eval(rule["value"][1:])
 
-            if self.debug: 
+            if self.debug:
                 print("rule['value']:", rule["value"])
             if rule["value"].count("/") == 3: # year/num/day/month, "3rd wednesday in april"
                 y, num, dayname, mon = rule["value"].split("/")
@@ -427,12 +436,12 @@ class _Holidays:
                 elif mon in self.MONTHS:
                     m = self.MONTHS.index(mon) + 1
                 dates_of_dayname = self.get_daynames(y, m, dayname)
-                
-                if self.debug: 
+
+                if self.debug:
                     print("num =", num)
-                    
+
                 d = dates_of_dayname[int(num)]
-                
+
             elif rule["value"].count("/") == 2: # year/month/day
                 y, m, d = rule["value"].split("/")
                 if y == "*":
@@ -450,10 +459,10 @@ class _Holidays:
                 else:
                     d = int(d)
             ndate = datetime.date(y, m, d)
-            
-            if self.debug: 
+
+            if self.debug:
                 print(ndate, offset, type(offset))
-                
+
             if isinstance(offset, int):
                 if offset != 0:
                     ndate = ndate.fromordinal(ndate.toordinal() + offset)
@@ -488,9 +497,9 @@ class _Holidays:
                         ordinal += direction
                     ndate = ndate.fromordinal(ordinal)
 
-            if self.debug: 
+            if self.debug:
                 print("ndate:", ndate, "date:", date)
-                
+
             if ndate == date:
                 if rule["if"] != "":
                     if not eval(rule["if"]):

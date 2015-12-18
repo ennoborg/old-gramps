@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-MODULE_VERSION="5.0" 
+MODULE_VERSION="5.0"
 
 #------------------------------------------------------------------------
 #
@@ -29,7 +29,7 @@ MODULE_VERSION="5.0"
 plg = newplugin()
 plg.id    = 'familylines_graph'
 plg.name  = _("Family Lines Graph")
-plg.description =  _("Produces family line graphs using GraphViz.")
+plg.description =  _("Produces family line graphs using Graphviz.")
 plg.version = '1.0'
 plg.gramps_target_version = MODULE_VERSION
 plg.status = STABLE

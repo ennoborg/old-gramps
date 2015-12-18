@@ -34,12 +34,15 @@ class Node(object):
         self.value = value
         self.next = None
 
-class LRU(object): 
+class LRU(object):
     """
     Implementation of a length-limited O(1) LRU cache
     """
     def __init__(self, count):
-        self.count = max(count, 2)
+        """
+        Set count to 0 or 1 to disable.
+        """
+        self.count = count
         self.data = {}
         self.first = None
         self.last = None
@@ -60,6 +63,8 @@ class LRU(object):
         """
         Set the item in the LRU, removing an old entry if needed
         """
+        if self.count <= 1: # Disabled
+            return
         if obj in self.data:
             del self[obj]
         nobj = Node(self.last, (obj, val))

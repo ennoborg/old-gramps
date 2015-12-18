@@ -19,3 +19,10 @@ tags
 # Testing
 test/data
 gramps/webapp/grampsdb/fixtures/initial_data.json
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Glade temp files
+*~

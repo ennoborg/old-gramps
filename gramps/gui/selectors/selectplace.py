@@ -25,16 +25,26 @@
 # internationalization
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
 # gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
 from ..views.treemodels.placemodel import PlaceTreeModel
 from .baseselector import BaseSelector
+from gramps.gui.display import display_help
+from gramps.gen.const import URL_MANUAL_SECT2
+
+#-------------------------------------------------------------------------
+#
+# Constants
+#
+#-------------------------------------------------------------------------
+WIKI_HELP_PAGE = URL_MANUAL_SECT2
+WIKI_HELP_SEC = _('manual|Select_Place_selector')
 
 #-------------------------------------------------------------------------
 #
@@ -52,7 +62,7 @@ class SelectPlace(BaseSelector):
 
     def get_window_title(self):
         return _("Select Place")
-        
+
     def get_model_class(self):
         return PlaceTreeModel
 

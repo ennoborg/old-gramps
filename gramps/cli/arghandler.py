@@ -51,7 +51,6 @@ from gramps.gen.plug.report import CATEGORY_BOOK, CATEGORY_CODE, BookList
 from .plug import cl_report, cl_book
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
-from gramps.gen.constfunc import conv_to_unicode
 from gramps.gen.config import config
 
 #-------------------------------------------------------------------------
@@ -62,7 +61,7 @@ from gramps.gen.config import config
 def _split_options(options_str):
     """
     Split the options for the action.
-    
+
     Rules:
 
     * Entries in the list of options are separated by commas without
@@ -74,7 +73,7 @@ def _split_options(options_str):
     * Text containing double quotes must be contained in single quotes
     * Text containing single quotes must be contained in double quotes
     * Text cannot include both single and double quotes
-    
+
     Examples:
 
     Multiple options specified::
@@ -97,9 +96,9 @@ def _split_options(options_str):
     in_list = False
     quote_type = ""
     options_str_dict = {}
-    
+
     for char in options_str:
-        if not parsing_value: 
+        if not parsing_value:
             # Parsing the name of the option
             if char == "=":
                 #print char, "This value ends the name"
@@ -150,11 +149,11 @@ def _split_options(options_str):
 class ArgHandler(object):
     """
     This class is responsible for the non GUI handling of commands.
-    The handler is passed a parser object, sanitizes it, and can execute the 
+    The handler is passed a parser object, sanitizes it, and can execute the
     actions requested working on a :class:`.DbState`.
     """
 
-    def __init__(self, dbstate, parser, sessionmanager, 
+    def __init__(self, dbstate, parser, sessionmanager,
                         errorfunc=None, gui=False):
         self.dbstate = dbstate
         self.sm = sessionmanager
@@ -178,10 +177,11 @@ class ArgHandler(object):
         self.cl = 0
         self.imports = []
         self.exports = []
+        self.removes = parser.removes
 
         self.open = self.__handle_open_option(parser.open, parser.create)
         self.sanitize_args(parser.imports, parser.exports)
-    
+
     def __error(self, msg1, msg2=None):
         """
         Output an error. Uses errorfunc if given, otherwise a simple print.
@@ -213,7 +213,6 @@ class ArgHandler(object):
         """
         if value is None:
             return None
-        value = conv_to_unicode(value, sys.stdin.encoding)
         db_path = self.__deduce_db_path(value)
 
         if db_path:
@@ -228,7 +227,8 @@ class ArgHandler(object):
             return db_path
         elif create:
             # create the tree here, and continue
-            db_path, title = self.dbman.create_new_db_cli(title=value)
+            dbid = config.get('behavior.database-backend')
+            db_path, title = self.dbman.create_new_db_cli(title=value, dbid=dbid)
             return db_path
         else:
             self.__error( _('Error: Input Family Tree "%s" does not exist.\n'
@@ -241,17 +241,15 @@ class ArgHandler(object):
         Handle the "-i" or "--import" option.
         Only Files supported by a plugin can be imported, so not Family Trees.
         """
-        # Need to convert path/filename to unicode before opening
-        # For non latin characters in Windows path/file/user names
-        fname = conv_to_unicode(value, sys.stdin.encoding)
+        fname = value
         fullpath = os.path.abspath(os.path.expanduser(fname))
         if fname != '-' and not os.path.exists(fullpath):
             self.__error(_('Error: Import file %s not found.') % fname)
             sys.exit(0)
-        
+
         if family_tree_format is None:
             # Guess the file format based on the file extension.
-            # This will get the lower case extension without a period, 
+            # This will get the lower case extension without a period,
             # or an empty string.
             family_tree_format = os.path.splitext(fname)[-1][1:].lower()
 
@@ -260,16 +258,16 @@ class ArgHandler(object):
         for plugin in pmgr.get_import_plugins():
             if family_tree_format == plugin.get_extension():
                 plugin_found = True
-                
+
         if plugin_found:
             self.imports.append((fname, family_tree_format))
         else:
             self.__error(_('Error: Unrecognized type: "%(format)s" for '
-                           'import file: %(filename)s') % 
-                           {'format' : family_tree_format, 
+                           'import file: %(filename)s') %
+                           {'format' : family_tree_format,
                             'filename' : fname})
             sys.exit(0)
-            
+
     def __handle_export_option(self, value, family_tree_format):
         """
         Handle the "-e" or "--export" option.
@@ -278,9 +276,7 @@ class ArgHandler(object):
         """
         if self.gui:
             return
-        # Need to convert path/filename to unicode before opening
-        # For non latin characters in Windows path/file/user names
-        fname = conv_to_unicode(value, sys.stdin.encoding)
+        fname = value
         if fname == '-':
             fullpath = '-'
         else:
@@ -289,17 +285,17 @@ class ArgHandler(object):
                 message = _("WARNING: Output file already exists!\n"
                             "WARNING: It will be overwritten:\n   %s"
                             ) % fullpath
-                accepted = self.user.prompt(_('OK to overwrite?'), message, 
+                accepted = self.user.prompt(_('OK to overwrite?'), message,
                         _('yes'), _('no'))
                 if accepted:
-                    self.__error(_("Will overwrite the existing file: %s") 
+                    self.__error(_("Will overwrite the existing file: %s")
                                    % fullpath)
                 else:
                     sys.exit(0)
 
         if family_tree_format is None:
             # Guess the file format based on the file extension.
-            # This will get the lower case extension without a period, 
+            # This will get the lower case extension without a period,
             # or an empty string.
             family_tree_format = os.path.splitext(fname)[-1][1:].lower()
 
@@ -308,18 +304,18 @@ class ArgHandler(object):
         for plugin in pmgr.get_export_plugins():
             if family_tree_format == plugin.get_extension():
                 plugin_found = True
-                
+
         if plugin_found:
             self.exports.append((fullpath, family_tree_format))
         else:
-            self.__error(_("ERROR: Unrecognized format for export file %s") 
+            self.__error(_("ERROR: Unrecognized format for export file %s")
                             % fname)
             sys.exit(0)
-        
+
     def __deduce_db_path(self, db_name_or_path):
         """
         Attempt to find a database path for the given parameter.
-        
+
         :returns: The path to a Gramps DB or None if a database can not be
                   deduced.
         """
@@ -335,20 +331,20 @@ class ArgHandler(object):
                 name_file_path = os.path.join(fullpath, NAME_FILE)
                 if os.path.isfile(name_file_path):
                     db_path = fullpath
-                    
+
         return db_path
 
     #-------------------------------------------------------------------------
-    # Overall argument handler: 
+    # Overall argument handler:
     # sorts out the sequence and details of operations
     #-------------------------------------------------------------------------
     def handle_args_gui(self):
         """
         Method to handle the arguments that can be given for a GUI session.
 
-        :returns: the filename of the family tree that should be opened if 
+        :returns: the filename of the family tree that should be opened if
                   user just passed a famtree or a filename.
-                  
+
         1. no options: a family tree can be given, if so, this name is tested
            and returned. If a filename, it is imported in a new db and name of
            new db returned
@@ -379,22 +375,22 @@ class ArgHandler(object):
             else:
                 sys.exit(0)
             return db_path
-        
-        # if not open_gui, parse any command line args. We can only have one 
+
+        # if not open_gui, parse any command line args. We can only have one
         #  open argument, and perhaps some import arguments
         self.__open_action()
         self.__import_action()
         return None
-    
-    def handle_args_cli(self, cleanup=True):
+
+    def handle_args_cli(self, cleanup=True, should_exit=True):
         """
         Depending on the given arguments, import or open data, launch
         session, write files, and/or perform actions.
-        
+
         :param: climan: the manager of a CLI session
         :type: :class:`.CLIManager` object
         """
-        # Handle the "-l" List Family Trees option.  
+        # Handle the "-l" List Family Trees option.
         if self.list:
             print(_('List of known Family Trees in your database path\n'))
 
@@ -403,29 +399,37 @@ class ArgHandler(object):
 
                 print(_("%(full_DB_path)s with name \"%(f_t_name)s\"")
                               % {'full_DB_path' : dirname, 'f_t_name' : name})
-            sys.exit(0)
+            if should_exit:
+                sys.exit(0)
+            else:
+                return
 
-        # Handle the "-L" List Family Trees in detail option.  
+        # Handle the "--remove" Family Tree
+        if self.removes:
+            for name in self.removes:
+                self.dbman.remove_database(name, self.user)
+            if should_exit:
+                sys.exit(0)
+            else:
+                return
+
+        # Handle the "-L" List Family Trees in detail option.
         if self.list_more:
-            print(_('Gramps Family Trees:'))
-            summary_list = self.dbman.family_tree_summary()
-            for summary in sorted(summary_list,
-                                  key=lambda sum: sum[_("Family Tree")].lower()):
-                print(_("Family Tree \"%s\":") % summary[_("Family Tree")])
-                for item in sorted(summary):
-                    if item != "Family Tree":
-                        # translators: needed for French, ignore otherwise
-                        print(_("   %(item)s: %(summary)s") % {
-                                        'item' : item,
-                                        'summary' : summary[item] } )
-            sys.exit(0)
-           
-        # Handle the "-t" List Family Trees, tab delimited option.  
+            self.dbman.print_family_tree_summaries()
+            if should_exit:
+                sys.exit(0)
+            else:
+                return
+
+        # Handle the "-t" List Family Trees, tab delimited option.
         if self.list_table:
             print(_('Gramps Family Trees:'))
             summary_list = self.dbman.family_tree_summary()
             if not summary_list:
-                sys.exit(0)
+                if should_exit:
+                    sys.exit(0)
+                else:
+                    return
             # We have to construct the line elements together, to avoid
             # insertion of blank spaces when print on the same line is used
             line_list = [_("Family Tree")]
@@ -438,14 +442,17 @@ class ArgHandler(object):
                 line_list = [(_('"%s"') % summary[_("Family Tree")])]
                 for item in sorted(summary):
                     if item != _("Family Tree"):
-                        # translators: ignore unless your quotation marks differ
+                        # translators: used in French+Russian, ignore otherwise
                         line_list += [(_('"%s"') % summary[item])]
                 print("\t".join(line_list))
-            sys.exit(0)
+            if should_exit:
+                sys.exit(0)
+            else:
+                return
 
         self.__open_action()
         self.__import_action()
-            
+
         for (action, op_string) in self.actions:
             print(_("Performing action: %s.") % action, file=sys.stderr)
             if op_string:
@@ -462,7 +469,8 @@ class ArgHandler(object):
         if cleanup:
             self.cleanup()
             print(_("Exiting."), file=sys.stderr)
-            sys.exit(0)
+            if should_exit:
+                sys.exit(0)
 
     def cleanup(self):
         print(_("Cleaning up."), file=sys.stderr)
@@ -474,7 +482,7 @@ class ArgHandler(object):
     def __import_action(self):
         """
         Take action for all given import files.
-        
+
         .. note:: Family trees are not supported.
 
         If a family tree is open, the import happens on top of it. If not
@@ -488,13 +496,14 @@ class ArgHandler(object):
             if not self.open:
                 # Create empty dir for imported database(s)
                 if self.gui:
-                    self.imp_db_path, title = self.dbman.create_new_db_cli()
+                    dbid = config.get('behavior.database-backend')
+                    self.imp_db_path, title = self.dbman.create_new_db_cli(dbid=dbid)
                 else:
                     self.imp_db_path = get_empty_tempdir("import_dbdir")
                     dbid = config.get('behavior.database-backend')
                     newdb = self.dbstate.make_database(dbid)
                     newdb.write_version(self.imp_db_path)
-                
+
                 try:
                     self.sm.open_activate(self.imp_db_path)
                     msg = _("Created empty Family Tree successfully")
@@ -512,11 +521,11 @@ class ArgHandler(object):
 
     def __open_action(self):
         """
-        Take action on a family tree dir to open. It will be opened in the 
+        Take action on a family tree dir to open. It will be opened in the
         session manager
         """
         if self.open:
-            # Family Tree to open was given. Open it 
+            # Family Tree to open was given. Open it
             # Then go on and process the rest of the command line arguments.
             self.cl = bool(self.exports or self.actions)
 
@@ -568,7 +577,7 @@ class ArgHandler(object):
     #-------------------------------------------------------------------------
     def cl_export(self, filename, family_tree_format):
         """
-        Command-line export routine. 
+        Command-line export routine.
         Try to write into filename using the family_tree_format.
         """
         pmgr = BasePluginManager.get_instance()
@@ -603,15 +612,15 @@ class ArgHandler(object):
                         mod = pmgr.load_plugin(pdata)
                         if not mod:
                             #import of plugin failed
-                            return 
+                            return
                         category = pdata.category
                         report_class = eval('mod.' + pdata.reportclass)
                         options_class = eval('mod.' + pdata.optionclass)
                         if category in (CATEGORY_BOOK, CATEGORY_CODE):
-                            options_class(self.dbstate.db, name, category, 
+                            options_class(self.dbstate.db, name, category,
                                           options_str_dict)
                         else:
-                            cl_report(self.dbstate.db, name, category, 
+                            cl_report(self.dbstate.db, name, category,
                                       report_class, options_class,
                                       options_str_dict)
                         return
@@ -651,16 +660,16 @@ class ArgHandler(object):
                         mod = pmgr.load_plugin(pdata)
                         if not mod:
                             #import of plugin failed
-                            return 
+                            return
                         category = pdata.category
                         tool_class = eval('mod.' + pdata.toolclass)
                         options_class = eval('mod.' + pdata.optionclass)
                         tool.cli_tool(
-                                dbstate=self.dbstate, 
-                                name=name, 
-                                category=category, 
+                                dbstate=self.dbstate,
+                                name=name,
+                                category=category,
                                 tool_class=tool_class,
-                                options_class=options_class, 
+                                options_class=options_class,
                                 options_str_dict=options_str_dict,
                                 user=self.user)
                         return
@@ -694,7 +703,7 @@ class ArgHandler(object):
             book_list = BookList('books.xml', self.dbstate.db)
             if name:
                 if name in book_list.get_book_names():
-                    cl_book(self.dbstate.db, name, book_list.get_book(name), 
+                    cl_book(self.dbstate.db, name, book_list.get_book(name),
                             options_str_dict)
                     return
                 msg = _("Unknown book name.")

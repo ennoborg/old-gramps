@@ -22,7 +22,6 @@
 # GTK/Gnome modules
 #
 #-------------------------------------------------------------------------
-from gi.repository import GObject
 from gi.repository import Gdk
 from gi.repository import Gtk
 
@@ -31,7 +30,7 @@ from gi.repository import Gtk
 # Gramps modules
 #
 #-------------------------------------------------------------------------
-from ..thumbnails import get_thumbnail_image, SIZE_NORMAL, SIZE_LARGE
+from gramps.gen.utils.thumbnails import get_thumbnail_image, SIZE_NORMAL, SIZE_LARGE
 from ..utils import is_right_click, open_file_with_default_application
 from ..widgets.menuitem import add_menuitem
 from gramps.gen.const import GRAMPS_LOCALE as glocale
@@ -47,7 +46,7 @@ class Photo(Gtk.EventBox):
     Displays an image and allows it to be viewed in an external image viewer.
     """
     def __init__(self, use_small_size=False):
-        GObject.GObject.__init__(self)
+        Gtk.EventBox.__init__(self)
         self.full_path = None
         self.uistate = None
         self.handle = None
@@ -85,7 +84,7 @@ class Photo(Gtk.EventBox):
             if self.handle and self.uistate:
                 self.menu = Gtk.Menu()
                 self.menu.set_title(_("Media Object"))
-                add_menuitem(self.menu, _("Make Active Media"), widget, 
+                add_menuitem(self.menu, _("Make Active Media"), widget,
                     lambda obj: self.uistate.set_active(self.handle, "Media"))
                 self.menu.popup(None, None, None, None, event.button, event.time)
                 return True

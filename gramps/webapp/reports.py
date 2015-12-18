@@ -38,8 +38,8 @@ import os
 #     settings.configure(default_settings)
 # except:
 #     pass
-# import dbdjango
-# db = dbdjango.DbDjango()
+# import djangodb
+# db = djangodb.DbDjango()
 # run_report(db, "ancestor_report", off="txt", of="ar.txt", pid="I0363")
 
 def get_plugin_options(db, pid):
@@ -85,9 +85,7 @@ def import_file(db, filename, user):
                     print("ERROR:", name, exception)
                 return False
             import_function = getattr(mod, pdata.import_function)
-            #db.prepare_import()
             retval = import_function(db, filename, user)
-            #db.commit_import()
             return retval
     return False
 
@@ -98,7 +96,7 @@ def download(url, filename=None):
     def getFilename(url,openUrl):
         if 'Content-Disposition' in openUrl.info():
             # If the response has Content-Disposition, try to get filename from it
-            cd = dict([x.strip().split('=') if '=' in x else (x.strip(),'') 
+            cd = dict([x.strip().split('=') if '=' in x else (x.strip(),'')
                                         for x in openUrl.info().split(';')])
             if 'filename' in cd:
                 fname = cd['filename'].strip("\"'")

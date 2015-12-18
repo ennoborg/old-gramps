@@ -3,7 +3,7 @@
 # Gramps - a GTK+/GNOME based genealogy program
 #
 # Copyright (C) 2005-2007  Donald N. Allingham
-# Copyright (C) 2008-2009  Gary Burton 
+# Copyright (C) 2008-2009  Gary Burton
 # Copyright (C) 2009-2012  Doug Blank <doug.blank@gmail.com>
 # Copyright (C) 2011       Tim G L Lyons
 #
@@ -32,6 +32,7 @@ This package implements access to GRAMPS configuration.
 #
 #---------------------------------------------------------------
 import os, sys
+import re
 import logging
 
 #---------------------------------------------------------------
@@ -93,7 +94,7 @@ def save(filename=None):
     return CONFIGMAN.save(filename)
 
 def connect(key, func):
-    """ 
+    """
     Module shortcut to connect a key to a callback func.
     Returns a unique callback ID number.
     """
@@ -154,10 +155,10 @@ register('behavior.web-search-url', 'http://google.com/#&q=%(text)s')
 register('behavior.addons-url', "https://raw.githubusercontent.com/gramps-project/addons/master/gramps50")
 
 register('export.proxy-order', [
-        ["privacy", 0], 
-        ["living", 0], 
-        ["person", 0], 
-        ["note", 0], 
+        ["privacy", 0],
+        ["living", 0],
+        ["person", 0],
+        ["note", 0],
         ["reference", 0],
         ])
 
@@ -186,7 +187,7 @@ register('interface.clipboard-height', 300)
 register('interface.clipboard-width', 300)
 register('interface.dont-ask', False)
 register('interface.view-categories',
-         ["Dashboard", "People", "Relationships", "Families", 
+         ["Dashboard", "People", "Relationships", "Families",
           "Ancestry", "Events", "Places", "Geography", "Sources",
           "Citations", "Repositories", "Media", "Notes"])
 register('interface.edit-filter-width', 500)
@@ -270,14 +271,16 @@ register('interface.url-width', 600)
 register('interface.view', True)
 register('interface.width', 775)
 register('interface.surname-box-height', 150)
+register('interface.treemodel-cache-size', 1000)
 
 register('paths.recent-export-dir', '')
 register('paths.recent-file', '')
 register('paths.recent-import-dir', '')
 register('paths.report-directory', USER_HOME)
 register('paths.website-directory', USER_HOME)
+register('paths.website-cms-uri', '')
 register('paths.quick-backup-directory', USER_HOME)
-register('paths.quick-backup-filename', 
+register('paths.quick-backup-filename',
          "%(filename)s_%(year)d-%(month)02d-%(day)02d.%(extension)s")
 
 register('preferences.date-format', 0)
@@ -365,6 +368,27 @@ if not os.path.exists(CONFIGMAN.filename):
                             oldstyle=True)
         logging.warning("Done importing old key file 'keys.ini'")
     # other version upgrades here...
+    # check previous version of gramps:
+    fullpath, filename = os.path.split(CONFIGMAN.filename)
+    fullpath, previous = os.path.split(fullpath)
+    match = re.match('gramps(\d*)', previous)
+    if match:
+        # cycle back looking for previous versions of gramps
+        for i in range(1, 20): # check back 2 gramps versions
+            # -----------------------------------------
+            # TODO: Assumes minor version is a decimal, not semantic versioning
+            #       Uses ordering ... 4.9, 5.0, 5.1, ...
+            #       Not ... 4.9, 4.10, 4.11, 5.0, 5.1, ...
+            # If not true, need to add a different method to auto upgrade.
+            # Perhaps addings specific list of versions to check
+            # -----------------------------------------
+            digits = str(int(match.groups()[0]) - i)
+            previous_grampsini = os.path.join(fullpath, "gramps" + str(digits), filename)
+            if os.path.exists(previous_grampsini):
+                logging.warning("Importing old config file '%s'..." % previous_grampsini)
+                CONFIGMAN.load(previous_grampsini)
+                logging.warning("Done importing old config file '%s'" % previous_grampsini)
+                break
 
 #---------------------------------------------------------------
 #

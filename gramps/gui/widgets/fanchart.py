@@ -11,7 +11,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful, 
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
@@ -35,7 +35,6 @@
 #
 #-------------------------------------------------------------------------
 from gi.repository import Pango
-from gi.repository import GObject
 from gi.repository import Gdk
 from gi.repository import Gtk
 from gi.repository import PangoCairo
@@ -48,7 +47,7 @@ from html import escape
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from gramps.gen.db import DbTxn
@@ -65,6 +64,32 @@ from gramps.gen.utils.libformatting import FormattingHelper
 from gramps.gen.utils.db import (find_children, find_parents, find_witnessed_people,
                                  get_age, get_timeperiod, preset_name)
 from gramps.gen.const import GRAMPS_LOCALE as glocale
+from gramps.gen.const import (
+    PIXELS_PER_GENERATION,
+    BORDER_EDGE_WIDTH,
+    CHILDRING_WIDTH,
+    TRANSLATE_PX,
+    PAD_PX,
+    PAD_TEXT,
+    BACKGROUND_SCHEME1,
+    BACKGROUND_SCHEME2,
+    BACKGROUND_GENDER,
+    BACKGROUND_WHITE,
+    BACKGROUND_GRAD_GEN,
+    BACKGROUND_GRAD_AGE,
+    BACKGROUND_SINGLE_COLOR,
+    BACKGROUND_GRAD_PERIOD,
+    GENCOLOR,
+    MAX_AGE,
+    GRADIENTSCALE,
+    FORM_CIRCLE,
+    FORM_HALFCIRCLE,
+    FORM_QUADRANT,
+    COLLAPSED,
+    NORMAL,
+    EXPANDED,
+    TYPE_BOX_NORMAL,
+    TYPE_BOX_FAMILY)
 _ = glocale.translation.gettext
 from gramps.gui.utilscairo import warpPath
 
@@ -77,66 +102,10 @@ def gender_code(is_male):
     """
     Given boolean is_male (means position in FanChart) return code.
     """
-    if is_male: 
+    if is_male:
         return Person.MALE
     else:
         return Person.FEMALE
-
-#-------------------------------------------------------------------------
-#
-# Constants
-#
-#-------------------------------------------------------------------------
-
-PIXELS_PER_GENERATION = 50 # size of radius for generation
-BORDER_EDGE_WIDTH = 10     # empty white box size at edge to indicate parents
-CHILDRING_WIDTH = 12       # width of the children ring inside the person
-TRANSLATE_PX = 10          # size of the central circle, used to move the chart
-PAD_PX = 4                 # padding with edges
-PAD_TEXT = 2               # padding for text in boxes
-
-BACKGROUND_SCHEME1 = 0
-BACKGROUND_SCHEME2 = 1
-BACKGROUND_GENDER = 2
-BACKGROUND_WHITE = 3
-BACKGROUND_GRAD_GEN = 4
-BACKGROUND_GRAD_AGE = 5
-BACKGROUND_SINGLE_COLOR = 6
-BACKGROUND_GRAD_PERIOD = 7
-GENCOLOR = {
-    BACKGROUND_SCHEME1: ((255, 63,  0),
-                         (255,175, 15),
-                         (255,223, 87),
-                         (255,255,111),
-                         (159,255,159),
-                         (111,215,255),
-                         ( 79,151,255),
-                         (231, 23,255),
-                         (231, 23,121),
-                         (210,170,124),
-                         (189,153,112)),
-    BACKGROUND_SCHEME2: ((229,191,252),
-                         (191,191,252),
-                         (191,222,252),
-                         (183,219,197),
-                         (206,246,209)),
-    BACKGROUND_WHITE: ((255,255,255),
-                       (255,255,255),),
-    }
-
-MAX_AGE = 100
-GRADIENTSCALE = 5
-
-FORM_CIRCLE = 0
-FORM_HALFCIRCLE = 1
-FORM_QUADRANT = 2
-
-COLLAPSED = 0
-NORMAL = 1
-EXPANDED = 2
-
-TYPE_BOX_NORMAL = 0
-TYPE_BOX_FAMILY = 1
 
 #-------------------------------------------------------------------------
 #
@@ -149,7 +118,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
     CENTER = 50                # pixel radius of center, changes per fanchart
 
     def __init__(self, dbstate, uistate, callback_popup=None):
-        GObject.GObject.__init__(self)
+        Gtk.DrawingArea.__init__(self)
         self.radialtext = True
         st_cont = self.get_style_context()
         col = st_cont.lookup_color('text_color')
@@ -171,7 +140,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
         #we want to grab key events also
         self.set_can_focus(True)
         self.connect("key-press-event", self.on_key_press)
-        
+
         self.connect("draw", self.on_draw)
         self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK |
                         Gdk.EventMask.BUTTON_RELEASE_MASK |
@@ -217,15 +186,15 @@ class FanChartBaseWidget(Gtk.DrawingArea):
 
     def reset(self):
         """
-        Reset the fan chart. This should trigger computation of all data 
+        Reset the fan chart. This should trigger computation of all data
         structures needed
         """
         self.cache_fontcolor = {}
-        
+
         # fill the data structure
         self._fill_data_structures()
-    
-        # prepare the colors for the boxes 
+
+        # prepare the colors for the boxes
         self.prepare_background_box()
 
     def _fill_data_structures(self):
@@ -233,7 +202,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
         fill in the data structures that will be needed to draw the chart
         """
         raise NotImplementedError
-        
+
     def do_size_request(self, requisition):
         """
         Overridden method to handle size request events.
@@ -249,7 +218,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
             requisition.height = requisition.width
 
     def do_get_preferred_width(self):
-        """ GTK3 uses width for height sizing model. This method will 
+        """ GTK3 uses width for height sizing model. This method will
             override the virtual method
         """
         req = Gtk.Requisition()
@@ -257,7 +226,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
         return req.width, req.width
 
     def do_get_preferred_height(self):
-        """ GTK3 uses width for height sizing model. This method will 
+        """ GTK3 uses width for height sizing model. This method will
             override the virtual method
         """
         req = Gtk.Requisition()
@@ -335,9 +304,9 @@ class FanChartBaseWidget(Gtk.DrawingArea):
         maxgen = self.generations
         cstart = hex_to_rgb(self.grad_start)
         cend = hex_to_rgb(self.grad_end)
-        self.cstart_hsv = colorsys.rgb_to_hsv(cstart[0]/255, cstart[1]/255, 
+        self.cstart_hsv = colorsys.rgb_to_hsv(cstart[0]/255, cstart[1]/255,
                                          cstart[2]/255)
-        self.cend_hsv = colorsys.rgb_to_hsv(cend[0]/255, cend[1]/255, 
+        self.cend_hsv = colorsys.rgb_to_hsv(cend[0]/255, cend[1]/255,
                                        cend[2]/255)
         if self.background in [BACKGROUND_GENDER, BACKGROUND_SINGLE_COLOR]:
             # nothing to precompute
@@ -347,7 +316,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
             #compute the colors, -1, 0, ..., maxgen
             divs = [x/(maxgen-1) for x in range(maxgen)] if maxgen>1 else [0]
             rgb_colors = [colorsys.hsv_to_rgb(
-                            (1-x) * self.cstart_hsv[0] + x * self.cend_hsv[0], 
+                            (1-x) * self.cstart_hsv[0] + x * self.cend_hsv[0],
                             (1-x) * self.cstart_hsv[1] + x * self.cend_hsv[1],
                             (1-x) * self.cstart_hsv[2] + x * self.cend_hsv[2],
                             ) for x in divs]
@@ -379,11 +348,11 @@ class FanChartBaseWidget(Gtk.DrawingArea):
                 if i % 2 == 1:
                     self.gradval[i] = ''
             self.gradcol = [colorsys.hsv_to_rgb(
-                        (1-div) * self.cstart_hsv[0] + div * self.cend_hsv[0], 
+                        (1-div) * self.cstart_hsv[0] + div * self.cend_hsv[0],
                         (1-div) * self.cstart_hsv[1] + div * self.cend_hsv[1],
                         (1-div) * self.cstart_hsv[2] + div * self.cend_hsv[2],
                         ) for div in divs]
-            
+
         elif self.background == BACKGROUND_GRAD_AGE:
             # we fill in in the data structure what the color age is, white if no age
             self.colors =  None
@@ -403,7 +372,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
                 if i % 2 == 1:
                     self.gradval[i] = ''
             self.gradcol = [colorsys.hsv_to_rgb(
-                        (1-div) * self.cstart_hsv[0] + div * self.cend_hsv[0], 
+                        (1-div) * self.cstart_hsv[0] + div * self.cend_hsv[0],
                         (1-div) * self.cstart_hsv[1] + div * self.cend_hsv[1],
                         (1-div) * self.cstart_hsv[2] + div * self.cend_hsv[2],
                         ) for div in divs]
@@ -416,7 +385,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
         determine red, green, blue value of background of the box of person,
         which has gender gender, and is in ring generation
         """
-        if generation == 0 and self.background in [BACKGROUND_GENDER, 
+        if generation == 0 and self.background in [BACKGROUND_GENDER,
                 BACKGROUND_GRAD_GEN, BACKGROUND_SCHEME1,
                 BACKGROUND_SCHEME2]:
             # white for center person:
@@ -443,7 +412,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
                 else:
                     periodfrac = 0.5
                 periodcol = colorsys.hsv_to_rgb(
-            (1-periodfrac) * self.cstart_hsv[0] + periodfrac * self.cend_hsv[0], 
+            (1-periodfrac) * self.cstart_hsv[0] + periodfrac * self.cend_hsv[0],
             (1-periodfrac) * self.cstart_hsv[1] + periodfrac * self.cend_hsv[1],
             (1-periodfrac) * self.cstart_hsv[2] + periodfrac * self.cend_hsv[2],
                         )
@@ -462,7 +431,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
                 alpha = self.alpha_filter
         else:
             alpha = 1.
-        
+
         return color[0], color[1], color[2], alpha
 
     def fontcolor(self, r, g, b, a):
@@ -548,12 +517,12 @@ class FanChartBaseWidget(Gtk.DrawingArea):
         cr.arc_negative(0, 0, rmax, thetamax, thetamin)
         cr.close_path()
         ##cr.append_path(path) # not working correct
-        cr.set_source_rgba(r/255., g/255., b/255., a) 
+        cr.set_source_rgba(r/255., g/255., b/255., a)
         cr.fill()
 
     def wrap_truncate_layout(self, layout, font, width_pixels):
         """Uses the layout to wrap and truncate its text to given width
-        
+
         Returns: (w,h) as returned by layout.get_pixel_size()
         """
 
@@ -587,7 +556,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
             layout.set_font_description(font)
             layout.set_wrap(Pango.WrapMode.CHAR)
 
-            # NOTE: for radial text, the sector radius height is the text width 
+            # NOTE: for radial text, the sector radius height is the text width
             w, h = self.wrap_truncate_layout(layout, font, height - 2*PAD_TEXT)
 
             w = w + 5 # 5 pixel padding
@@ -703,7 +672,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
         def phi(x):
             return (x - x0) * dphi * arc_used_ratio / w \
                    + (1 - arc_used_ratio) * dphi / 2 \
-                   - math.pi/2 
+                   - math.pi/2
         def rho(y):
             return (y - y0) * (radiusin - radiusout)/h + radiusout
 
@@ -744,8 +713,8 @@ class FanChartBaseWidget(Gtk.DrawingArea):
 
     def person_under_cursor(self, curx, cury):
         """
-        Determine the generation and the position in the generation at 
-        position x and y, as well as the type of box. 
+        Determine the generation and the position in the generation at
+        position x and y, as well as the type of box.
         generation = -1 on center black dot
         generation >= self.generations outside of diagram
         """
@@ -757,7 +726,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
         radius = math.sqrt((curx - cx) ** 2 + (cury - cy) ** 2)
         if radius < TRANSLATE_PX:
             generation = -1
-        elif (self.childring and self.angle[-2] and 
+        elif (self.childring and self.angle[-2] and
                     radius < TRANSLATE_PX + CHILDRING_WIDTH):
             generation = -2  # indication of one of the children
         elif radius < self.CENTER:
@@ -776,7 +745,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
         if rads < math.pi:
             rads += 2 * math.pi
         # if generation is in expand zone:
-        # FIXME: add a way of expanding 
+        # FIXME: add a way of expanding
         # find what person is in this position:
         selected = None
         if (0 <= generation < self.generations):
@@ -787,7 +756,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
                 if start <= rads <= stop:
                     selected = p
                     break
-            
+
         return generation, selected, btype
 
     def boxtype(self, radius):
@@ -844,7 +813,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
                 # we edit the family
                 self.edit_fam_cb(None, family.handle)
                 return True
-            
+
         return False
 
     def on_mouse_down(self, widget, event):
@@ -856,7 +825,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
             self.grab_focus()
 
         # left mouse on center dot, we translate on left click
-        if generation == -1: 
+        if generation == -1:
             if event.button == 1: # left mouse
                 # save the mouse location for movements
                 self.translating = True
@@ -876,7 +845,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
             self._mouse_click_sel = selected
             self._mouse_click_btype = btype
             return False
-    
+
         #right click on person, context menu
         # Do things based on state, event.get_state(), or button, event.button
         if is_right_click(event):
@@ -904,7 +873,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
                 tooltip = self.format_helper.format_person(person, 11)
             self.set_tooltip_text(tooltip)
             return False
-        
+
         #translate or rotate should happen
         alloc = self.get_allocation()
         x, y, w, h = alloc.x, alloc.y, alloc.width, alloc.height
@@ -956,7 +925,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
                 self.center_xy = w/2 - event.x, h - self.CENTER - PAD_PX - event.y
             elif self.form == FORM_QUADRANT:
                 self.center_xy = self.CENTER + PAD_PX - event.x, h - self.CENTER - PAD_PX - event.y
-        
+
         self.last_x, self.last_y = None, None
         self.queue_draw()
         return True
@@ -1016,7 +985,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
                 pass
             return True
         return False
-    
+
 #-------------------------------------------------------------------------
 #
 # FanChartWidget
@@ -1025,7 +994,7 @@ class FanChartBaseWidget(Gtk.DrawingArea):
 
 class FanChartWidget(FanChartBaseWidget):
     """
-    Interactive Fan Chart Widget. 
+    Interactive Fan Chart Widget.
     """
 
     def __init__(self, dbstate, uistate, callback_popup=None):
@@ -1042,7 +1011,7 @@ class FanChartWidget(FanChartBaseWidget):
               filter, alpha_filter, form):
         """
         Reset the values to be used:
-         
+
         :param root_person_handle: person to show
         :param maxgen: maximum generations to show
         :param background: config setting of which background procedure to use
@@ -1055,7 +1024,7 @@ class FanChartWidget(FanChartBaseWidget):
         :param filter: the person filter to apply to the people in the chart
         :param alpha: the alpha transparency value (0-1) to apply to filtered
                       out data
-        :param form: the ``FORM_`` constant for the fanchart 
+        :param form: the ``FORM_`` constant for the fanchart
         """
         self.rootpersonh = root_person_handle
         self.generations = maxgen
@@ -1098,9 +1067,12 @@ class FanChartWidget(FanChartBaseWidget):
 
     def _fill_data_structures(self):
         self.set_generations()
+        if not self.rootpersonh:
+            return
         person = self.dbstate.db.get_person_from_handle(self.rootpersonh)
-        if not person: 
-            name = None
+        if not person:
+            #nothing to do, just return
+            return
         else:
             name = name_displayer.display(person)
         parents = self._have_parents(person)
@@ -1155,7 +1127,7 @@ class FanChartWidget(FanChartBaseWidget):
 
     def _have_parents(self, person):
         """
-        Returns True if a person has parents. 
+        Returns True if a person has parents.
         TODO: is there no util function for this
         """
         if person:
@@ -1231,7 +1203,7 @@ class FanChartWidget(FanChartBaseWidget):
     def on_draw(self, widget, cr, scale=1.):
         """
         The main method to do the drawing.
-        If widget is given, we assume we draw in GTK3 and use the allocation. 
+        If widget is given, we assume we draw in GTK3 and use the allocation.
         To draw raw on the cairo context cr, set widget=None.
         """
         # first do size request of what we will need
@@ -1243,7 +1215,7 @@ class FanChartWidget(FanChartBaseWidget):
                 self.set_size_request(2 * halfdist, halfdist + self.CENTER + PAD_PX)
             elif self.form == FORM_QUADRANT:
                 self.set_size_request(halfdist + self.CENTER + PAD_PX, halfdist + self.CENTER + PAD_PX)
-            
+
             #obtain the allocation
             alloc = self.get_allocation()
             x, y, w, h = alloc.x, alloc.y, alloc.width, alloc.height
@@ -1270,8 +1242,8 @@ class FanChartWidget(FanChartBaseWidget):
                 if person:
                     start, stop, state = self.angle[generation][p]
                     if state in [NORMAL, EXPANDED]:
-                        self.draw_person(cr, gender_code(p%2 == 0), 
-                                         text, start, stop, 
+                        self.draw_person(cr, gender_code(p%2 == 0),
+                                         text, start, stop,
                                          generation, state, parents, child,
                                          person, userdata)
         cr.set_source_rgb(1, 1, 1) # white
@@ -1294,8 +1266,8 @@ class FanChartWidget(FanChartBaseWidget):
             cr.fill()
             cr.save()
             name = name_displayer.display(person)
-            self.draw_text(cr, name, self.CENTER - 
-                        (self.CENTER - (CHILDRING_WIDTH + TRANSLATE_PX))/2, 95, 455, 
+            self.draw_text(cr, name, self.CENTER -
+                        (self.CENTER - (CHILDRING_WIDTH + TRANSLATE_PX))/2, 95, 455,
                         10, False,
                         self.fontcolor(r, g, b, a), self.fontbold(a))
             cr.restore()
@@ -1312,11 +1284,11 @@ class FanChartWidget(FanChartBaseWidget):
         if self.background in [BACKGROUND_GRAD_AGE, BACKGROUND_GRAD_PERIOD]:
             self.draw_gradient(cr, widget, halfdist)
 
-    def draw_person(self, cr, gender, name, start, stop, generation, 
+    def draw_person(self, cr, gender, name, start, stop, generation,
                     state, parents, child, person, userdata):
         """
         Display the piece of pie for a given person. start and stop
-        are in degrees. Gender is indication of father position or mother 
+        are in degrees. Gender is indication of father position or mother
         position in the chart
         """
         cr.save()
@@ -1353,7 +1325,7 @@ class FanChartWidget(FanChartBaseWidget):
         cr.arc_negative(0, 0, radmin, stop_rad, start_rad)
         cr.close_path()
         ##path = cr.copy_path() # not working correct
-        cr.set_source_rgba(r/255., g/255., b/255., a) 
+        cr.set_source_rgba(r/255., g/255., b/255., a)
         cr.fill()
         #and again for the border
         cr.move_to(radius * math.cos(start_rad), radius * math.sin(start_rad))
@@ -1370,7 +1342,7 @@ class FanChartWidget(FanChartBaseWidget):
             cr.set_line_width(3)
         cr.stroke()
         cr.set_line_width(1)
-        if self.last_x is None or self.last_y is None: 
+        if self.last_x is None or self.last_y is None:
             #we are not in a move, so draw text
             radial = False
             radstart = radius - PIXELS_PER_GENERATION/2
@@ -1380,8 +1352,8 @@ class FanChartWidget(FanChartBaseWidget):
                     # more space to print it radial
                     radial = True
                     radstart = radius - PIXELS_PER_GENERATION
-            self.draw_text(cr, name, radstart, start, stop, 
-                           PIXELS_PER_GENERATION, radial, 
+            self.draw_text(cr, name, radstart, start, stop,
+                           PIXELS_PER_GENERATION, radial,
                            self.fontcolor(r, g, b, a), self.fontbold(a))
         cr.restore()
 
@@ -1450,7 +1422,7 @@ class FanChartWidget(FanChartBaseWidget):
         start, stop, state = self.angle[generation][selected]
         if state in [NORMAL, EXPANDED]:
             slice = (stop - start) / 2.0
-            self.angle[generation][selected] = [current, current + slice, 
+            self.angle[generation][selected] = [current, current + slice,
                                                 state]
             self.shrink_parents(generation + 1, selected, current)
             current += slice
@@ -1559,7 +1531,7 @@ class FanChartGrampsGUI(object):
         self.fan = None
         self.on_childmenu_changed = on_childmenu_changed
         self.format_helper = FormattingHelper(self.dbstate)
-    
+
     def set_fan(self, fan):
         """
         Set the fanchartwidget to work on
@@ -1570,7 +1542,7 @@ class FanChartGrampsGUI(object):
 
     def main(self):
         """
-        Fill the data structures with the active data. This initializes all 
+        Fill the data structures with the active data. This initializes all
         data.
         """
         root_person_handle = self.get_active('Person')
@@ -1583,7 +1555,7 @@ class FanChartGrampsGUI(object):
 
     def on_popup(self, obj, event, person_handle, family_handle=None):
         """
-        Builds the full menu (including Siblings, Spouses, Children, 
+        Builds the full menu (including Siblings, Spouses, Children,
         and Parents) with navigation.
         """
         #store menu for GTK3 to avoid it being destroyed before showing
@@ -1649,7 +1621,7 @@ class FanChartGrampsGUI(object):
 
         # collect all spouses, parents and children
         linked_persons = []
-        
+
         # Go over spouses and build their menu
         item = Gtk.MenuItem(label=_("Spouses"))
         fam_list = person.get_family_handle_list()
@@ -1683,7 +1655,7 @@ class FanChartGrampsGUI(object):
 
         item.show()
         menu.append(item)
-        
+
         # Go over siblings and build their menu
         item = Gtk.MenuItem(label=_("Siblings"))
         pfam_list = person.get_parent_family_handle_list()
@@ -1726,7 +1698,7 @@ class FanChartGrampsGUI(object):
             item.set_sensitive(0)
         item.show()
         menu.append(item)
-        
+
         # Go over children and build their menu
         item = Gtk.MenuItem(label=_("Children"))
         no_children = 1
@@ -1735,7 +1707,7 @@ class FanChartGrampsGUI(object):
             child = self.dbstate.db.get_person_from_handle(child_handle)
             if not child:
                 continue
-        
+
             if no_children:
                 no_children = 0
                 item.set_submenu(Gtk.Menu())
@@ -1804,17 +1776,17 @@ class FanChartGrampsGUI(object):
             add_item.connect("activate", self.on_add_parents, person_handle)
             add_item.show()
             par_menu.append(add_item)
-            
+
         item.show()
         menu.append(item)
-    
+
         # Go over parents and build their menu
         item = Gtk.MenuItem(label=_("Related"))
         no_related = 1
         for p_id in find_witnessed_people(self.dbstate.db,person):
             #if p_id in linked_persons:
             #    continue    # skip already listed family members
-            
+
             per = self.dbstate.db.get_person_from_handle(p_id)
             if not per:
                 continue
@@ -1837,12 +1809,12 @@ class FanChartGrampsGUI(object):
             per_item.connect("activate", self.on_childmenu_changed, p_id)
             per_item.show()
             per_menu.append(per_item)
-        
+
         if no_related:
             item.set_sensitive(0)
         item.show()
         menu.append(item)
-        
+
         #we now construct an add menu
         item = Gtk.MenuItem(label=_("Add"))
         item.set_submenu(Gtk.Menu())
@@ -1867,7 +1839,7 @@ class FanChartGrampsGUI(object):
                                    person_handle)
             add_partner_item.show()
             add_menu.append(add_partner_item)
-            
+
         add_pers_item = Gtk.ImageMenuItem()
         img = Gtk.Image.new_from_icon_name('list-add', Gtk.IconSize.MENU)
         add_pers_item.set_image(img)
@@ -1877,10 +1849,10 @@ class FanChartGrampsGUI(object):
         add_menu.append(add_pers_item)
         item.show()
         menu.append(item)
-        
+
         menu.popup(None, None, None, None, event.button, event.time)
         return 1
-    
+
     def edit_person_cb(self, obj, person_handle):
         person = self.dbstate.db.get_person_from_handle(person_handle)
         if person:
@@ -1935,17 +1907,17 @@ class FanChartGrampsGUI(object):
             preset_name(father, name)
         person.set_primary_name(name)
         try:
-            EditPerson(self.dbstate, self.uistate, [], person, 
+            EditPerson(self.dbstate, self.uistate, [], person,
                        callback=callback)
         except WindowActiveError:
             pass
-   
+
     def callback_add_child(self, person, family_handle):
         ref = ChildRef()
         ref.ref = person.get_handle()
         family = self.dbstate.db.get_family_from_handle(family_handle)
         family.add_child_ref(ref)
-        
+
         with DbTxn(_("Add Child to Family"), self.dbstate.db) as trans:
             #add parentref to child
             person.add_parent_family_handle(family_handle)
@@ -1963,7 +1935,7 @@ class FanChartGrampsGUI(object):
 
         if not person:
             return
-            
+
         if person.gender == Person.MALE:
             family.set_father_handle(person.handle)
         else:
@@ -1988,7 +1960,7 @@ class FanChartGrampsGUI(object):
         """Renders the person data into some lines of text and puts that into the clipboard"""
         person = self.dbstate.db.get_person_from_handle(person_handle)
         if person:
-            cb = Gtk.Clipboard.get_for_display(Gdk.Display.get_default(), 
+            cb = Gtk.Clipboard.get_for_display(Gdk.Display.get_default(),
                         Gdk.SELECTION_CLIPBOARD)
             cb.set_text( self.format_helper.format_person(person,11), -1)
             return True

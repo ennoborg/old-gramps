@@ -46,8 +46,9 @@ _ = glocale.translation.gettext
 #
 #-------------------------------------------------------------------------
 
-MIN_PYGOBJECT_VERSION = (3, 3, 2)
+MIN_PYGOBJECT_VERSION = (3, 12, 0)
 PYGOBJ_ERR = False
+MIN_GTK_VERSION = (3, 10)
 
 try:
     #import gnome introspection, part of pygobject
@@ -58,7 +59,7 @@ except:
             "You need a version which has the function 'require_version' "
             "to start Gramps"))
     sys.exit(0)
-            
+
 if not PYGOBJ_ERR:
     try:
         from gi.repository import GObject, GLib
@@ -71,8 +72,8 @@ if PYGOBJ_ERR:
     print((_("Your pygobject version does not meet the requirements.\n"
              "At least pygobject %(major)d.%(feature)d.%(minor)d "
              "is needed to start Gramps with a GUI.\n\n"
-             "Gramps will terminate now.") % 
-            {'major':MIN_PYGOBJECT_VERSION[0], 
+             "Gramps will terminate now.") %
+            {'major':MIN_PYGOBJECT_VERSION[0],
             'feature':MIN_PYGOBJECT_VERSION[1],
             'minor':MIN_PYGOBJECT_VERSION[2]}))
     sys.exit(0)
@@ -88,10 +89,21 @@ try:
 except (ImportError, ValueError):
     print((_("Gdk, Gtk, Pango or PangoCairo typelib not installed.\n"
              "Install Gnome Introspection, and "
-             "pygobject version 3.3.2 or later.\n"
+             "pygobject version 3.12 or later.\n"
              "Then install introspection data for Gdk, Gtk, Pango and "
              "PangoCairo\n\n"
              "Gramps will terminate now.")))
+    sys.exit(0)
+
+gtk_major = Gtk.get_major_version()
+gtk_minor = Gtk.get_minor_version()
+if (gtk_major, gtk_minor) < MIN_GTK_VERSION:
+    print(_("Your Gtk version does not meet the requirements.\n"
+            "At least %(major)d.%(minor)d "
+            "is needed to start Gramps with a GUI.\n\n"
+            "Gramps will terminate now.") %
+                { 'major' : MIN_GTK_VERSION[0],
+                  'minor' : MIN_GTK_VERSION[1] } )
     sys.exit(0)
 
 try:
@@ -184,7 +196,7 @@ class Gramps(object):
                      'bold_end'   : '</b>' } )
 
         dbstate = DbState()
-        self.vm = ViewManager(dbstate, 
+        self.vm = ViewManager(dbstate,
                 config.get("interface.view-categories"))
         self.vm.init_interface()
 
@@ -271,7 +283,7 @@ def __startgramps(errors, argparser):
     "You can also change manually the startup view in the gramps.ini file \n"
     "by changing the last-view parameter.\n"
                    ), exc_info=True)
-    
+
     # start Gramps, errors stop the gtk loop
     try:
         quit_now = False
@@ -321,9 +333,6 @@ def __startgramps(errors, argparser):
 def startgtkloop(errors, argparser):
     """ We start the gtk loop and run the function to start up Gramps
     """
-    if GObject.pygobject_version < (3, 10, 2):
-        GObject.threads_init()
-
     GLib.timeout_add(100, __startgramps, errors, argparser, priority=100)
     if os.path.exists(os.path.join(DATA_DIR, "gramps.accel")):
         Gtk.AccelMap.load(os.path.join(DATA_DIR, "gramps.accel"))

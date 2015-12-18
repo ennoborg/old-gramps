@@ -28,21 +28,28 @@ import traceback
 import tempfile
 import shutil
 import logging
+import contextlib
+from io import TextIOWrapper, BytesIO, StringIO
 
+from gramps.gen.dbstate import DbState
+from gramps.cli.user import User
+from gramps.cli.grampscli import CLIManager
+from gramps.cli.argparser import ArgParser
+from gramps.cli.arghandler import ArgHandler
 
 # _caller_context is primarily here to support and document the process
 # of determining the test-module's directory.
-# 
+#
 # NB: the traceback 0-element is 'limit'-levels back, or earliest calling
 # context if that is less than limit.
 #  The -1 element is this very function; -2 is its caller, etc.
-# A traceback context tuple is: 
+# A traceback context tuple is:
 #  (file, line, active function, text of the call-line)
 def _caller_context():
     """Return context of first caller outside this module"""
     lim = 5  #  1 for this function, plus futrher chain within this module
     st = traceback.extract_stack(limit=lim)
-    thisfile = __file__.rstrip("co")  # eg, in ".py[co] 
+    thisfile = __file__.rstrip("co")  # eg, in ".py[co]
     while st and st[-1][0] == thisfile:
         del(st[-1])
     if not st:
@@ -60,7 +67,7 @@ def _caller_dir():
 
 class TestError(Exception):
     """Exception for use by test modules
-    
+
     Use this, for example, to distuinguish testing errors.
 
     """
@@ -76,7 +83,7 @@ def msg(got, exp, msg, pfx=""):
     This improves unittest failure messages by showing data values
     Usage:
       assertEqual(got,exp, msg(got,exp,"mess" [,prefix])
-    The failure message will show as 
+    The failure message will show as
       [prefix: ] mess
         .....got:repr(value-of-got)
         expected:repr(value-of-exp)
@@ -89,12 +96,12 @@ def msg(got, exp, msg, pfx=""):
 
 def absdir(path=None):
     """Return absolute dir of the specified path
-    
+
     The path parm may be dir or file  or missing.
     If a file, the dir of the file is used.
     If missing, the dir of test-module caller is used
 
-    Common usage is 
+    Common usage is
       here = absdir()
       here = absdir(__file__)
     These 2 return the same result
@@ -113,7 +120,7 @@ def path_append_parent(path=None):
     and return the abspath to the parent as a possible convenience
 
     The path parm may be a dir or a file or missing.
-      If a file, the dir of the file is used. 
+      If a file, the dir of the file is used.
       If missing the test-module caller's dir is used.
     And then the parent of that dir is appended (if not already present)
 
@@ -131,7 +138,7 @@ def path_append_parent(path=None):
 
 def make_subdir(dir, parent=None):
     """Make (if required) a subdir to a given parent and return its path
-    
+
     The parent parm may be dir or file or missing
       If a file, the dir of the file us used
       If missing, the test-module caller's dir is used
@@ -147,7 +154,7 @@ def make_subdir(dir, parent=None):
 
 def delete_tree(dir):
     """Recursively delete directory and content
-    
+
     WARNING: this is clearly dangerous
       it will only operate on subdirs of the test module dir or of /tmp
 
@@ -160,7 +167,7 @@ def delete_tree(dir):
     here = _caller_dir() + os.path.sep
     tmp = tempfile.gettempdir() + os.path.sep
     if not (sdir.startswith(here) or sdir.startswith(tmp)):
-        raise TestError("%r is not a subdir of here (%r) or %r" 
+        raise TestError("%r is not a subdir of here (%r) or %r"
             % (dir, here, tmp))
     shutil.rmtree(sdir)
 
@@ -170,7 +177,7 @@ def delete_tree(dir):
 # I don't see any need to inherit from logging.Logger
 # (at present, test code needs nothing fancy)
 # but that might be considered for future needs
-# NB: current code reflects limited expertise on the 
+# NB: current code reflects limited expertise on the
 # uses of the logging module
 # ---------------------------------------------------------
 class TestLogger():
@@ -179,7 +186,7 @@ class TestLogger():
 
     provides simplified logging setup for test modules
     that need to setup logging for modules under test
-    (just instantiate a TestLogger to avoid error 
+    (just instantiate a TestLogger to avoid error
      messages about logging handlers not available)
 
     There is also a simple logfile capability, to allow
@@ -190,7 +197,7 @@ class TestLogger():
     """
     def __init__(self, lvl=logging.WARN):
         logging.basicConfig(level=lvl)
-        
+
     def logfile_init(self, lfname):
         """init or re-init a logfile"""
         if getattr(self, "lfh", None):
@@ -200,12 +207,64 @@ class TestLogger():
         self.lfh = logging.FileHandler(lfname)
         logging.getLogger().addHandler(self.lfh)
         self.lfname = lfname
-    
+
     def logfile_getlines(self):
         """get current content of logfile as list of lines"""
         txt = []
         if self.lfname and os.path.isfile(self.lfname):
-            txt = open(self.lfname).readlines() 
+            txt = open(self.lfname).readlines()
         return txt
+
+### Support for testing CLI
+
+def new_exit(edit_code=None):
+    raise SystemExit()
+
+@contextlib.contextmanager
+def capture(stdin):
+    oldout, olderr = sys.stdout, sys.stderr
+    oldexit = sys.exit
+    if stdin:
+        oldin = sys.stdin
+        sys.stdin = stdin
+    try:
+        output = [StringIO(), StringIO()]
+        sys.stdout, sys.stderr = output
+        sys.exit = new_exit
+        yield output
+    except SystemExit:
+        pass
+    finally:
+        sys.stdout, sys.stderr = oldout, olderr
+        sys.exit = oldexit
+        if stdin:
+            sys.stdin = oldin
+        output[0] = output[0].getvalue() 
+        output[1] = output[1].getvalue() 
+
+class Gramps(object):
+    def __init__(self, user=None, dbstate=None):
+        ## Setup:
+        from gramps.cli.clidbman import CLIDbManager
+        self.dbstate = dbstate or DbState()
+        #we need a manager for the CLI session
+        self.user = user or User(auto_accept=True, quiet=False)
+        self.climanager = CLIManager(self.dbstate, setloader=True, user=self.user)
+        self.clidbmanager = CLIDbManager(self.dbstate)
+
+    def run(self, *args, stdin=None):
+        with capture(stdin) as output:
+            #load the plugins
+            self.climanager.do_reg_plugins(self.dbstate, uistate=None)
+            # handle the arguments
+            args = [sys.executable] + list(args)
+            argparser = ArgParser(args)
+            argparser.need_gui() # initializes some variables
+            argparser.print_help()
+            argparser.print_usage()
+            handler = ArgHandler(self.dbstate, argparser, self.climanager)
+            # create a manager to manage the database
+            handler.handle_args_cli(should_exit=False)
+        return output
 
 #===eof===

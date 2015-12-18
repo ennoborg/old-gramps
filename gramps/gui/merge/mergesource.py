@@ -31,7 +31,7 @@ Provide merge capabilities for sources.
 #-------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.sgettext
-from gramps.gen.const import URL_MANUAL_PAGE
+from gramps.gen.const import URL_MANUAL_SECT3
 from ..display import display_help
 from ..managedwindow import ManagedWindow
 from gramps.gen.merge import MergeSourceQuery
@@ -41,8 +41,7 @@ from gramps.gen.merge import MergeSourceQuery
 # Gramps constants
 #
 #-------------------------------------------------------------------------
-WIKI_HELP_PAGE = '%s_-_Entering_and_Editing_Data:_Detailed_-_part_3' % \
-        URL_MANUAL_PAGE
+WIKI_HELP_PAGE = URL_MANUAL_SECT3
 WIKI_HELP_SEC = _('manual|Merge_Sources')
 _GLADE_FILE = 'mergesource.glade'
 
@@ -114,7 +113,7 @@ class MergeSource(ManagedWindow):
             for widget_name in ('gramps1', 'gramps2', 'gramps_btn1',
                     'gramps_btn2'):
                 self.get_widget(widget_name).set_sensitive(False)
-        
+
         # Main window widgets that determine which handle survives
         rbutton1 = self.get_widget("handle_btn1")
         rbutton_label1 = self.get_widget("label_handle_btn1")
@@ -159,7 +158,7 @@ class MergeSource(ManagedWindow):
         else:
             phoenix = self.src2
             titanic = self.src1
-            # Add second handle to history so that when merge is complete, 
+            # Add second handle to history so that when merge is complete,
             # phoenix is the selected row.
             self.uistate.set_active(phoenix.get_handle(), 'Source')
 

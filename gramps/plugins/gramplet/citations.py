@@ -48,7 +48,7 @@ class Citations(Gramplet, DbGUIElement):
         """
         self.callman.register_callbacks({'citation-update': self.changed})
         self.callman.connect_all(keys=['citation'])
-    
+
     def changed(self, handle):
         """
         Called when a registered citation is updated.
@@ -66,14 +66,14 @@ class Citations(Gramplet, DbGUIElement):
                   (_('Source/Citation'), 1, 350),
                   (_('Author'), 2, 200),
                   (_('Publisher'), 3, 150)]
-        self.model = ListModel(top, titles, list_mode="tree", 
+        self.model = ListModel(top, titles, list_mode="tree",
                                event_func=self.invoke_editor)
         return top
-        
+
     def add_citations(self, obj):
         for citation_handle in obj.get_citation_list():
             self.add_citation_ref(citation_handle)
-        
+
     def add_name_citations(self, obj):
         names = [obj.get_primary_name()] + obj.get_alternate_names()
         for name in names:
@@ -105,9 +105,10 @@ class Citations(Gramplet, DbGUIElement):
         self.add_attribute_citations(event)
         self.add_mediaref_citations(event)
         place_handle = event.get_place_handle()
-        place = self.dbstate.db.get_place_from_handle(place_handle)
-        if place:
-            self.add_place_citations(place)
+        if place_handle:
+            place = self.dbstate.db.get_place_from_handle(place_handle)
+            if place:
+                self.add_place_citations(place)
 
     def add_place_citations(self, place):
         self.add_citations(place)
@@ -147,13 +148,13 @@ class Citations(Gramplet, DbGUIElement):
         if source_handle not in self.source_nodes:
             node = self.model.add([source_handle, title, author, publisher])
             self.source_nodes[source_handle] = node
-            
-        self.model.add([citation_handle, page, '', ''], 
+
+        self.model.add([citation_handle, page, '', ''],
                        node=self.source_nodes[source_handle])
 
     def check_citations(self, obj):
         return True if obj.get_citation_list() else False
-        
+
     def check_name_citations(self, obj):
         names = [obj.get_primary_name()] + obj.get_alternate_names()
         for name in names:
@@ -202,9 +203,10 @@ class Citations(Gramplet, DbGUIElement):
         if self.check_mediaref_citations(event):
             return True
         place_handle = event.get_place_handle()
-        place = self.dbstate.db.get_place_from_handle(place_handle)
-        if place and self.check_place_citations(place):
-            return True
+        if place_handle:
+            place = self.dbstate.db.get_place_from_handle(place_handle)
+            if place and self.check_place_citations(place):
+                return True
         return False
 
     def check_place_citations(self, place):

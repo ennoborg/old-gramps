@@ -32,8 +32,6 @@ to edit information about a particular Person.
 #
 #-------------------------------------------------------------------------
 from copy import copy
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.sgettext
 import pickle
 
 #-------------------------------------------------------------------------
@@ -50,8 +48,10 @@ from gi.repository import Pango
 # gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
 from gramps.gen.utils.file import media_path_full
-from ..thumbnails import get_thumbnail_image
+from gramps.gen.utils.thumbnails import get_thumbnail_image
 from ..utils import is_right_click, open_file_with_default_application
 from gramps.gen.utils.db import get_birth_or_fallback
 from gramps.gen.lib import NoteType, Person, Surname
@@ -75,7 +75,7 @@ from .displaytabs import (PersonEventEmbedList, NameEmbedList, CitationEmbedList
                          WebEmbedList, PersonRefEmbedList, LdsEmbedList,
                          PersonBackRefList, SurnameTab)
 from gramps.gen.plug import CATEGORY_QR_PERSON
-from gramps.gen.const import URL_MANUAL_PAGE
+from gramps.gen.const import URL_MANUAL_SECT1
 from gramps.gen.utils.id import create_id
 
 #-------------------------------------------------------------------------
@@ -84,7 +84,7 @@ from gramps.gen.utils.id import create_id
 #
 #-------------------------------------------------------------------------
 
-WIKI_HELP_PAGE = _('%s_-_Entering_and_editing_data:_detailed_-_part_1') % URL_MANUAL_PAGE
+WIKI_HELP_PAGE = URL_MANUAL_SECT1
 
 _select_gender = ((True, False, False),
                   (False, True, False),
@@ -243,7 +243,7 @@ class EditPerson(EditPrimary):
         self.define_ok_button(self.top.get_object("ok"), self.save)
         self.define_help_button(self.top.get_object("button134"),
                 WIKI_HELP_PAGE,
-                _('manpage section id|Editing_information_about_people'))
+                _('manual|Editing_information_about_people'))
 
         self.given.connect("focus_out_event", self._given_focus_out_event)
         self.top.get_object("editnamebtn").connect("clicked",
@@ -259,8 +259,8 @@ class EditPerson(EditPrimary):
         tglist.add(DdTargets.PERSON_LINK.atom_drag_type,
                    DdTargets.PERSON_LINK.target_flags,
                    DdTargets.PERSON_LINK.app_id)
-        self.contexteventbox.drag_source_set(Gdk.ModifierType.BUTTON1_MASK, 
-                                   [], 
+        self.contexteventbox.drag_source_set(Gdk.ModifierType.BUTTON1_MASK,
+                                   [],
                                    Gdk.DragAction.COPY)
         self.contexteventbox.drag_source_set_target_list(tglist)
         self.contexteventbox.drag_source_set_icon_name('gramps-person')
@@ -436,6 +436,7 @@ class EditPerson(EditPrimary):
 
         #make sure title updates automatically
         for obj in [self.top.get_object("given_name"),
+                    self.top.get_object("nickname"),
                     self.top.get_object("call"),
                     self.top.get_object("suffix"),
                     self.top.get_object("prefix"),
@@ -483,7 +484,7 @@ class EditPerson(EditPrimary):
         self.srcref_list = CitationEmbedList(self.dbstate,
                                            self.uistate,
                                            self.track,
-                                           self.obj.get_citation_list(), 
+                                           self.obj.get_citation_list(),
                                            self.get_menu_title())
         self._add_tab(notebook, self.srcref_list)
         self.track_ref_for_deletion("srcref_list")
@@ -768,9 +769,8 @@ class EditPerson(EditPrimary):
             f.set_child_ref_list(new_order)
 
         error = False
-        original = self.db.get_person_from_handle(self.obj.handle)
-
-        if original:
+        if not self.added:
+            original = self.db.get_person_from_handle(self.obj.handle)
             (female, male, unknown) = _select_gender[self.obj.get_gender()]
             if male and original.get_gender() != Person.MALE:
                 for tmp_handle in self.obj.get_family_handle_list():
@@ -970,8 +970,8 @@ class EditPerson(EditPrimary):
         Load the person's main photo using the Thumbnailer.
         """
         pixbuf = get_thumbnail_image(
-                        media_path_full(self.dbstate.db, 
-                                              obj.get_path()), 
+                        media_path_full(self.dbstate.db,
+                                              obj.get_path()),
                         obj.get_mime_type(),
                         ref.get_rectangle())
 

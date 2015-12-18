@@ -34,9 +34,6 @@ import os
 # internationalization
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
-from gramps.gen.constfunc import conv_to_unicode
 
 #-------------------------------------------------------------------------
 #
@@ -50,16 +47,27 @@ from gi.repository import GdkPixbuf
 # gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
 from gramps.gen.const import ICON, THUMBSCALE, USER_HOME
 from gramps.gen.config import config
 from gramps.gen.utils.file import (media_path_full, media_path, relative_path,
                                    find_file)
 from gramps.gen.mime import get_type
-from ..thumbnails import find_mime_type_pixbuf
+from gramps.gen.utils.thumbnails import find_mime_type_pixbuf
 from ..display import display_help
 from ..managedwindow import ManagedWindow
 from ..dialog import ErrorDialog, WarningDialog
 from ..glade import Glade
+from gramps.gen.const import URL_MANUAL_SECT2
+
+#-------------------------------------------------------------------------
+#
+# Constants
+#
+#-------------------------------------------------------------------------
+WIKI_HELP_PAGE = URL_MANUAL_SECT2
+WIKI_HELP_SEC = _('manual|Select_a_media_object_selector')
 
 #-------------------------------------------------------------------------
 #
@@ -71,13 +79,13 @@ class AddMediaObject(ManagedWindow):
     Displays the Add Media Dialog window, allowing the user to select
     a file from the file system, while providing a description.
     """
-    
+
     def __init__(self, dbstate, uistate, track, mediaobj, callback=None):
         """
         Create and displays the dialog box
 
         db - the database in which the new object is to be stored
-        The mediaobject is updated with the information, and on save, the 
+        The mediaobject is updated with the information, and on save, the
         callback function is called
         """
         ManagedWindow.__init__(self, uistate, track, self)
@@ -88,13 +96,13 @@ class AddMediaObject(ManagedWindow):
 
         self.last_directory = config.get('behavior.addmedia-image-dir')
         self.relative_path  = config.get('behavior.addmedia-relative-path')
-        
+
         self.glade = Glade()
         self.set_window(
             self.glade.toplevel,
             self.glade.get_object('title'),
             _('Select a media object'))
-            
+
         self.description = self.glade.get_object("photoDescription")
         self.image = self.glade.get_object("image")
         self.file_text = self.glade.get_object("fname")
@@ -126,7 +134,9 @@ class AddMediaObject(ManagedWindow):
         self.cancel_button = self.glade.get_object('button81')
         self.ok_button.connect('clicked', self.save)
         self.ok_button.set_sensitive(not self.dbase.readonly)
-        self.help_button.connect('clicked', lambda x: display_help())
+        self.help_button.connect('clicked', lambda x: display_help(
+                                     webpage=WIKI_HELP_PAGE,
+                                             section=WIKI_HELP_SEC))
         self.cancel_button.connect('clicked', self.close)
         self.show()
         self.modal_call()
@@ -150,7 +160,7 @@ class AddMediaObject(ManagedWindow):
             ErrorDialog(msgstr, msgstr2)
             return
 
-        filename = conv_to_unicode(self.file_text.get_filename())
+        filename = self.file_text.get_filename()
         full_file = filename
 
         if self.relpath.get_active():
@@ -170,7 +180,7 @@ class AddMediaObject(ManagedWindow):
         self.obj.set_mime_type(mtype)
         name = filename
         self.obj.set_path(name)
-        
+
         self.last_directory = os.path.dirname(full_file)
         self.relative_path = self.relpath.get_active()
 
@@ -187,15 +197,15 @@ class AddMediaObject(ManagedWindow):
         fname = self.file_text.get_filename()
         if not fname:
             return
-        filename = conv_to_unicode(fname)
+        filename = fname
         basename = os.path.basename(filename)
         (root, ext) = os.path.splitext(basename)
-        old_title  = str(self.description.get_text())
+        old_title  = self.description.get_text()
 
         if old_title == '' or old_title == self.temp_name:
             self.description.set_text(root)
         self.temp_name = root
-        
+
         filename = find_file( filename)
         if filename:
             mtype = get_type(filename)
@@ -223,12 +233,12 @@ def scale_image(path, size):
     title_msg = _("Cannot display %s") % path
     detail_msg =  _('Gramps is not able to display the image file. '
                     'This may be caused by a corrupt file.')
-    
+
     try:
         image1 = GdkPixbuf.Pixbuf.new_from_file(path)
         width  = image1.get_width()
         height = image1.get_height()
-        
+
         scale = size / float(max(width, height))
         return image1.scale_simple(int(scale*width), int(scale*height),
                                    GdkPixbuf.InterpType.BILINEAR)

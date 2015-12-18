@@ -35,7 +35,7 @@ from gi.repository import Gtk
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from ... import widgets
@@ -44,7 +44,7 @@ from .. import build_filter_model
 from . import SidebarFilter
 from gramps.gen.filters import GenericFilterFactory, rules
 from gramps.gen.filters.rules.repository import (RegExpIdOf, HasRepo, HasTag,
-                                                 HasNoteRegexp, MatchesFilter) 
+                                                 HasNoteRegexp, MatchesFilter)
 
 GenericRepoFilter = GenericFilterFactory('Repository')
 #-------------------------------------------------------------------------
@@ -67,7 +67,9 @@ class RepoSidebarFilter(SidebarFilter):
         self.event_menu = widgets.MonitoredDataType(
             self.rtype,
             self.repo.set_type,
-            self.repo.get_type)
+            self.repo.get_type,
+            False, # read-only?
+            dbstate.db.get_repository_types())
 
         self.filter_note = widgets.BasicEntry()
 
@@ -137,7 +139,7 @@ class RepoSidebarFilter(SidebarFilter):
 
             rule = HasRepo([title, rtype, address, url], use_regex=regex)
             generic_filter.add_rule(rule)
-                
+
             if note:
                 rule = HasNoteRegexp([note], use_regex=regex)
                 generic_filter.add_rule(rule)
@@ -158,13 +160,13 @@ class RepoSidebarFilter(SidebarFilter):
                 generic_filter.add_rule(rule)
 
         return generic_filter
-        
+
     def on_filters_changed(self, name_space):
         if name_space == 'Repository':
             all_filter = GenericRepoFilter()
             all_filter.set_name(_("None"))
             all_filter.add_rule(rules.repository.AllRepos([]))
-            self.generic.set_model(build_filter_model('Repository', 
+            self.generic.set_model(build_filter_model('Repository',
                                                       [all_filter]))
             self.generic.set_active(0)
 

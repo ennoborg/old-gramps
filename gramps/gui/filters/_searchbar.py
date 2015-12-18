@@ -42,9 +42,10 @@ _KP_ENTER = Gdk.keyval_from_name("KP_Enter")
 #
 #-------------------------------------------------------------------------
 class SearchBar(object):
-    def __init__( self, dbstate, uistate, on_apply, apply_done = None):
+    def __init__( self, dbstate, uistate, on_apply, apply_done = None, apply_clear = None):
         self.on_apply_callback = on_apply
         self.apply_done_callback = apply_done
+        self.apply_clear_callback = apply_clear
         self.dbstate = dbstate
         self.uistate = uistate
         self.apply_text = ''
@@ -55,8 +56,8 @@ class SearchBar(object):
         self.filter_button = Gtk.Button.new_with_mnemonic(_('_Find'))
         self.clear_button = Gtk.Button.new_with_mnemonic(_('_Clear'))
         self.filter_list = Gtk.ComboBox()
-        self.filter_model = Gtk.ListStore(GObject.TYPE_STRING, 
-                                          GObject.TYPE_INT, 
+        self.filter_model = Gtk.ListStore(GObject.TYPE_STRING,
+                                          GObject.TYPE_INT,
                                           GObject.TYPE_BOOLEAN)
 
     def destroy(self):
@@ -86,7 +87,7 @@ class SearchBar(object):
         self.filterbar.pack_end(self.filter_button, False, True, 0)
 
         return self.filterbar
-        
+
     def setup_filter( self, column_data ):
         """
         column_data is a list of tuples:
@@ -94,7 +95,7 @@ class SearchBar(object):
         """
         self.filter_model.clear()
         old_value = self.filter_list.get_active()
-        
+
         cell = Gtk.CellRendererText()
         self.filter_list.clear()
         self.filter_list.pack_start(cell, True)
@@ -114,7 +115,7 @@ class SearchBar(object):
                 rule = _("%s does not contain") % col
             self.filter_model.append(row=[rule, index, True])
             maxval += 1
-            
+
         self.filter_list.set_model(self.filter_model)
         if old_value == -1 or old_value >= maxval:
             self.filter_list.set_active(0)
@@ -144,13 +145,15 @@ class SearchBar(object):
                 self.clear_button.set_sensitive(True)
                 self.apply_filter()
         return False
-        
+
     def apply_filter_clicked(self, obj):
         self.apply_filter()
 
     def apply_clear(self, obj):
         self.filter_text.set_text('')
         self.apply_filter()
+        if self.apply_clear_callback is not None:
+            self.apply_clear_callback()
 
     def get_value(self):
         text = str(self.filter_text.get_text()).strip()
@@ -158,7 +161,7 @@ class SearchBar(object):
         index = self.filter_model.get_value(node, 1)
         inv = self.filter_model.get_value(node, 2)
         return (index, text, inv)
-        
+
     def apply_filter(self, current_model=None):
         self.apply_text = str(self.filter_text.get_text())
         self.filter_button.set_sensitive(False)

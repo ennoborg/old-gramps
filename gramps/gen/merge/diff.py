@@ -34,7 +34,6 @@ from gramps.gen.lib import *
 from gramps.gen.lib.personref import PersonRef
 from gramps.gen.lib.eventref import EventRef
 from ..const import GRAMPS_LOCALE as glocale
-from ..constfunc import handle2internal
 _ = glocale.translation.gettext
 
 def get_schema(cls):
@@ -80,7 +79,7 @@ def get_schema(cls):
             "urls": [Url],
             "lds_ord_list": [LdsOrd],
             "citation_list": [Handle("Citation", "CITATION-HANDLE")],
-            "note_list": [Handle("Note", "NOTE-HANDLE")], 
+            "note_list": [Handle("Note", "NOTE-HANDLE")],
             "change": int,
             "tag_list": [Handle("Tag", "TAG-HANDLE")],
             "private": bool,
@@ -118,7 +117,7 @@ def get_schema(cls):
         if isinstance(schema, type):
             schema = get_schema(schema)
     return schema
-    
+
 def parse(string):
     """
     Break a string up into a struct-path. Used by get_schema() and setitem().
@@ -135,7 +134,7 @@ def parse(string):
     for p in range(len(string)):
         c = string[p]
         if c == "]":
-            if stack and stack[-1] == "[": # end 
+            if stack and stack[-1] == "[": # end
                 stack.pop(-1)
             current += c
             retval.append(current)
@@ -146,7 +145,7 @@ def parse(string):
             current = ""
             current += c
         elif c in ["'", '"']:
-            if stack and stack[-1] == c: # end 
+            if stack and stack[-1] == c: # end
                 stack.pop(-1)
                 current += c
                 if stack and stack[-1] in ["'", '"', '[']: # in quote or args
@@ -176,6 +175,7 @@ def import_as_dict(filename, user=None):
     if user is None:
         user = User()
     db = DictionaryDb()
+    db.load(None)
     db.set_feature("skip-import-additions", True)
     dbstate = DbState()
     climanager = CLIManager(dbstate, setloader=False, user=user)
@@ -258,10 +258,10 @@ def diff_items(path, json1, json2):
 
 def diff_dbs(db1, db2, user=None):
     """
-    1. new objects => mark for insert 
+    1. new objects => mark for insert
     2. deleted objects, no change locally after delete date => mark
        for deletion
-    3. deleted objects, change locally => mark for user confirm for 
+    3. deleted objects, change locally => mark for user confirm for
        deletion
     4. updated objects => do a diff on differences, mark origin
        values as new data
@@ -271,13 +271,13 @@ def diff_dbs(db1, db2, user=None):
     missing_from_old = []
     missing_from_new = []
     diffs = []
-    with user.progress(_('Family Tree Differences'), 
+    with user.progress(_('Family Tree Differences'),
             _('Searching...'), 10) as step:
         for item in ['Person', 'Family', 'Source', 'Citation', 'Event', 'Media',
                      'Place', 'Repository', 'Note', 'Tag']:
             step()
-            handles1 = sorted([handle2internal(handle) for handle in db1._tables[item]["handles_func"]()])
-            handles2 = sorted([handle2internal(handle) for handle in db2._tables[item]["handles_func"]()])
+            handles1 = sorted([handle.decode('utf-8') for handle in db1._tables[item]["handles_func"]()])
+            handles2 = sorted([handle.decode('utf-8') for handle in db2._tables[item]["handles_func"]()])
             p1 = 0
             p2 = 0
             while p1 < len(handles1) and p2 < len(handles2):
@@ -306,7 +306,7 @@ def diff_dbs(db1, db2, user=None):
                 item2 = db2._tables[item]["handle_func"](handles2[p2])
                 missing_from_old += [(item, item2)]
                 p2 += 1
-    return diffs, missing_from_old, missing_from_new 
+    return diffs, missing_from_old, missing_from_new
 
 def diff_db_to_file(old_db, filename, user=None):
     if user is None:
@@ -317,12 +317,12 @@ def diff_db_to_file(old_db, filename, user=None):
         # Next get differences:
         diffs, m_old, m_new = diff_dbs(old_db, new_db, user)
         return diffs, m_old, m_new
-    
+
 def from_struct(struct):
     """
     Given a struct with metadata, create a Gramps object.
     """
-    from  gramps.gen.lib import (Person, Family, Event, Source, Place, Citation, 
+    from  gramps.gen.lib import (Person, Family, Event, Source, Place, Citation,
                                  Repository, MediaObject, Note, Tag)
     if isinstance(struct, dict):
         if "_class" in struct.keys():
@@ -436,7 +436,7 @@ class Struct(object):
         return len(self.struct)
 
     def __contains__(self, item):
-        return item in self.struct 
+        return item in self.struct
 
     def __call__(self, *args, **kwargs):
         """
@@ -493,14 +493,14 @@ class Struct(object):
     def __getattr__(self, attr):
         """
         Called when getattr fails. Lookup attr in struct; returns Struct
-        if more struct.  
+        if more struct.
 
         >>> Struct({}, db).primary_name
         returns: Struct([], db) or value
 
         struct can be list/tuple, dict with _class, or value (including dict).
 
-        self.setitem_from_path(path, v) should be used to set value of 
+        self.setitem_from_path(path, v) should be used to set value of
         item.
         """
         if isinstance(self.struct, dict) and "_class" in self.struct.keys():
@@ -523,7 +523,7 @@ class Struct(object):
     def __getitem__(self, item):
         """
         Called when getitem fails. Lookup item in struct; returns Struct
-        if more struct.  
+        if more struct.
 
         >>> Struct({}, db)[12]
         returns: Struct([], db) or value
@@ -557,7 +557,7 @@ class Struct(object):
         """
         If the item is a handle, look up reference object.
         """
-        if isinstance(item, HandleClass) and self.db: 
+        if isinstance(item, HandleClass) and self.db:
             obj = self.get_object_from_handle(item)
             if obj:
                 return Struct(obj.to_struct(), self.db)

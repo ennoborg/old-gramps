@@ -36,7 +36,7 @@ try:
     BSDDB_STR = str(bsddb.__version__) + " " + str(bsddb.db.version())
 except:
     BSDDB_STR = 'not found'
-    
+
 #-------------------------------------------------------------------------
 #
 # Gramps modules
@@ -60,7 +60,7 @@ class ErrorReportAssistant(Gtk.Assistant):
     reporting system.
     """
     def __init__(self, error_detail, rotate_handler, ownthread=False):
-        GObject.GObject.__init__(self)
+        Gtk.Assistant.__init__(self)
 
         try:
             # did we get a handler wrapping the error detail?
@@ -121,13 +121,13 @@ class ErrorReportAssistant(Gtk.Assistant):
         """
         Copy the bug report to the clipboard.
         """
-        clipboard = Gtk.Clipboard.get_for_display(Gdk.Display.get_default(), 
+        clipboard = Gtk.Clipboard.get_for_display(Gdk.Display.get_default(),
                     Gdk.SELECTION_CLIPBOARD)
         clipboard.set_text(
             self._final_report_text_buffer.get_text(
               self._final_report_text_buffer.get_start_iter(),
               self._final_report_text_buffer.get_end_iter(), True), -1)
-        
+
         clipboard = t = Gtk.Clipboard.get(Gdk.SELECTION_PRIMARY)
         clipboard.set_text(
             self._final_report_text_buffer.get_text(
@@ -143,7 +143,7 @@ class ErrorReportAssistant(Gtk.Assistant):
                           % self._final_report_text_buffer.get_text(
                         self._final_report_text_buffer.get_start_iter(),
                         self._final_report_text_buffer.get_end_iter(), True))
-        
+
     def _start_gramps_bts_in_browser(self, obj=None):
         """
         Start a web browser to report the bug.
@@ -176,14 +176,14 @@ class ErrorReportAssistant(Gtk.Assistant):
                   get_env_var('LANG',''),
                   operatingsystem,
                   distribution,
-                  '%d.%d.%d' % (Gtk.get_major_version(), 
+                  '%d.%d.%d' % (Gtk.get_major_version(),
                             Gtk.get_minor_version(), Gtk.get_micro_version()),
                   '%d.%d.%d' % GObject.pygobject_version,
                   cairo.version_info)
 
     def _reset_error_details(self, obj=None):
         """
-        Reset the error details buffer to its original contents. 
+        Reset the error details buffer to its original contents.
         """
         self._error_details_text_buffer.set_text(
             "\n".join(self._rotate_handler.get_formatted_log(
@@ -199,7 +199,7 @@ class ErrorReportAssistant(Gtk.Assistant):
 
     def _reset_sys_information(self, obj=None):
         """
-        Reset the system information buffer to its original contents. 
+        Reset the system information buffer to its original contents.
         """
         self._sys_information_text_buffer.set_text(
             self._get_sys_information())
@@ -250,7 +250,7 @@ class ErrorReportAssistant(Gtk.Assistant):
               "developers that will be as detailed as possible.\n\n"
               "The assistant will ask you a few questions and will "
               "gather some information about the error that has "
-              "occured and the operating environment. "
+              "occurred and the operating environment. "
               "At the end of the assistant you will be asked to "
               "file a bug report on the Gramps bug tracking system. "
               "The assistant will place the bug report on the clip board so "
@@ -276,12 +276,12 @@ class ErrorReportAssistant(Gtk.Assistant):
 
         self._error_details_text_buffer = textview.get_buffer()
         self._reset_error_details()
-            
+
         swin.add(textview)
 
         sw_frame = Gtk.Frame()
         sw_frame.add(swin)
-        
+
         reset = Gtk.Button("Reset")
         reset.connect('clicked', self._reset_error_details)
         clear = Gtk.Button("Clear")
@@ -301,8 +301,9 @@ class ErrorReportAssistant(Gtk.Assistant):
         error_details_box.pack_start(button_box, False, False, 0)
         error_details_box.set_hexpand(True)
         error_details_box.set_vexpand(True)
-        error_details_box.set_margin_start(12)
-        
+
+        error_details_box.set_property("margin", 12)
+
         error_details_frame = Gtk.Frame()
         error_details_frame.set_border_width(3)
         error_details_frame.set_label("<b>%s</b>" % _("Error Details"))
@@ -360,7 +361,7 @@ class ErrorReportAssistant(Gtk.Assistant):
 
         sw_frame = Gtk.Frame()
         sw_frame.add(swin)
-        
+
         reset = Gtk.Button("Reset")
         reset.connect('clicked', self._reset_sys_information)
         clear = Gtk.Button("Clear")
@@ -381,7 +382,7 @@ class ErrorReportAssistant(Gtk.Assistant):
         sys_information_box.pack_start(button_box, False, False, 0)
         sys_information_box.set_hexpand(True)
         sys_information_box.set_vexpand(True)
-        sys_information_box.set_margin_start(12)
+        sys_information_box.set_property("margin", 12)
 
         sys_information_frame = Gtk.Frame()
         sys_information_frame.set_border_width(3)
@@ -420,7 +421,7 @@ class ErrorReportAssistant(Gtk.Assistant):
         """
         label = Gtk.Label(label=_("Please provide as much information as you "
                              "can about what you were doing when the error "
-                             "occured."))
+                             "occurred."))
         label.set_halign(Gtk.Align.START)
         label.set_padding(0, 4)
         label.set_line_wrap(True)
@@ -436,7 +437,7 @@ class ErrorReportAssistant(Gtk.Assistant):
 
         sw_frame = Gtk.Frame()
         sw_frame.add(swin)
-        
+
         clear = Gtk.Button("Clear")
         clear.connect('clicked', self._clear_user_information)
 
@@ -453,7 +454,7 @@ class ErrorReportAssistant(Gtk.Assistant):
         user_information_box.pack_start(button_box, False, False, 0)
         user_information_box.set_hexpand(True)
         user_information_box.set_vexpand(True)
-        user_information_box.set_margin_start(12)
+        user_information_box.set_property("margin", 12)
 
         user_information_frame = Gtk.Frame()
         user_information_frame.set_border_width(3)
@@ -463,7 +464,7 @@ class ErrorReportAssistant(Gtk.Assistant):
         user_information_frame.add(user_information_box)
 
         side_label = Gtk.Label(label=_("This is your opportunity to describe "
-                                 "what you were doing when the error occured."))
+                                 "what you were doing when the error occurred."))
 
         side_label.set_line_wrap(True)
 
@@ -505,19 +506,19 @@ class ErrorReportAssistant(Gtk.Assistant):
         textview.set_editable(False)
         textview.set_cursor_visible(False)
 
-        self._final_report_text_buffer = textview.get_buffer()        
+        self._final_report_text_buffer = textview.get_buffer()
 
         swin.add(textview)
 
         sw_frame = Gtk.Frame()
         sw_frame.add(swin)
-        
+
         summary_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         summary_box.pack_start(label, False, False, 0)
         summary_box.pack_start(sw_frame, True, True, 0)
         summary_box.set_hexpand(True)
         summary_box.set_vexpand(True)
-        summary_box.set_margin_start(12)
+        summary_box.set_property("margin", 12)
 
         summary_frame = Gtk.Frame()
         summary_frame.set_border_width(3)
@@ -578,16 +579,16 @@ class ErrorReportAssistant(Gtk.Assistant):
         url_button.connect('clicked', self._start_gramps_bts_in_browser)
         url_button_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         url_button_vbox.pack_start(url_button, True, False, 0)
-        
+
         url_box = Gtk.Box()
         url_box.pack_start(url_label, True, True, 0)
         url_box.pack_start(url_button_vbox, False, False, 0)
         url_box.set_hexpand(True)
-        url_box.set_margin_start(12)
+        url_box.set_property("margin", 12)
 
         url_frame = Gtk.Frame()
         url_frame.add(url_box)
-        
+
         clip_label = Gtk.Label(label=_("Use this button "
                                  "to copy the bug report onto the clipboard. "
                                  "Then go to the bug tracking website by using "
@@ -602,12 +603,12 @@ class ErrorReportAssistant(Gtk.Assistant):
         clip_button.connect('clicked', self._copy_to_clipboard)
         clip_button_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         clip_button_vbox.pack_start(clip_button, True, False, 0)
-        
+
         clip_box = Gtk.Box()
         clip_box.pack_start(clip_label, True, True, 0)
         clip_box.pack_start(clip_button_vbox, False, False, 0)
         clip_box.set_hexpand(True)
-        clip_box.set_margin_start(12)
+        clip_box.set_property("margin", 12)
 
         clip_frame = Gtk.Frame()
         clip_frame.add(clip_box)
@@ -616,7 +617,7 @@ class ErrorReportAssistant(Gtk.Assistant):
         inner_box.pack_start(label, False, False, 0)
         inner_box.pack_start(clip_frame, False, False, 0)
         inner_box.pack_start(url_frame, False, False, 0)
-        inner_box.set_margin_start(12)
+        inner_box.set_property("margin", 12)
 
         outer_frame = Gtk.Frame()
         outer_frame.set_border_width(3)
@@ -697,5 +698,5 @@ class ErrorReportAssistant(Gtk.Assistant):
 
             self._sys_information_text_buffer.get_text(
               self._sys_information_text_buffer.get_start_iter(),
-              self._sys_information_text_buffer.get_end_iter(), True)             
+              self._sys_information_text_buffer.get_end_iter(), True)
             )

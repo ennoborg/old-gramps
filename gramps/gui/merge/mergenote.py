@@ -29,7 +29,7 @@ Provide merge capabilities for notes.
 #-------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.sgettext
-from gramps.gen.const import URL_MANUAL_PAGE
+from gramps.gen.const import URL_MANUAL_SECT3
 from ..display import display_help
 from ..managedwindow import ManagedWindow
 from ..widgets.styledtextbuffer import StyledTextBuffer
@@ -40,8 +40,7 @@ from gramps.gen.merge import MergeNoteQuery
 # Gramps constants
 #
 #-------------------------------------------------------------------------
-WIKI_HELP_PAGE = '%s_-_Entering_and_Editing_Data:_Detailed_-_part_3' % \
-    URL_MANUAL_PAGE
+WIKI_HELP_PAGE = URL_MANUAL_SECT3
 WIKI_HELP_SEC = _('manual|Merge_Notes')
 _GLADE_FILE = 'mergenote.glade'
 
@@ -159,7 +158,7 @@ class MergeNote(ManagedWindow):
         else:
             phoenix = self.no2
             titanic = self.no1
-            # Add second handle to history so that when merge is complete, 
+            # Add second handle to history so that when merge is complete,
             # phoenix is the selected row.
             self.uistate.set_active(phoenix.get_handle(), 'Note')
 

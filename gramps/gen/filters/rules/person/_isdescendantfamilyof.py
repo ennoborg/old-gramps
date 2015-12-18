@@ -32,7 +32,7 @@ except NameError:
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from .. import Rule
@@ -51,7 +51,7 @@ class IsDescendantFamilyOf(Rule):
     category    = _('Descendant filters')
     description = _("Matches people that are descendants or the spouse "
                     "of a descendant of a specified person")
-    
+
     def prepare(self,db):
         self.db = db
         self.matches = set()

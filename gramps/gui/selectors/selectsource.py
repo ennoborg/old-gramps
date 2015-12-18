@@ -24,16 +24,26 @@
 # internationalization
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
 # gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
 from ..views.treemodels import SourceModel
 from .baseselector import BaseSelector
+from gramps.gui.display import display_help
+from gramps.gen.const import URL_MANUAL_PAGE
+
+#-------------------------------------------------------------------------
+#
+# Constants
+#
+#-------------------------------------------------------------------------
+WIKI_HELP_PAGE = '%s_-_xxx' % URL_MANUAL_PAGE # FIXME
+WIKI_HELP_SEC = _('manual|xxxx') # FIXME
 
 #-------------------------------------------------------------------------
 #
@@ -51,7 +61,7 @@ class SelectSource(BaseSelector):
 
     def get_window_title(self):
         return _("Select Source")
-        
+
     def get_model_class(self):
         return SourceModel
 

@@ -29,7 +29,7 @@ _ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from .. import MatchesEventFilterBase
@@ -45,7 +45,7 @@ class MatchesEventFilter(MatchesEventFilterBase):
 
     This is a base rule for subclassing by specific objects.
     Subclasses need to define the namespace class attribute.
-    
+
     """
 
     labels      = [_('Event filter name:')]

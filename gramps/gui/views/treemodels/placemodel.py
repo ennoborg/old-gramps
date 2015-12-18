@@ -41,7 +41,7 @@ from gi.repository import Gtk
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from gramps.gen.lib import Place, PlaceType
@@ -116,12 +116,17 @@ class PlaceBaseModel(object):
         return len(self.fmap)+1
 
     def column_title(self, data):
-        place = Place()
-        place.unserialize(data)
-        return place_displayer.display(self.db, place)
+        handle = data[0]
+        cached, value = self.get_cached_value(handle, "PLACE")
+        if not cached:
+            place = Place()
+            place.unserialize(data)
+            value = place_displayer.display(self.db, place)
+            self.set_cached_value(handle, "PLACE", value)
+        return value
 
     def column_name(self, data):
-        return str(data[6][0])
+        return data[6][0]
 
     def column_longitude(self, data):
         if not data[3]:
@@ -153,16 +158,16 @@ class PlaceBaseModel(object):
         value = conv_lat_lon(data[4], '0', format='ISO-DMS') if data[4] else ''
         if not value:
             return _("Error in format")
-        return value 
+        return value
 
     def column_id(self, data):
-        return str(data[1])
+        return data[1]
 
     def column_type(self, data):
         return str(PlaceType(data[8]))
 
     def column_code(self, data):
-        return str(data[9])
+        return data[9]
 
     def column_private(self, data):
         if data[17]:
@@ -170,10 +175,10 @@ class PlaceBaseModel(object):
         else:
             # There is a problem returning None here.
             return ''
-    
+
     def sort_change(self, data):
         return "%012x" % data[15]
-    
+
     def column_change(self, data):
         return format_time(data[15])
 
@@ -181,22 +186,31 @@ class PlaceBaseModel(object):
         """
         Return the tag name from the given tag handle.
         """
-        return self.db.get_tag_from_handle(tag_handle).get_name()
-        
+        cached, value = self.get_cached_value(tag_handle, "TAG_NAME")
+        if not cached:
+            value = self.db.get_tag_from_handle(tag_handle).get_name()
+            self.set_cached_value(tag_handle, "TAG_NAME", value)
+        return value
+
     def column_tag_color(self, data):
         """
         Return the tag color.
         """
-        tag_color = "#000000000000"
-        tag_priority = None
-        for handle in data[16]:
-            tag = self.db.get_tag_from_handle(handle)
-            if tag:
-                this_priority = tag.get_priority()
-                if tag_priority is None or this_priority < tag_priority:
-                    tag_color = tag.get_color()
-                    tag_priority = this_priority
-        return tag_color
+        tag_handle = data[0]
+        cached, value = self.get_cached_value(tag_handle, "TAG_COLOR")
+        if not cached:
+            tag_color = "#000000000000"
+            tag_priority = None
+            for handle in data[16]:
+                tag = self.db.get_tag_from_handle(handle)
+                if tag:
+                    this_priority = tag.get_priority()
+                    if tag_priority is None or this_priority < tag_priority:
+                        tag_color = tag.get_color()
+                        tag_priority = this_priority
+            value = tag_color
+            self.set_cached_value(tag_handle, "TAG_COLOR", value)
+        return value
 
     def column_tags(self, data):
         """

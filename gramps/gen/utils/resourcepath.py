@@ -18,7 +18,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import sys
-import io
 import os
 import logging
 LOG = logging.getLogger("ResourcePath")
@@ -26,14 +25,14 @@ _hdlr = logging.StreamHandler()
 _hdlr.setFormatter(logging.Formatter(fmt="%(name)s.%(levelname)s: %(message)s"))
 LOG.addHandler(_hdlr)
 
-from ..constfunc import get_env_var, conv_to_unicode
+from ..constfunc import get_env_var
 
 class ResourcePath(object):
     """
     ResourcePath is a singleton, meaning that only one of them is ever
     created.  At startup it finds the paths to Gramps's resource files and
     caches them for future use.
-    
+
     It should be called only by const.py; other code should retrieve the
     paths from there.
     """
@@ -49,7 +48,7 @@ class ResourcePath(object):
         if self.initialized:
             return
         resource_file = os.path.join(os.path.abspath(os.path.dirname(
-            conv_to_unicode(__file__))), 'resource-path')
+            __file__)), 'resource-path')
         installed = os.path.exists(resource_file)
         if installed:
             test_path = os.path.join("gramps", "authors.xml")
@@ -61,9 +60,9 @@ class ResourcePath(object):
             resource_path = tmp_path
         elif installed:
             try:
-                with io.open(resource_file, encoding='utf-8',
+                with open(resource_file, encoding='utf-8',
                                 errors='strict') as fp:
-                    resource_path = conv_to_unicode(fp.readline())
+                    resource_path = fp.readline()
             except UnicodeError as err:
                 LOG.exception("Encoding error while parsing resource path", err)
                 sys.exit(1)
@@ -76,7 +75,7 @@ class ResourcePath(object):
         else:
             # Let's try to run from source without env['GRAMPS_RESOURCES']:
             resource_path = os.path.join(os.path.abspath(os.path.dirname(
-                conv_to_unicode(__file__))), '..', "..", "..")
+                __file__)), '..', "..", "..")
             test_path = os.path.join("data", "authors.xml")
             if (not os.path.exists(os.path.join(resource_path, test_path))):
                 LOG.error("Unable to determine resource path")

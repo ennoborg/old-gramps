@@ -24,16 +24,26 @@
 # internationalization
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
 # gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
 from ..views.treemodels import FamilyModel
 from .baseselector import BaseSelector
+from gramps.gui.display import display_help
+from gramps.gen.const import URL_MANUAL_PAGE
+
+#-------------------------------------------------------------------------
+#
+# Constants
+#
+#-------------------------------------------------------------------------
+WIKI_HELP_PAGE = '%s_-_Categories' % URL_MANUAL_PAGE
+WIKI_HELP_SEC = _('manual|Select_Family_selector')
 
 #-------------------------------------------------------------------------
 #
@@ -51,7 +61,7 @@ class SelectFamily(BaseSelector):
 
     def get_window_title(self):
         return _("Select Family")
-        
+
     def get_model_class(self):
         return FamilyModel
 

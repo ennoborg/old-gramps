@@ -48,7 +48,6 @@ def load_on_reg(dbstate, uistate, plugin):
     from functools import partial
     path_css = partial(os.path.join, DATA_DIR, "css")
     path_img = partial(os.path.join, IMAGE_DIR, "webstuff")
-    path_js = partial(os.path.join, DATA_DIR, "javascript")
     CSS_FILES = [
 
         # id, user selectable?, translated_name, option name, fullpath,
@@ -82,10 +81,10 @@ def load_on_reg(dbstate, uistate, plugin):
 
         # Mainz style sheet with its images
         ["Mainz",         1, _("Mainz"),
-         path_css('Web_Mainz.css'),         None, 
-         [path_img("Web_Mainz_Bkgd.png"), 
-          path_img("Web_Mainz_Header.png"), 
-          path_img("Web_Mainz_Mid.png"), 
+         path_css('Web_Mainz.css'),         None,
+         [path_img("Web_Mainz_Bkgd.png"),
+          path_img("Web_Mainz_Header.png"),
+          path_img("Web_Mainz_Mid.png"),
           path_img("Web_Mainz_MidLight.png")], [] ],
 
         # Nebraska style sheet
@@ -104,7 +103,7 @@ def load_on_reg(dbstate, uistate, plugin):
 
         # media reference regions style sheet
         ["behaviour",     0, "Behaviour",
-         path_css('behaviour.css'),         None,  [], [] ], 
+         path_css('behaviour.css'),         None,  [], [] ],
 
         # NarrativeMap stylesheet/ image for NarrativeWeb place maps
         ["NarrativeMaps",  0, "",
@@ -129,7 +128,7 @@ def load_on_reg(dbstate, uistate, plugin):
         # WebKit/ Html5/ CSS3 Animated Drop Down Style Sheet
         ["Animated DropDown", 0, "Animated DropDown",
          path_css("Web_Citations-Animated.css"), None, [],
-         path_js("jquery-1.7.1.min.js")                                  ],
+         "https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"                                  ],
 
         # Source Page Citations Referents Outline Style sheet...
         ["Outline", 0, "Outline Citations",

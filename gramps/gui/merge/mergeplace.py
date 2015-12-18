@@ -37,7 +37,7 @@ from gi.repository import Gtk
 #-------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.sgettext
-from gramps.gen.const import URL_MANUAL_PAGE
+from gramps.gen.const import URL_MANUAL_SECT3
 from ..display import display_help
 from ..managedwindow import ManagedWindow
 from gramps.gen.merge import MergePlaceQuery
@@ -49,8 +49,7 @@ from gramps.gen.config import config
 # Gramps constants
 #
 #-------------------------------------------------------------------------
-WIKI_HELP_PAGE = '%s_-_Entering_and_Editing_Data:_Detailed_-_part_3' % \
-        URL_MANUAL_PAGE
+WIKI_HELP_PAGE = URL_MANUAL_SECT3
 WIKI_HELP_SEC = _('manual|Merge_Places')
 _GLADE_FILE = 'mergeplace.glade'
 PLACE_NAME = _('place|Name:')
@@ -76,7 +75,7 @@ class MergePlace(ManagedWindow):
         self.set_window(self._gladeobj.toplevel,
                         self.get_widget('place_title'),
                         _("Merge Places"))
-        
+
         # Detailed selection widgets
         if not config.get('preferences.place-auto'):
             title1 = self.pl1.get_title()
@@ -152,8 +151,8 @@ class MergePlace(ManagedWindow):
         rbutton1 = self.get_widget("handle_btn1")
         rbutton_label1 = self.get_widget("label_handle_btn1")
         rbutton_label2 = self.get_widget("label_handle_btn2")
-        rbutton_label1.set_label(title1 + " [" + gramps1 + "]")
-        rbutton_label2.set_label(title2 + " [" + gramps2 + "]")
+        rbutton_label1.set_label(title1 + " [" + gramps1 + "] " + str(self.pl1.place_type))
+        rbutton_label2.set_label(title2 + " [" + gramps2 + "] " + str(self.pl1.place_type))
         rbutton1.connect("toggled", self.on_handle1_toggled)
 
         self.connect_button('place_help', self.cb_help)
@@ -196,7 +195,7 @@ class MergePlace(ManagedWindow):
         else:
             phoenix = self.pl2
             titanic = self.pl1
-            # Add second handle to history so that when merge is complete, 
+            # Add second handle to history so that when merge is complete,
             # phoenix is the selected row.
             self.uistate.set_active(phoenix.get_handle(), 'Place')
 
@@ -217,7 +216,7 @@ class MergePlace(ManagedWindow):
 
         query = MergePlaceQuery(self.dbstate, phoenix, titanic)
         query.execute()
-        
+
         if self.callback:
             self.callback()
         self.uistate.set_busy_cursor(False)

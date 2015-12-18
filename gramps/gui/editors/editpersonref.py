@@ -30,8 +30,6 @@ mechanism for the user to edit address information.
 # Python modules
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 
 import pickle
 
@@ -47,6 +45,8 @@ from gi.repository import Gtk
 # gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
 from gramps.gen.display.name import displayer as name_displayer
 from .editsecondary import EditSecondary
 from gramps.gen.lib import NoteType
@@ -56,6 +56,16 @@ from .displaytabs import CitationEmbedList, NoteTab
 from ..glade import Glade
 from ..ddtargets import DdTargets
 from gi.repository import Gdk
+from gramps.gen.const import URL_MANUAL_SECT1
+
+#-------------------------------------------------------------------------
+#
+# Constants
+#
+#-------------------------------------------------------------------------
+
+WIKI_HELP_PAGE = URL_MANUAL_SECT1
+WIKI_HELP_SEC = _('manual|Person_Reference_Editor')
 
 #-------------------------------------------------------------------------
 #
@@ -79,9 +89,9 @@ class EditPersonRef(EditSecondary):
     def _local_init(self):
         self.width_key = 'interface.person-ref-width'
         self.height_key = 'interface.person-ref-height'
-        
+
         self.top = Glade()
-                
+
         self.set_window(self.top.toplevel,
                         self.top.get_object("title"),
                         _('Person Reference Editor'))
@@ -104,7 +114,7 @@ class EditPersonRef(EditSecondary):
         self.label_event_box = self.top.get_object('person_event_box')
         # Set the drag action from the label
         if self.obj.ref:
-            self.label_event_box.drag_source_set(Gdk.ModifierType.BUTTON1_MASK, 
+            self.label_event_box.drag_source_set(Gdk.ModifierType.BUTTON1_MASK,
                                        [], Gdk.DragAction.COPY)
             tglist = Gtk.TargetList.new([])
             tglist.add(DdTargets.PERSON_LINK.atom_drag_type,
@@ -121,7 +131,7 @@ class EditPersonRef(EditSecondary):
         if self.obj.ref:
             p = self.dbstate.db.get_person_from_handle(self.obj.ref)
             self.person_label.set_text(name_displayer.display(p))
-        
+
         self.street = MonitoredEntry(
             self.top.get_object("relationship"),
             self.obj.set_relation,
@@ -134,14 +144,15 @@ class EditPersonRef(EditSecondary):
             self.db.readonly)
 
     def _connect_signals(self):
-        #self.define_help_button(self.top.get_object('help'))
         self.define_cancel_button(self.top.get_object('cancel'))
         self.define_ok_button(self.top.get_object('ok'),self.save)
         self.top.get_object('select').connect('clicked',self._select_person)
+        self.define_help_button(self.top.get_object('help'),
+                WIKI_HELP_PAGE, WIKI_HELP_SEC)
 
     def _connect_db_signals(self):
         """
-        Connect any signals that need to be connected. 
+        Connect any signals that need to be connected.
         Called by the init routine of the base class (_EditPrimary).
         """
         self._add_db_signal('person-rebuild', self.close)
@@ -149,7 +160,7 @@ class EditPersonRef(EditSecondary):
 
     def check_for_close(self, handles):
         """
-        Callback method for delete signals. 
+        Callback method for delete signals.
         If there is a delete signal of the primary object we are editing, the
         editor (and all child windows spawned) should be closed
         """
@@ -178,7 +189,7 @@ class EditPersonRef(EditSecondary):
             (drag_type, idval, handle, val) = pickle.loads(sel_data.get_data())
             person = self.db.get_person_from_handle(handle)
             self.update_person(person)
-        
+
     def drag_data_get(self, widget, context, sel_data, info, time):
         # get the selected object, returning if not is defined
         if info == DdTargets.PERSON_LINK.app_id:
@@ -190,11 +201,11 @@ class EditPersonRef(EditSecondary):
         Create the notebook tabs and inserts them into the main
         window.
         """
-        
+
         notebook = Gtk.Notebook()
-        
+
         self.srcref_list = CitationEmbedList(self.dbstate, self.uistate,
-                                             self.track, 
+                                             self.track,
                                              self.obj.get_citation_list())
         self._add_tab(notebook, self.srcref_list)
         self.track_ref_for_deletion("srcref_list")
