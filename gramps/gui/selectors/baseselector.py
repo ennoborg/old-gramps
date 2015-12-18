@@ -92,7 +92,7 @@ class BaseSelector(ManagedWindow):
         self.tree.connect('key-press-event', self.searchbox.treeview_keypress)
 
         #add the search bar
-        self.search_bar = SearchBar(dbstate, uistate, self.build_tree)
+        self.search_bar = SearchBar(dbstate, uistate, self.build_tree, apply_clear=self.apply_clear)
         filter_box = self.search_bar.build()
         self.setup_filter()
         vbox.pack_start(filter_box, False, False, 0)
@@ -130,30 +130,26 @@ class BaseSelector(ManagedWindow):
         """
         Goto the correct row.
         """
-        try: # tree:
-            path = None
-            node = self.model.get_node(handle)
-            if node:
-                parent_node = self.model.on_iter_parent(node)
-                if parent_node:
-                    parent_path = self.model.on_get_path(parent_node)
+        iter_ = self.model.get_iter_from_handle(handle)
+        if iter_:
+            if not (self.model.get_flags() & Gtk.TreeModelFlags.LIST_ONLY):
+                # Expand tree
+                parent_iter = self.model.iter_parent(iter_)
+                if parent_iter:
+                    parent_path = self.model.get_path(parent_iter)
                     if parent_path:
-                        for i in range(len(parent_path)):
-                            expand_path = tuple([x for x in parent_path[:i+1]])
+                        parent_path_list = parent_path.get_indices()
+                        for i in range(len(parent_path_list)):
+                            expand_path = Gtk.TreePath(
+                                    tuple([x for x in parent_path_list[:i+1]]))
                             self.tree.expand_row(expand_path, False)
-                path = self.model.on_get_path(node)
-        except: # flat:
-            try:
-                path = self.model.on_get_path(handle)
-            except:
-                path = None
 
-        if path is not None:
+            # Select active object
+            path = self.model.get_path(iter_)
             self.selection.unselect_all()
             self.selection.select_path(path)
             self.tree.scroll_to_cell(path, None, 1, 0.5, 0)
         else:
-            # not in list
             self.selection.unselect_all()
 
     def add_columns(self,tree):
@@ -277,14 +273,7 @@ class BaseSelector(ManagedWindow):
         """
         Builds the selection people see in the Selector
         """
-        if self.filter[1]:
-            filter_info = self.filter
-        else:
-            #search info for the 
-            if self.search_bar.get_value()[0] in self.exact_search():
-                filter_info = (0, self.search_bar.get_value(), True)
-            else:
-                filter_info = (0, self.search_bar.get_value(), False)
+        filter_info = (False, self.search_bar.get_value(), False)
 
         #set up cols the first time
         if self.setupcols :
@@ -351,6 +340,9 @@ class BaseSelector(ManagedWindow):
             if hasattr(self.model, 'destroy'):
                 self.model.destroy()
             self.model = None
+
+    def apply_clear(self):
+        self.showall.set_active(False)
 
     def _cleanup_on_exit(self):
         """Unset all things that can block garbage collection.
