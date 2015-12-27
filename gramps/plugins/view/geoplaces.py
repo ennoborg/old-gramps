@@ -133,6 +133,7 @@ class GeoPlaces(GeoGraphyView):
         self.generic_filter = None
         self.additional_uis.append(self.additional_ui())
         self.no_show_places_in_status_bar = False
+        self.show_all = False
 
     def get_title(self):
         """
@@ -178,6 +179,8 @@ class GeoPlaces(GeoGraphyView):
         """
         Ask to show all places.
         """
+        self.show_all = True
+        self.nbmarkers = 0
         self._createmap(None)
 
     def build_tree(self):
@@ -217,8 +220,6 @@ class GeoPlaces(GeoGraphyView):
                                         None, # event.gramps_id
                                         None # family.gramps_id
                                        )
-        else:
-            self._append_to_places_without_coord(place.gramps_id, descr)
 
     def _createmap(self,place_x):
         """
@@ -228,6 +229,7 @@ class GeoPlaces(GeoGraphyView):
         dbstate = self.dbstate
         self.cal = config.get('preferences.calendar-format-report')
         self.place_list = []
+        self.places_found = []
         self.place_without_coordinates = []
         self.minlat = 0.0
         self.maxlat = 0.0
@@ -256,12 +258,8 @@ class GeoPlaces(GeoGraphyView):
         # 65598 places : createmap : 08'48"; create_markers : 0'01"; draw markers : 0'07"
         _LOG.debug("%s" % time.strftime("start createmap : "
                    "%a %d %b %Y %H:%M:%S", time.gmtime()))
-        if self.generic_filter:
-            place_list = self.generic_filter.apply(dbstate.db)
-            for place_handle in place_list:
-                place = dbstate.db.get_place_from_handle(place_handle)
-                self._create_one_place(place)
-        else:
+        if self.show_all:
+            self.show_all = False
             try:
                 places_handle = dbstate.db.get_place_handles()
             except:
@@ -269,8 +267,14 @@ class GeoPlaces(GeoGraphyView):
             for place_hdl in places_handle:
                 place = dbstate.db.get_place_from_handle(place_hdl)
                 self._create_one_place(place)
-            if place_x:
+        elif self.generic_filter:
+            place_list = self.generic_filter.apply(dbstate.db)
+            for place_handle in place_list:
+                place = dbstate.db.get_place_from_handle(place_handle)
+                self._create_one_place(place)
+        elif place_x:
                 place = dbstate.db.get_place_from_handle(place_x)
+                self._create_one_place(place)
                 if ( place.get_latitude() != "" and place.get_longitude() != "" ):
                     self.osm.set_center_and_zoom(float(place.get_latitude()),
                                                  float(place.get_longitude()),
