@@ -64,6 +64,7 @@ from gramps.gui.filters.sidebar import EventSidebarFilter
 from gramps.gui.views.navigationview import NavigationView
 from gramps.gui.views.bookmarks import EventBookmarks
 from gramps.plugins.lib.maps.geography import GeoGraphyView
+from gramps.gui.utils import ProgressMeter
 
 #-------------------------------------------------------------------------
 #
@@ -116,7 +117,8 @@ class GeoEvents(GeoGraphyView):
     """
 
     def __init__(self, pdata, dbstate, uistate, nav_group=0):
-        GeoGraphyView.__init__(self, _('Events places map'),
+        self.window_name = _('Events places map')
+        GeoGraphyView.__init__(self, self.window_name,
                                       pdata, dbstate, uistate,
                                       EventBookmarks,
                                       nav_group)
@@ -133,6 +135,7 @@ class GeoEvents(GeoGraphyView):
         self.generic_filter = None
         self.additional_uis.append(self.additional_ui())
         self.no_show_places_in_status_bar = False
+        self.show_all = False
 
     def get_title(self):
         """
@@ -178,6 +181,7 @@ class GeoEvents(GeoGraphyView):
         """
         Ask to show all events.
         """
+        self.show_all = True
         self._createmap(None)
 
     def build_tree(self):
@@ -240,10 +244,13 @@ class GeoEvents(GeoGraphyView):
                                       ]
                         if family_list:
                             for family in family_list:
+                                father = mother = None
                                 hdle = family.get_father_handle()
-                                father = dbstate.db.get_person_from_handle(hdle)
+                                if hdle:
+                                    father = dbstate.db.get_person_from_handle(hdle)
                                 hdle = family.get_mother_handle()
-                                mother = dbstate.db.get_person_from_handle(hdle)
+                                if hdle:
+                                    mother = dbstate.db.get_person_from_handle(hdle)
                                 descr2 = ("%(father)s - %(mother)s") % {
                                                'father': _nd.display(father) if father is not None else "?",
                                                'mother': _nd.display(mother) if mother is not None else "?"
@@ -261,10 +268,6 @@ class GeoEvents(GeoGraphyView):
                                                 event.gramps_id,
                                                 None
                                                 )
-                else:
-                    descr = _pd.display(dbstate.db, place)
-                    self._append_to_places_without_coord(
-                         place.gramps_id, descr)
 
     def _createmap(self,obj):
         """
@@ -273,30 +276,44 @@ class GeoEvents(GeoGraphyView):
         """
         dbstate = self.dbstate
         self.place_list = []
+        self.places_found = []
         self.place_without_coordinates = []
         self.minlat = self.maxlat = self.minlon = self.maxlon = 0.0
         self.minyear = 9999
         self.maxyear = 0
+        self.nbmarkers = 0
+        self.nbplaces = 0
         latitude = ""
         longitude = ""
         self.without = 0
         self.cal = config.get('preferences.calendar-format-report')
         self.no_show_places_in_status_bar = False
-
-        if self.generic_filter:
+        if self.show_all:
+            self.show_all = False
+            events_handle = dbstate.db.get_event_handles()
+            progress = ProgressMeter(self.window_name, can_cancel=False,
+                                     parent=self.uistate.window)
+            length = len(events_handle)
+            progress.set_pass(_('Selecting all events'), length)
+            for event_hdl in events_handle:
+                event = dbstate.db.get_event_from_handle(event_hdl)
+                self._createmap_for_one_event(event)
+                progress.step()
+            progress.close()
+        elif self.generic_filter:
             events_list = self.generic_filter.apply(dbstate.db)
+            progress = ProgressMeter(self.window_name, can_cancel=False,
+                                     parent=self.uistate.window)
+            length = len(events_list)
+            progress.set_pass(_('Selecting all events'), length)
             for event_handle in events_list:
                 event = dbstate.db.get_event_from_handle(event_handle)
                 self._createmap_for_one_event(event)
-        else:
-            if obj is None:
-                events_handle = dbstate.db.get_event_handles()
-                for event_hdl in events_handle:
-                    event = dbstate.db.get_event_from_handle(event_hdl)
-                    self._createmap_for_one_event(event)
-            else:
-                event = dbstate.db.get_event_from_handle(obj)
-                self._createmap_for_one_event(event)
+                progress.step()
+            progress.close()
+        elif obj:
+            event = dbstate.db.get_event_from_handle(obj)
+            self._createmap_for_one_event(event)
         self.sort = sorted(self.place_list,
                            key=operator.itemgetter(3, 4, 6)
                           )

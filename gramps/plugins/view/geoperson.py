@@ -201,7 +201,6 @@ class GeoPerson(GeoGraphyView):
         """
         Rebuild the tree with the given person handle as the root.
         """
-        self.places_found = []
         active = self.get_active()
         if handle:
             self._createmap(handle)
@@ -296,15 +295,18 @@ class GeoPerson(GeoGraphyView):
         self.cal = config.get('preferences.calendar-format-report')
         self.place_list = []
         self.place_without_coordinates = []
+        self.places_found = []
         self.minlat = self.maxlat = self.minlon = self.maxlon = 0.0
         self.minyear = 9999
         self.maxyear = 0
         latitude = ""
         longitude = ""
+        self.nbplaces = 0
+        self.nbmarkers = 0
         self.message_layer.clear_messages()
         self.kml_layer.clear()
         person_handle = self.uistate.get_active('Person')
-        person = dbstate.db.get_person_from_handle(person_handle)
+        person = dbstate.db.get_person_from_handle(person_handle) if person_handle else None
         if person is not None:
             # For each event, if we have a place, set a marker.
             self.load_kml_files(person)

@@ -99,6 +99,17 @@ class Surname(SecondaryObject):
                 "connector": self.connector}
 
     @classmethod
+    def get_labels(cls, _):
+        return {
+            "_class": _("Surname"),
+            "surname": _("Surname"),
+            "prefix": _("Prefix"),
+            "primary": _("Primary"),
+            "origintype": _("Origin type"),
+            "connector": _("Connector")
+        }
+
+    @classmethod
     def from_struct(cls, struct):
         """
         Given a struct data representation, return a serialized object.
