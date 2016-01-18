@@ -532,8 +532,10 @@ class PeopleBaseModel(BaseModel):
         """
         cached, value = self.get_cached_value(tag_handle, "TAG_NAME")
         if not cached:
-            value = self.db.get_tag_from_handle(tag_handle).get_name()
-            self.set_cached_value(tag_handle, "TAG_NAME", value)        
+            tag = self.db.get_tag_from_handle(tag_handle)
+            if tag:
+                value = tag.get_name()
+                self.set_cached_value(tag_handle, "TAG_NAME", value)
         return value 
 
     def column_tag_color(self, data):
