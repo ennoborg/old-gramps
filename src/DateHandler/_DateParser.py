@@ -501,9 +501,9 @@ class DateParser(object):
         match = self._iso.match(text)
         if match:
             groups = match.groups()
-            y = self._get_int(groups[0])
+            d = self._get_int(groups[0])
             m = self._get_int(groups[3])
-            d = self._get_int(groups[4])
+            y = self._get_int(groups[4])
             if check and not check((d, m, y)):
                 return Date.EMPTY
             if groups[2]: # slash year digit

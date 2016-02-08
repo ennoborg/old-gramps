@@ -161,7 +161,7 @@ class DateDisplayNL(DateDisplay):
     _bce_str = "%s v. Chr."
 
     formats = (
-        "JJJJ-MM-DD (ISO)", "Numerisch DD/MM/JJ", "Maand Dag, Jaar", 
+        "JJJJ-MM-DD (ISO)", "Numeriek DD-MM-JJJJ", "Maand Dag, Jaar", 
         "Mnd. Dag Jaar", "Dag Maand Jaar", "Dag Mnd. Jaar"
         )
         # this definition must agree with its "_display_gregorian" method
@@ -178,14 +178,14 @@ class DateDisplayNL(DateDisplay):
             if date_val[3]:
                 return self.display_iso(date_val)
             else:
-                # day/month_number/year
+                # day-month_number-year
                 if date_val[0] == date_val[1] == 0:
                     value = str(date_val[2])
                 else:
                     value = self._tformat.replace('%m', str(date_val[1]))
                     value = value.replace('%d', str(date_val[0]))
                     value = value.replace('%Y', str(abs(date_val[2])))
-                    value = value.replace('-', '/')
+                    value = value.replace('/', '-')
         elif self.format == 2:
             # month_name day, year
             if date_val[0] == 0:
