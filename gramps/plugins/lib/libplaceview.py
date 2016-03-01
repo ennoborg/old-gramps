@@ -459,6 +459,7 @@ class PlaceBaseView(ListView):
         return (("Place Filter",),
                 ("Place Details",
                  "Place Locations",
+                 "Place Encloses",
                  "Place Gallery",
                  "Place Citations",
                  "Place Notes",
