@@ -137,12 +137,12 @@ class EventType(GrampsType):
     WILL           = 44
 
     _MENU = [[_('Life Events'),
-              [BIRTH, BAPTISM, DEATH, BURIAL, CREMATION, ADOPT]],
+              [BIRTH, CHRISTEN, DEATH, BURIAL, CREMATION, ADOPT]],
             [_('Family'),
               [ENGAGEMENT, MARRIAGE, DIVORCE, ANNULMENT, MARR_SETTL, MARR_LIC,
                MARR_CONTR, MARR_BANNS, DIV_FILING, MARR_ALT]],
             [_('Religious'),
-              [CHRISTEN, ADULT_CHRISTEN, CONFIRMATION, FIRST_COMMUN, BLESS,
+              [BAPTISM, ADULT_CHRISTEN, CONFIRMATION, FIRST_COMMUN, BLESS,
                BAR_MITZVAH, BAS_MITZVAH, RELIGION]],
             [_('Vocational'),
               [OCCUPATION, RETIREMENT, ELECTED, MILITARY_SERV, ORDINATION]],
