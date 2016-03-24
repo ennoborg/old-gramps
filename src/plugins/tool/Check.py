@@ -1835,6 +1835,7 @@ class CheckIntegrity(object):
             source = gen.lib.Source()
             source.unserialize(info)
             new_media_ref_list = []
+            m_changed = False
             for media_ref in source.get_media_list():
                 citation_list = media_ref.get_citation_list()
                 new_citation_list = []
@@ -1847,6 +1848,7 @@ class CheckIntegrity(object):
                             sourceref = citation_handle
                         else:
                             sourceref = eval(citation_handle)
+                        m_changed = True
                         new_citation = gen.lib.Citation()
                         new_citation.set_date_object(sourceref[0])
                         new_citation.set_privacy(sourceref[1])
@@ -1867,8 +1869,9 @@ class CheckIntegrity(object):
                 media_ref.set_citation_list(new_citation_list)
                 new_media_ref_list.append(media_ref)
                 
-            source.set_media_list(new_media_ref_list)
-            self.db.commit_source(source, self.trans)
+            if m_changed:
+                source.set_media_list(new_media_ref_list)
+                self.db.commit_source(source, self.trans)
 
         if len(self.replaced_sourceref) > 0:
             logging.info('    OK: no broken source citations on mediarefs found')
