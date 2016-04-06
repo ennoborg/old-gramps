@@ -4450,7 +4450,7 @@ class MediaPages(BasePage):
                                   len(self.report.obj_dict[MediaObject]) + 1) as step:
             # bug 8950 : it seems it's better to sort on desc + gid.
             def sort_by_desc_and_gid(obj):
-                return (obj.desc, obj.gramps_id)
+                return (obj.desc.lower(), obj.gramps_id)
             
             sorted_media_handles = sorted(self.report.obj_dict[MediaObject].keys(),
                         key=lambda x: sort_by_desc_and_gid(self.report.database.get_object_from_handle(x)))
@@ -6888,7 +6888,7 @@ class AddressBookListPage(BasePage):
 
 class AddressBookPage(BasePage):
     def __init__(self, report, title, person_handle, has_add, has_res, has_url):
-        self.dbase_ = report.database
+        self.dbase_ = self.db = report.database
         self.bibli = Bibliography()
 
         person = self.dbase_.get_person_from_handle(person_handle)
