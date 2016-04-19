@@ -54,17 +54,12 @@ ALL_LINGUAS = ('ar', 'bg', 'ca', 'cs', 'da', 'de', 'el', 'en_GB',
                'ja', 'lt', 'nb', 'nl', 'nn', 'pl', 'pt_BR', 'pt_PT',
                'ru', 'sk', 'sl', 'sq', 'sr', 'sv', 'tr', 'uk', 'vi',
                'zh_CN', 'zh_HK', 'zh_TW')
-INTLTOOL_FILES = ('data/tips.xml', 'gramps/plugins/lib/holidays.xml')
+INTLTOOL_FILES = ('data/tips.xml', 'data/holidays.xml')
 
 svem_flag = '--single-version-externally-managed'
 if svem_flag in sys.argv:
     # Die, setuptools, die.
     sys.argv.remove(svem_flag)
-
-server = False
-if '--server' in sys.argv:
-    sys.argv.remove('--server')
-    server = True
 
 # check if the resourcepath option is used and store the path
 # this is for packagers that build out of the source tree
@@ -143,12 +138,11 @@ def build_trans(build_cmd):
                 reply = input(ask)
                 if reply in ['n', 'N']:
                     raise SystemExit(msg)
+            log.info('Compiling %s >> %s', po_file, mo_file)
 
         #linux specific piece:
         target = 'share/locale/' + lang + '/LC_MESSAGES'
         data_files.append((target, [mo_file_unix]))
-
-        log.info('Compiling %s >> %s.', po_file, target)
 
 def build_man(build_cmd):
     '''
@@ -169,7 +163,7 @@ def build_man(build_cmd):
             import gzip
             man_file_gz = os.path.join(newdir, 'gramps.1.gz')
             if os.path.exists(man_file_gz):
-                if newer(newfile, man_file_gz):
+                if newer(filename, man_file_gz):
                     os.remove(man_file_gz)
                 else:
                     filename = False
@@ -180,6 +174,7 @@ def build_man(build_cmd):
                 with open(newfile, 'rb') as f_in,\
                         gzip.open(man_file_gz, 'wb') as f_out:
                     f_out.writelines(f_in)
+                    log.info('Compiling %s >> %s', filename, man_file_gz)
 
                 os.remove(newfile)
                 filename = False
@@ -188,8 +183,6 @@ def build_man(build_cmd):
             src = build_cmd.build_base  + '/data/man/' + lang  + '/gramps.1.gz'
             target = 'share/man/' + lang + '/man1'
             data_files.append((target, [src]))
-
-            log.info('Compiling %s >> %s.', src, target)
 
 def build_intl(build_cmd):
     '''
@@ -334,6 +327,8 @@ package_core = ['gramps',
                 'gramps.plugins', 
                 'gramps.plugins.database', 
                 'gramps.plugins.database.bsddb_support', 
+                'gramps.plugins.database.dbapi_support',
+                'gramps.plugins.database.dbapi_support.defaults',
                 'gramps.plugins.docgen', 
                 'gramps.plugins.drawreport', 
                 'gramps.plugins.export', 
@@ -368,15 +363,8 @@ package_gui = ['gramps.gui',
                'gramps.gui.views.treemodels',
                'gramps.gui.widgets',
                ]
-package_webapp = ['gramps.webapp',
-                  'gramps.webapp.grampsdb',
-                  'gramps.webapp.grampsdb.templatetags',
-                  'gramps.webapp.grampsdb.view',
-                  ]
-if server:
-    packages = package_core + package_webapp
-else:
-    packages = package_core + package_gui
+
+packages = package_core + package_gui
 
 #-------------------------------------------------------------------------
 #
@@ -399,16 +387,11 @@ for (dirpath, dirnames, filenames) in os.walk(basedir):
         #we add to data_list so glade , xml, files are found, we don't need the gramps/ part
         package_data_core.append(dirpath[7:] + '/' + dirname + '/*.glade')
         package_data_core.append(dirpath[7:] + '/' + dirname + '/*.xml')
+
 package_data_core.append('gen/utils/resource-path')
 
 package_data_gui = ['gui/glade/*.glade']
-
-package_data_webapp = ['webapp/*.sql', 'webapp/grampsdb/sql/*.sql']
-
-if server:
-    package_data = package_data_core + package_data_webapp
-else:
-    package_data = package_data_core + package_data_gui
+package_data = package_data_core + package_data_gui
 
 #-------------------------------------------------------------------------
 #
@@ -424,7 +407,6 @@ GRAMPS_FILES = glob.glob(os.path.join('example', 'gramps', '*.*'))
 IMAGE_WEB = glob.glob(os.path.join('images', 'webstuff', '*.png'))
 IMAGE_WEB.extend(glob.glob(os.path.join('images', 'webstuff','*.ico')))
 IMAGE_WEB.extend(glob.glob(os.path.join('images', 'webstuff', '*.gif')))
-JS_FILES = glob.glob(os.path.join('data', 'javascript', '*.js'))
 CSS_FILES = glob.glob(os.path.join('data', 'css', '*.css'))
 SWANKY_PURSE = glob.glob(os.path.join('data', 'css', 'swanky-purse', '*.css'))
 SWANKY_IMG = glob.glob(os.path.join('data', 'css', 'swanky-purse', 'images', '*.png'))
@@ -461,18 +443,7 @@ data_files_gui.append(('share/gramps/images/hicolor/22x22/actions', ICON_22))
 data_files_gui.append(('share/gramps/images/hicolor/48x48/actions', ICON_48))
 data_files_gui.append(('share/gramps/images/hicolor/scalable/actions', ICON_SC))
 
-data_files_webapp = []
-TEMPLATE_FILES = glob.glob(os.path.join('data/templates', '*.html'))
-data_files_webapp.append(('share/gramps/templates', TEMPLATE_FILES))
-ADMIN_FILES = glob.glob(os.path.join('data/templates/admin', '*.html'))
-data_files_webapp.append(('share/gramps/templates/admin', ADMIN_FILES))
-REG_FILES = glob.glob(os.path.join('data/templates/registration', '*.html'))
-data_files_webapp.append(('share/gramps/templates/registration', REG_FILES))
-
-if server:
-    data_files = data_files_core + data_files_webapp
-else:
-    data_files = data_files_core + data_files_gui
+data_files = data_files_core + data_files_gui
 
 #-------------------------------------------------------------------------
 #
@@ -529,6 +500,7 @@ setup(name = 'gramps',
           "Natural Language :: Greek",
           "Natural Language :: Hebrew",
           "Natural Language :: Hungarian",
+          "Natural Language :: Icelandic",
           "Natural Language :: Italian",
           "Natural Language :: Japanese",
           "Natural Language :: Macedonian",

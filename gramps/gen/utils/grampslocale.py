@@ -120,6 +120,10 @@ def _check_mswin_locale(locale):
             msloc = _LOCALE_NAMES[locale[:2]][:2]
             locale = locale[:2]
         except KeyError:
+            #US English is the outlier, all other English locales want
+            #real English:
+            if locale[:2] == ('en') and locale[:5] != 'en_US':
+                return ('en_GB', '1252')
             return (None, None)
     return (locale, msloc)
 
@@ -127,7 +131,9 @@ def _check_mswin_locale_reverse(locale):
     for (loc, msloc) in _LOCALE_NAMES.items():
         if msloc and locale == msloc[0]:
             return (loc, msloc[1])
-
+    #US English is the outlier, all other English locales want real English:
+    if locale.startswith('English') and locale != 'English_United States':
+        return ('en_GB', '1252')
     return (None, None)
 
 #------------------------------------------------------------------------
@@ -284,6 +290,9 @@ class GrampsLocale(object):
             if not locale[0]:
                 return False
             lang = self.check_available_translations(locale[0])
+            if not lang and locale[0].startswith('en'):
+                locale = ('en_GB', 'UTF-8')
+                lang = 'en_GB'
             if not lang:
                 return False
             self.lang = locale[0]
@@ -294,13 +303,12 @@ class GrampsLocale(object):
         _failure = False
         try:
             locale.setlocale(locale.LC_ALL, '')
-            if not _check_locale(locale.getlocale()):
-                if not _check_locale(locale.getdefaultlocale()):
-                    LOG.debug("Usable locale not found, localization settings ignored.");
-                    self.lang = 'C'
-                    self.encoding = 'ascii'
-                    self.language = ['en']
-                    _failure = True
+            if not _check_locale(locale.getdefaultlocale(envvars=('LC_ALL', 'LANG', 'LANGUAGE'))):
+                LOG.debug("Usable locale not found, localization settings ignored.");
+                self.lang = 'C'
+                self.encoding = 'ascii'
+                self.language = ['en']
+                _failure = True
 
         except locale.Error as err:
             LOG.debug("Locale error %s, localization settings ignored.",
@@ -796,9 +804,11 @@ class GrampsLocale(object):
 
         if locale[:5] in self.languages:
             return locale[:5]
+        #US English is the outlier, all other English locales want real English:
+        if locale[:2] == 'en' and locale[:5] != 'en_US':
+            return 'en_GB'
         if locale[:2] in self.languages:
             return locale[:2]
-
         return None
 
     def get_language_dict(self):
@@ -829,7 +839,7 @@ class GrampsLocale(object):
             return _("the repository")
         elif objclass == "note":
             return _("the note")
-        elif objclass in ["media", "mediaobject"]:
+        elif objclass == "media":
             return _("the media")
         elif objclass == "source":
             return _("the source")

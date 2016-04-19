@@ -84,6 +84,7 @@ class ErrorView(object):
         self.top = Gtk.Dialog(title)
         try:
             self.top.set_transient_for(self.top.list_toplevels()[-2])
+            self.top.set_keep_above(True)
         except IndexError:
             self.top.set_position(Gtk.WindowPosition.CENTER)
             self.top.set_urgency_hint(True)
@@ -121,6 +122,7 @@ class ErrorView(object):
         tb_label.get_buffer().set_text(self._error_detail.get_formatted_log())
         tb_label.set_border_width(6)
         tb_label.set_editable(False)
+        tb_label.set_vexpand(True)
 
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)

@@ -341,7 +341,7 @@ class EditNote(EditPrimary):
 
         if self.callback:
             self.callback(self.obj.get_handle())
-        self.close()
+        self._do_close()
 
 class DeleteNoteQuery(object):
     def __init__(self, dbstate, uistate, note, the_lists):
@@ -391,9 +391,9 @@ class DeleteNoteQuery(object):
                 self.db.commit_citation(citation, trans)
 
             for handle in media_list:
-                media = self.db.get_object_from_handle(handle)
+                media = self.db.get_media_from_handle(handle)
                 media.remove_note(note_handle)
-                self.db.commit_media_object(media, trans)
+                self.db.commit_media(media, trans)
 
             for handle in repo_list:
                 repo = self.db.get_repository_from_handle(handle)

@@ -46,9 +46,9 @@ from .attrtype import AttributeType
 from .eventroletype import EventRoleType
 from .attribute import Attribute
 from .const import IDENTICAL, EQUAL, DIFFERENT
+from .handle import Handle
 from ..const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
-from .handle import Handle
 
 #-------------------------------------------------------------------------
 #
@@ -75,8 +75,8 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
     """
 
     UNKNOWN = 2
-    MALE    = 1
-    FEMALE  = 0
+    MALE = 1
+    FEMALE = 0
 
     def __init__(self, data=None):
         """
@@ -99,7 +99,7 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
         self.parent_family_list = []
         self.alternate_names = []
         self.person_ref_list = []
-        self.gender = Person.UNKNOWN
+        self.__gender = Person.UNKNOWN
         self.death_ref_index = -1
         self.birth_ref_index = -1
         if data:
@@ -136,7 +136,7 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
         return (
             self.handle,                                         #  0
             self.gramps_id,                                      #  1
-            self.gender,                                         #  2
+            self.__gender,                                       #  2
             self.primary_name.serialize(),                       #  3
             [name.serialize() for name in self.alternate_names], #  4
             self.death_ref_index,                                #  5
@@ -181,7 +181,7 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
             "_class": "Person",
             "handle":  Handle("Person", self.handle),            #  0
             "gramps_id": self.gramps_id,                         #  1
-            "gender": self.gender,                               #  2
+            "gender": self.__gender,                             #  2
             "primary_name": self.primary_name.to_struct(),       #  3
             "alternate_names": [name.to_struct()
                                 for name in self.alternate_names], #  4
@@ -208,9 +208,38 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
             }
 
     @classmethod
+    def field_aliases(cls):
+        """
+        Return dictionary of alias to full field names
+        for this object class.
+        """
+        return {
+            "given": "primary_name.first_name",
+            "surname": "primary_name.surname_list.0.surname",
+            "surnames": "primary_name.surname_list.surname",
+        }
+
+    @classmethod
+    def get_extra_secondary_fields(cls):
+        """
+        Return a list of full field names and types for secondary
+        fields that are not directly listed in the schema.
+        """
+        return [
+            ("primary_name.first_name", str),
+            ("primary_name.surname_list.0.surname", str),
+        ]
+
+    @classmethod
+    def get_index_fields(cls):
+        return [
+            "primary_name.first_name",
+            "primary_name.surname_list.0.surname",
+        ]
+
+    @classmethod
     def get_labels(cls, _):
         return {
-            "_class": _("Person"),
             "handle":  _("Handle"),
             "gramps_id": _("Gramps ID"),
             "gender": _("Gender"),
@@ -248,27 +277,41 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
             struct.get("gramps_id", default.gramps_id),
             struct.get("gender", default.gender),
             Name.from_struct(struct.get("primary_name", {})),
-            [Name.from_struct(name) for name in struct.get("alternate_names", default.alternate_names)],
+            [Name.from_struct(name)
+             for name in struct.get("alternate_names",
+                                    default.alternate_names)],
             struct.get("death_ref_index", default.death_ref_index),
             struct.get("birth_ref_index", default.birth_ref_index),
-            [EventRef.from_struct(er) for er in struct.get("event_ref_list", default.event_ref_list)],
-            [Handle.from_struct(handle) for handle in struct.get("family_list", default.family_list)],
-            [Handle.from_struct(handle) for handle in struct.get("parent_family_list", default.parent_family_list)],
+            [EventRef.from_struct(er)
+             for er in struct.get("event_ref_list", default.event_ref_list)],
+            [Handle.from_struct(handle)
+             for handle in struct.get("family_list", default.family_list)],
+            [Handle.from_struct(handle)
+             for handle in struct.get("parent_family_list",
+                                      default.parent_family_list)],
             MediaBase.from_struct(struct.get("media_list", default.media_list)),
-            AddressBase.from_struct(struct.get("address_list", default.address_list)),
-            AttributeBase.from_struct(struct.get("attribute_list", default.attribute_list)),
+            AddressBase.from_struct(struct.get("address_list",
+                                               default.address_list)),
+            AttributeBase.from_struct(struct.get("attribute_list",
+                                                 default.attribute_list)),
             UrlBase.from_struct(struct.get("urls", default.urls)),
-            LdsOrdBase.from_struct(struct.get("lds_ord_list", default.lds_ord_list)),
-            CitationBase.from_struct(struct.get("citation_list", default.citation_list)),
+            LdsOrdBase.from_struct(struct.get("lds_ord_list",
+                                              default.lds_ord_list)),
+            CitationBase.from_struct(struct.get("citation_list",
+                                                default.citation_list)),
             NoteBase.from_struct(struct.get("note_list", default.note_list)),
             struct.get("change", default.change),
             TagBase.from_struct(struct.get("tag_list", default.tag_list)),
             struct.get("private", default.private),
-            [PersonRef.from_struct(p) for p in struct.get("person_ref_list", default.person_ref_list)]
+            [PersonRef.from_struct(p)
+             for p in struct.get("person_ref_list", default.person_ref_list)]
         )
 
     @classmethod
     def get_schema(cls):
+        """
+        Return the schema as a dictionary for this class.
+        """
         from .mediaref import MediaRef
         from .address import Address
         from .url import Url
@@ -308,7 +351,7 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
         """
         (self.handle,             #  0
          self.gramps_id,          #  1
-         self.gender,             #  2
+         self.__gender,           #  2
          primary_name,            #  3
          alternate_names,         #  4
          self.death_ref_index,    #  5
@@ -327,7 +370,7 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
          tag_list,                # 18
          self.private,            # 19
          person_ref_list,         # 20
-         ) = data
+        ) = data
 
         self.primary_name = Name()
         self.primary_name.unserialize(primary_name)
@@ -366,11 +409,11 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
             return any(ref.ref == handle for ref in self.person_ref_list)
         elif classname == 'Family':
             return any(ref == handle
-                for ref in self.family_list + self.parent_family_list +
-                [ordinance.famc for ordinance in self.lds_ord_list])
+                       for ref in self.family_list + self.parent_family_list +
+                       [ordinance.famc for ordinance in self.lds_ord_list])
         elif classname == 'Place':
             return any(ordinance.place == handle
-                for ordinance in self.lds_ord_list)
+                       for ordinance in self.lds_ord_list)
         return False
 
     def _remove_handle_references(self, classname, handle_list):
@@ -384,30 +427,30 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
             # If deleting removing the reference to the event
             # to which birth or death ref_index points, unset the index
             if (self.birth_ref_index != -1
-                   and self.event_ref_list[self.birth_ref_index].ref
-                        in handle_list):
+                    and self.event_ref_list[self.birth_ref_index].ref
+                    in handle_list):
                 self.set_birth_ref(None)
             if (self.death_ref_index != -1
-                   and self.event_ref_list[self.death_ref_index].ref
-                        in handle_list):
+                    and self.event_ref_list[self.death_ref_index].ref
+                    in handle_list):
                 self.set_death_ref(None)
             self.event_ref_list = new_list
 
             # Reset the indexes after deleting the event from even_ref_list
-            if (self.birth_ref_index != -1):
+            if self.birth_ref_index != -1:
                 self.set_birth_ref(birth_ref)
-            if (self.death_ref_index != -1):
+            if self.death_ref_index != -1:
                 self.set_death_ref(death_ref)
         elif classname == 'Person':
             new_list = [ref for ref in self.person_ref_list
-                            if ref.ref not in handle_list]
+                        if ref.ref not in handle_list]
             self.person_ref_list = new_list
         elif classname == 'Family':
             new_list = [handle for handle in self.family_list
-                            if handle not in handle_list]
+                        if handle not in handle_list]
             self.family_list = new_list
             new_list = [handle for handle in self.parent_family_list
-                            if handle not in handle_list]
+                        if handle not in handle_list]
             self.parent_family_list = new_list
             for ordinance in self.lds_ord_list:
                 if ordinance.famc in handle_list:
@@ -449,7 +492,7 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
                             # death_ref_index should be recalculated which
                             # needs database access!
         elif classname == 'Person':
-            refs_list = [ ref.ref for ref in self.person_ref_list ]
+            refs_list = [ref.ref for ref in self.person_ref_list]
             new_ref = None
             if new_handle in refs_list:
                 new_ref = self.person_ref_list[refs_list.index(new_handle)]
@@ -504,15 +547,15 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
         check_list = self.lds_ord_list
         add_list = [_f for _f in check_list if _f]
         return ([self.primary_name] +
-                 self.media_list +
-                 self.alternate_names +
-                 self.address_list +
-                 self.attribute_list +
-                 self.urls +
-                 self.event_ref_list +
-                 add_list +
-                 self.person_ref_list
-                )
+                self.media_list +
+                self.alternate_names +
+                self.address_list +
+                self.attribute_list +
+                self.urls +
+                self.event_ref_list +
+                add_list +
+                self.person_ref_list
+               )
 
     def get_citation_child_list(self):
         """
@@ -523,14 +566,14 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
         :rtype: list
         """
         return ([self.primary_name] +
-                 self.media_list +
-                 self.alternate_names +
-                 self.address_list +
-                 self.attribute_list +
-                 self.lds_ord_list +
-                 self.person_ref_list +
-                 self.event_ref_list
-                )
+                self.media_list +
+                self.alternate_names +
+                self.address_list +
+                self.attribute_list +
+                self.lds_ord_list +
+                self.person_ref_list +
+                self.event_ref_list
+               )
 
     def get_note_child_list(self):
         """
@@ -541,14 +584,14 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
         :rtype: list
         """
         return ([self.primary_name] +
-                 self.media_list +
-                 self.alternate_names +
-                 self.address_list +
-                 self.attribute_list +
-                 self.lds_ord_list +
-                 self.person_ref_list +
-                 self.event_ref_list
-                )
+                self.media_list +
+                self.alternate_names +
+                self.address_list +
+                self.attribute_list +
+                self.lds_ord_list +
+                self.person_ref_list +
+                self.event_ref_list
+               )
 
     def get_referenced_handles(self):
         """
@@ -560,9 +603,9 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
         """
         return [('Family', handle) for handle in
                 (self.family_list + self.parent_family_list)] + (
-                 self.get_referenced_note_handles() +
-                 self.get_referenced_citation_handles() +
-                 self.get_referenced_tag_handles()
+                    self.get_referenced_note_handles() +
+                    self.get_referenced_citation_handles() +
+                    self.get_referenced_tag_handles()
                 )
 
     def get_handle_referents(self):
@@ -574,14 +617,14 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
         :rtype: list
         """
         return ([self.primary_name] +
-                 self.media_list +
-                 self.alternate_names +
-                 self.address_list +
-                 self.attribute_list +
-                 self.lds_ord_list +
-                 self.person_ref_list +
-                 self.event_ref_list
-                )
+                self.media_list +
+                self.alternate_names +
+                self.address_list +
+                self.attribute_list +
+                self.lds_ord_list +
+                self.person_ref_list +
+                self.event_ref_list
+               )
 
     def merge(self, acquisition):
         """
@@ -612,7 +655,7 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
         self._merge_tag_list(acquisition)
 
         list(map(self.add_parent_family_handle,
-            acquisition.get_parent_family_handle_list()))
+                 acquisition.get_parent_family_handle_list()))
         list(map(self.add_family_handle, acquisition.get_family_handle_list()))
 
     def set_primary_name(self, name):
@@ -692,10 +735,9 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
         for attr in self.attribute_list:
             if int(attr.type) == AttributeType.NICKNAME:
                 return attr.get_value()
-        else:
-            return ''
+        return ''
 
-    def set_gender(self, gender) :
+    def set_gender(self, gender):
         """
         Set the gender of the Person.
 
@@ -707,9 +749,11 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
                        - Person.UNKNOWN
         :type gender: int
         """
-        self.gender = gender
+        if gender not in (Person.MALE, Person.FEMALE, Person.UNKNOWN):
+            raise ValueError('Attempt to assign invalid gender')
+        self.__gender = gender
 
-    def get_gender(self) :
+    def get_gender(self):
         """
         Return the gender of the Person.
 
@@ -720,7 +764,10 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
                   - Person.UNKNOWN
         :rtype: int
         """
-        return self.gender
+        return self.__gender
+
+    gender = property(get_gender, set_gender, None,
+                      'Returns or sets the gender of the person')
 
     def set_birth_ref(self, event_ref):
         """
@@ -743,9 +790,9 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
         for self.birth_ref_index, ref in enumerate(self.event_ref_list):
             if event_ref.is_equal(ref):
                 return    # Note: self.birth_ref_index already set
-        else:
-            self.event_ref_list.append(event_ref)
-            self.birth_ref_index = len(self.event_ref_list)-1
+
+        self.event_ref_list.append(event_ref)
+        self.birth_ref_index = len(self.event_ref_list)-1
 
     def set_death_ref(self, event_ref):
         """
@@ -768,9 +815,9 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
         for self.death_ref_index, ref in enumerate(self.event_ref_list):
             if event_ref.is_equal(ref):
                 return    # Note: self.death_ref_index already set
-        else:
-            self.event_ref_list.append(event_ref)
-            self.death_ref_index = len(self.event_ref_list)-1
+
+        self.event_ref_list.append(event_ref)
+        self.death_ref_index = len(self.event_ref_list)-1
 
     def get_birth_ref(self):
         """
@@ -881,10 +928,10 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
             else:
                 self.event_ref_list.append(addendum)
                 if (self.birth_ref_index == -1 and
-                    idx == acquisition.birth_ref_index):
+                        idx == acquisition.birth_ref_index):
                     self.birth_ref_index = len(self.event_ref_list) - 1
                 if (self.death_ref_index == -1 and
-                    idx == acquisition.death_ref_index):
+                        idx == acquisition.death_ref_index):
                     self.death_ref_index = len(self.event_ref_list) - 1
 
     def add_family_handle(self, family_handle):
@@ -935,7 +982,7 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
         else:
             return False
 
-    def get_family_handle_list(self) :
+    def get_family_handle_list(self):
         """
         Return the list of :class:`~.family.Family` handles in which the person
         is a parent or spouse.
@@ -947,7 +994,7 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
         """
         return self.family_list
 
-    def set_family_handle_list(self, family_list) :
+    def set_family_handle_list(self, family_list):
         """
         Assign the passed list to the Person's list of families in which it is
         a parent or spouse.

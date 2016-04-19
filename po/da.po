@@ -1797,6 +1797,9 @@ msgid "Missing Surname"
 msgstr "Manglende efternavn"
 
 #: ../gramps/gen/config.py:310 ../gramps/gen/config.py:312
+msgid "[Living]"
+msgstr "[Nulevende]"
+
 msgid "Living"
 msgstr "Nulevende"
 
@@ -28051,7 +28054,7 @@ msgid "Filtering_on|Inverse Repository"
 msgstr "Ikke-valgt arkiv"
 
 #: ../gramps/plugins/quickview/filterbyname.py:48
-msgid "Filtering_on|Inverse MediaObject"
+msgid "Filtering_on|Inverse Media"
 msgstr "Ikke-valgt medieobjekt"
 
 #: ../gramps/plugins/quickview/filterbyname.py:49

@@ -79,6 +79,7 @@ for event_group, type_list in EventType().get_menu_standard_xml():
         TYPE2GROUP[event_type] = event_group
 SECTION_LIST.append(CUSTOM)
 TYPE2GROUP[EventType.CUSTOM] = CUSTOM
+TYPE2GROUP[EventType.UNKNOWN] = _T_("Unknown")
 
 #------------------------------------------------------------------------
 #
@@ -109,13 +110,19 @@ class IndivCompleteReport(Report):
         sections  - Which event groups should be given separate sections.
         name_format   - Preferred format to display names
         incl_private  - Whether to include private data
+        living_people - How to handle living people
+        years_past_death - Consider as living this many years after death
         """
 
         Report.__init__(self, database, options, user)
         self._user = user
         menu = options.menu
 
+        lang = menu.get_option_by_name('trans').get_value()
+        self._locale = self.set_locale(lang)
+
         stdoptions.run_private_data_option(self, menu)
+        stdoptions.run_living_people_option(self, menu, self._locale)
         self._db = self.database
 
         self.use_pagebreak = menu.get_option_by_name('pageben').get_value()
@@ -132,9 +139,6 @@ class IndivCompleteReport(Report):
         self.bibli = None
 
         self.section_list = menu.get_option_by_name('sections').get_selected()
-
-        lang = menu.get_option_by_name('trans').get_value()
-        self._locale = self.set_locale(lang)
 
         stdoptions.run_name_format_option(self, menu)
 
@@ -472,7 +476,7 @@ class IndivCompleteReport(Report):
             tags.append(tag.get_name())
         for text in sorted(tags):
             self.doc.start_row()
-            self.write_cell(text)
+            self.write_cell(text, span=2)
             self.doc.end_row()
         self.doc.end_table()
         self.doc.start_paragraph('IDS-Normal')
@@ -488,7 +492,7 @@ class IndivCompleteReport(Report):
         for media_ref in media_list:
             media_handle = media_ref.get_reference_handle()
             if media_handle:
-                media = self._db.get_object_from_handle(media_handle)
+                media = self._db.get_media_from_handle(media_handle)
                 if media and media.get_mime_type():
                     if media.get_mime_type().startswith("image"):
                         i_total += 1
@@ -513,7 +517,7 @@ class IndivCompleteReport(Report):
         while ( media_count < len(media_list) ):
             media_ref = media_list[media_count]
             media_handle = media_ref.get_reference_handle()
-            media = self._db.get_object_from_handle(media_handle)
+            media = self._db.get_media_from_handle(media_handle)
             if media is None:
                 from gramps.gui.dialog import RunDatabaseRepair
                 RunDatabaseRepair(_('Non existing media found in the Gallery'))
@@ -708,8 +712,9 @@ class IndivCompleteReport(Report):
             if group in event_dict:
                 self.write_section(event_dict[group], group)
 
-    def write_cell(self, text, endnotes=None, mark=None, style='IDS-Normal'):
-        self.doc.start_cell('IDS-NormalCell')
+    def write_cell(self, text,
+                   endnotes=None, mark=None, style='IDS-Normal', span=1):
+        self.doc.start_cell('IDS-NormalCell', span)
         self.write_paragraph(text, endnotes=endnotes, mark=mark, style=style)
         self.doc.end_cell()
 
@@ -789,7 +794,7 @@ class IndivCompleteReport(Report):
         if self.use_images and len(media_list) > 0:
             media0 = media_list[0]
             media_handle = media0.get_reference_handle()
-            media = self._db.get_object_from_handle(media_handle)
+            media = self._db.get_media_from_handle(media_handle)
             self.mime0 = media.get_mime_type()
             if self.mime0 and self.mime0.startswith("image"):
                 image_filename = media_path_full(self._db, media.get_path())
@@ -828,7 +833,7 @@ class IndivCompleteReport(Report):
 
         if p_style == 'IDS-PersonTable':
             self.doc.start_cell('IDS-NormalCell')
-            self.doc.add_media_object(image_filename, "right", 4.0, 4.0,
+            self.doc.add_media(image_filename, "right", 4.0, 4.0,
                                       crop=media0.get_rectangle())
             endnotes = self._cite_endnote(media0)
             attr_list = media0.get_attribute_list()
@@ -947,6 +952,8 @@ class IndivCompleteOptions(MenuReportOptions):
         self.__update_filters()
 
         stdoptions.add_private_data_option(menu, category_name)
+
+        stdoptions.add_living_people_option(menu, category_name)
 
         sort = BooleanOption(_("List events chronologically"), True)
         sort.set_help(_("Whether to sort events into chronological order."))

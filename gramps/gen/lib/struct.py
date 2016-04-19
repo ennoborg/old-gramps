@@ -20,6 +20,9 @@
 
 from gramps.gen.lib.handle import HandleClass
 
+def from_struct(struct):
+    return Struct.instance_from_struct(struct)
+
 class Struct(object):
     """
     Class for getting and setting parts of a struct by dotted path.
@@ -172,9 +175,11 @@ class Struct(object):
             # get first item in list that matches:
             sublist = [getattr(Struct(item, self.db), attr) for item in self.struct]
             return Struct(sublist, self.db)
-        else:
+        elif hasattr(self.struct, attr):
             # better be a property of the list/tuple/dict/value:
             return getattr(self.struct, attr)
+        else:
+            return Struct({}, self.db) # dummy, extending a previous dummy
 
     def __getitem__(self, item):
         """
@@ -206,19 +211,16 @@ class Struct(object):
             current = getattr(current, item)
         return current
 
-    def get_object_from_handle(self, handle):
-        return self.db.get_from_name_and_handle(handle.classname, str(handle))
-
     def handle_join(self, item):
         """
         If the item is a handle, look up reference object.
         """
         if isinstance(item, HandleClass) and self.db:
-            obj = self.get_object_from_handle(item)
+            obj = self.db.get_from_name_and_handle(item.classname, str(item))
             if obj:
                 return Struct(obj.to_struct(), self.db)
             else:
-                raise AttributeError("missing object: %s" % item)
+                return Struct({}, self.db) # dummy, a db error
         elif isinstance(item, (list, tuple)):
             return Struct(item, self.db)
         elif isinstance(item, dict) and "_class" in item.keys():
@@ -258,7 +260,8 @@ class Struct(object):
             if struct is None:       # invalid part to set, skip
                 return
             if isinstance(struct, HandleClass):
-                struct = self.get_object_from_handle(struct).to_struct()
+                obj = self.db.get_from_name_and_handle(struct.classname, str(struct))
+                struct = obj.to_struct()
             # keep track of primary object for update, below
             if isinstance(struct, dict) and "_class" in struct and self.primary_object_q(struct["_class"]):
                 primary_obj = struct
@@ -288,33 +291,38 @@ class Struct(object):
         if self.db:
             if trans is None:
                 with self.transaction("Struct Update", self.db, batch=True) as trans:
-                    new_obj = self.from_struct(struct)
+                    new_obj = Struct.instance_from_struct(struct)
                     name, handle = struct["_class"], struct["handle"]
                     old_obj = self.db.get_from_name_and_handle(name, handle)
                     if old_obj:
-                        commit_func = self.db._tables[name]["commit_func"]
+                        commit_func = self.db.get_table_func(name,"commit_func")
                         commit_func(new_obj, trans)
                     else:
-                        add_func = self.db._tables[name]["add_func"]
+                        add_func = self.db.get_table_func(name,"add_func")
                         add_func(new_obj, trans)
             else:
-                new_obj = self.from_struct(struct)
+                new_obj = Struct.instance_from_struct(struct)
                 name, handle = struct["_class"], struct["handle"]
                 old_obj = self.db.get_from_name_and_handle(name, handle)
                 if old_obj:
-                    commit_func = self.db._tables[name]["commit_func"]
+                    commit_func = self.db.get_table_func(name,"commit_func")
                     commit_func(new_obj, trans)
                 else:
-                    add_func = self.db._tables[name]["add_func"]
+                    add_func = self.db.get_table_func(name,"add_func")
                     add_func(new_obj, trans)
 
     def from_struct(self):
+        return Struct.instance_from_struct(self.struct)
+
+    @classmethod
+    def instance_from_struct(cls, struct):
         """
         Given a struct with metadata, create a Gramps object.
+
+        self is class when called as a classmethod.
         """
         from  gramps.gen.lib import (Person, Family, Event, Source, Place, Citation,
-                                     Repository, MediaObject, Note, Tag, Date)
-        struct = self.struct
+                                     Repository, Media, Note, Tag, Date)
         if isinstance(struct, dict):
             if "_class" in struct.keys():
                 if struct["_class"] == "Person":
@@ -331,8 +339,8 @@ class Struct(object):
                     return Citation.create(Citation.from_struct(struct))
                 elif struct["_class"] == "Repository":
                     return Repository.create(Repository.from_struct(struct))
-                elif struct["_class"] == "MediaObject":
-                    return MediaObject.create(MediaObject.from_struct(struct))
+                elif struct["_class"] == "Media":
+                    return Media.create(Media.from_struct(struct))
                 elif struct["_class"] == "Note":
                     return Note.create(Note.from_struct(struct))
                 elif struct["_class"] == "Tag":

@@ -2,7 +2,7 @@
 # Gramps - a GTK+/GNOME based genealogy program
 #
 # Copyright (C) 2000-2007 Donald N. Allingham
-# Copyright (C) 2011       Tim G L Lyons
+# Copyright (C) 2011      Tim G L Lyons
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -71,36 +71,288 @@ class BasicPrimaryObject(TableObject, PrivacyBase, TagBase):
         else:
             self.gramps_id = None
 
-    def get_label(self, field, _):
+    def serialize(self):
+        """
+        Convert the object to a serialized tuple of data.
+        """
+        raise NotImplementedError
+
+    def unserialize(self, data):
+        """
+        Convert a serialized tuple of data to an object.
+        """
+        raise NotImplementedError
+
+    def to_struct(self):
+        """
+        Convert the data held in this object to a structure (eg,
+        struct) that represents all the data elements.
+
+        This method is used to recursively convert the object into a
+        self-documenting form that can easily be used for various
+        purposes, including diffs and queries.
+
+        These structures may be primitive Python types (string,
+        integer, boolean, etc.) or complex Python types (lists,
+        tuples, or dicts). If the return type is a dict, then the keys
+        of the dict match the fieldname of the object. If the return
+        struct (or value of a dict key) is a list, then it is a list
+        of structs. Otherwise, the struct is just the value of the
+        attribute.
+
+        :returns: Returns a struct containing the data of the object.
+        """
+        raise NotImplementedError
+
+    def from_struct(self, struct):
+        """
+        Given a struct data representation, return an object of this type.
+
+        These structures may be primitive Python types (string,
+        integer, boolean, etc.) or complex Python types (lists,
+        tuples, or dicts). If the return type is a dict, then the keys
+        of the dict match the fieldname of the object. If the return
+        struct (or value of a dict key) is a list, then it is a list
+        of structs. Otherwise, the struct is just the value of the
+        attribute.
+
+        :returns: Returns an object of this type.
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def get_labels(cls, _):
+        """
+        Return labels.
+        """
+        return {}
+
+    @classmethod
+    def field_aliases(cls):
+        """
+        Return dictionary of alias to full field names
+        for this object class.
+        """
+        return {}
+
+    @classmethod
+    def get_field_alias(cls, alias):
+        """
+        Return full field name for an alias, if one.
+        """
+        return cls.field_aliases().get(alias, alias)
+
+    @classmethod
+    def get_schema(cls):
+        """
+        Return schema.
+        """
+        return {}
+
+    @classmethod
+    def get_extra_secondary_fields(cls):
+        """
+        Return a list of full field names and types for secondary
+        fields that are not directly listed in the schema.
+        """
+        return []
+
+    @classmethod
+    def get_index_fields(cls):
+        """
+        Return a list of full field names for indices.
+        """
+        return []
+
+    @classmethod
+    def get_secondary_fields(cls):
+        """
+        Return all seconday fields and their types
+        """
+        from .handle import HandleClass
+        return ([(key, value) for (key, value) in cls.get_schema().items()
+                 if value in [str, int, float, bool] or 
+                 isinstance(value, HandleClass)] +
+                cls.get_extra_secondary_fields())
+
+    @classmethod
+    def get_label(cls, field, _):
         """
         Get the associated label given a field name of this object.
+        No index positions allowed on lists.
         """
         chain = field.split(".")
-        path = self
-        for part in chain[:-1]:
-            if hasattr(path, part):
-                path = getattr(path, part)
-            else:
-                path = path[int(part)]
+        path = cls._follow_schema_path(chain[:-1])
         labels = path.get_labels(_)
         if chain[-1] in labels:
             return labels[chain[-1]]
         else:
-            raise Exception("%s has no such label: '%s'" % (self, field))
+            raise Exception("%s has no such label on %s: '%s'" %
+                            (cls, path, field))
 
-    def get_field(self, field):
+    @classmethod
+    def get_field_type(cls, field):
+        """
+        Get the associated label given a field name of this object.
+        No index positions allowed on lists.
+        """
+        field = cls.get_field_alias(field)
+        chain = field.split(".")
+        ftype = cls._follow_schema_path(chain)
+        return ftype
+
+    @classmethod
+    def _follow_schema_path(cls, chain):
+        """
+        Follow a list of schema items. Return endpoint.
+        """
+        path = cls
+        for part in chain:
+            schema = path.get_schema()
+            if part.isdigit():
+                pass # skip over
+            elif part in schema.keys():
+                path = schema[part]
+            else:
+                raise Exception("No such '%s' in %s" % (part, list(schema.keys())))
+            if isinstance(path, (list, tuple)):
+                path = path[0]
+        return path
+
+    def get_field(self, field, db=None, ignore_errors=False):
         """
         Get the value of a field.
         """
+        field = self.__class__.get_field_alias(field)
         chain = field.split(".")
-        path = self
-        for part in chain:
-            class_ = None
-            if hasattr(path, part):
-                path = getattr(path, part)
-            else:
-                path = path[int(part)]
+        path = self._follow_field_path(chain, db, ignore_errors)
         return path
+
+    def _follow_field_path(self, chain, db=None, ignore_errors=False):
+        """
+        Follow a list of items. Return endpoint(s) only.
+        With the db argument, can do joins across tables.
+        self - current object
+        returns - None, endpoint, of recursive list of endpoints
+        """
+        from .handle import HandleClass
+        # start with [self, self, chain, path_to=[]]
+        # results = []
+        # expand when you reach multiple answers [obj, chain_left, []]
+        # if you get to an endpoint, put results
+        # go until nothing left to expand
+        todo = [(self, self, [], chain)]
+        results = []
+        while todo:
+            parent, current, path_to, chain = todo.pop()
+            #print("expand:", parent.__class__.__name__,
+            #      current.__class__.__name__,
+            #      path_to,
+            #      chain)
+            keep_going = True
+            p = 0
+            while p < len(chain) and keep_going:
+                #print("while:", path_to, chain[p:])
+                part = chain[p]
+                if hasattr(current, part): # attribute
+                    current = getattr(current, part)
+                    path_to.append(part)
+                # need to consider current+part if current is list:
+                elif isinstance(current, (list, tuple)):
+                    if part.isdigit():
+                        # followed by index, so continue here
+                        if int(part) < len(current):
+                            current = current[int(part)]
+                            path_to.append(part)
+                        elif ignore_errors:
+                            current = None
+                            keeping_going = False
+                        else:
+                            raise Exception("invalid index position")
+                    else: # else branch! in middle, split paths
+                        for i in range(len(current)):
+                            #print("split list:", self.__class__.__name__,
+                            #      current.__class__.__name__,
+                            #      path_to[:],
+                            #      [str(i)] + chain[p:])
+                            todo.append([self, current, path_to[:], [str(i)] + chain[p:]])
+                        current = None
+                        keep_going = False
+                else: # part not found on this self
+                    # current is a handle
+                    # part is something on joined object
+                    if parent:
+                        ptype = parent.__class__.get_field_type(".".join(path_to))
+                        if isinstance(ptype, HandleClass):
+                            if db:
+                                # start over here:
+                                obj = None
+                                if current:
+                                    obj = ptype.join(db, current)
+                                if part == "self":
+                                    current = obj
+                                    path_to = []
+                                    #print("split self:", obj.__class__.__name__,
+                                    #      current.__class__.__name__,
+                                    #      path_to,
+                                    #      chain[p + 1:])
+                                    todo.append([obj, current, path_to, chain[p + 1:]])
+                                elif obj:
+                                    current = getattr(obj, part)
+                                    #print("split :", obj.__class__.__name__,
+                                    #      current.__class__.__name__,
+                                    #      [part],
+                                    #      chain[p + 1:])
+                                    todo.append([obj, current, [part], chain[p + 1:]])
+                                current = None
+                                keep_going = False
+                            else:
+                                raise Exception("Can't join without database")
+                        elif part == "self":
+                            pass
+                        elif ignore_errors:
+                            pass
+                        else:
+                            raise Exception("%s is not a valid field of %s; use %s" %
+                                            (part, current, dir(current)))
+                    current = None
+                    keep_going = False
+                p += 1
+            if keep_going:
+                results.append(current)
+        if len(results) == 1:
+            return results[0]
+        elif len(results) == 0:
+            return None
+        else:
+            return results
+
+    def set_field(self, field, value, db=None, ignore_errors=False):
+        """
+        Set the value of a basic field (str, int, float, or bool).
+        value can be a string or actual value.
+        Returns number of items changed.
+        """
+        field = self.__class__.get_field_alias(field)
+        chain = field.split(".")
+        path = self._follow_field_path(chain[:-1] + ["self"], db, ignore_errors)
+        ftype = self.get_field_type(field)
+        # ftype is str, bool, float, or int
+        value = (value in ['True', True]) if ftype is bool else value
+        return self._set_fields(path, chain[-1], value, ftype)
+
+    def _set_fields(self, path, attr, value, ftype):
+        """
+        Helper function to handle recursive lists of items.
+        """
+        if isinstance(path, (list, tuple)):
+            count = 0
+            for item in path:
+                count += self._set_fields(item, attr, value, ftype)
+        else:
+            setattr(path, attr, ftype(value))
+            count = 1
+        return count
 
     def set_gramps_id(self, gramps_id):
         """
@@ -162,6 +414,15 @@ class BasicPrimaryObject(TableObject, PrivacyBase, TagBase):
         """
         pass
 
+    def has_citation_reference(self, handle):
+        """
+        Indicate if the object has a citation references.
+
+        In the base class, no such references exist. Derived classes should
+        override this if they provide citation references.
+        """
+        return False
+
     def has_media_reference(self, handle):
         """
         Indicate if the object has a media references.
@@ -173,10 +434,10 @@ class BasicPrimaryObject(TableObject, PrivacyBase, TagBase):
 
     def remove_citation_references(self, handle_list):
         """
-        Remove the specified source references from the object.
+        Remove the specified citation references from the object.
 
         In the base class no such references exist. Derived classes should
-        override this if they provide source references.
+        override this if they provide citation references.
         """
         pass
 
@@ -190,9 +451,17 @@ class BasicPrimaryObject(TableObject, PrivacyBase, TagBase):
         pass
 
     def replace_citation_references(self, old_handle, new_handle):
+        """
+        Replace all references to the old citation handle with those to the new
+        citation handle.
+        """
         pass
 
     def replace_media_references(self, old_handle, new_handle):
+        """
+        Replace all references to the old media handle with those to the new
+        media handle.
+        """
         pass
 
 #-------------------------------------------------------------------------
@@ -224,6 +493,55 @@ class PrimaryObject(BasicPrimaryObject):
         """
         BasicPrimaryObject.__init__(self, source)
 
+    def serialize(self):
+        """
+        Convert the object to a serialized tuple of data.
+        """
+        raise NotImplementedError
+
+    def unserialize(self, data):
+        """
+        Convert a serialized tuple of data to an object.
+        """
+        raise NotImplementedError
+
+    def to_struct(self):
+        """
+        Convert the data held in this object to a structure (eg,
+        struct) that represents all the data elements.
+
+        This method is used to recursively convert the object into a
+        self-documenting form that can easily be used for various
+        purposes, including diffs and queries.
+
+        These structures may be primitive Python types (string,
+        integer, boolean, etc.) or complex Python types (lists,
+        tuples, or dicts). If the return type is a dict, then the keys
+        of the dict match the fieldname of the object. If the return
+        struct (or value of a dict key) is a list, then it is a list
+        of structs. Otherwise, the struct is just the value of the
+        attribute.
+
+        :returns: Returns a struct containing the data of the object.
+        """
+        raise NotImplementedError
+
+    def from_struct(self, struct):
+        """
+        Given a struct data representation, return an object of this type.
+
+        These structures may be primitive Python types (string,
+        integer, boolean, etc.) or complex Python types (lists,
+        tuples, or dicts). If the return type is a dict, then the keys
+        of the dict match the fieldname of the object. If the return
+        struct (or value of a dict key) is a list, then it is a list
+        of structs. Otherwise, the struct is just the value of the
+        attribute.
+
+        :returns: Returns an object of this type.
+        """
+        raise NotImplementedError
+
     def has_handle_reference(self, classname, handle):
         """
         Return True if the object has reference to a given handle of given
@@ -239,7 +557,7 @@ class PrimaryObject(BasicPrimaryObject):
         """
         if classname == 'Citation' and isinstance(self, CitationBase):
             return self.has_citation_reference(handle)
-        elif classname == 'MediaObject' and isinstance(self, MediaBase):
+        elif classname == 'Media' and isinstance(self, MediaBase):
             return self.has_media_reference(handle)
         else:
             return self._has_handle_reference(classname, handle)
@@ -255,7 +573,7 @@ class PrimaryObject(BasicPrimaryObject):
         """
         if classname == 'Citation' and isinstance(self, CitationBase):
             self.remove_citation_references(handle_list)
-        elif classname == 'MediaObject' and isinstance(self, MediaBase):
+        elif classname == 'Media' and isinstance(self, MediaBase):
             self.remove_media_references(handle_list)
         else:
             self._remove_handle_references(classname, handle_list)
@@ -273,7 +591,7 @@ class PrimaryObject(BasicPrimaryObject):
         """
         if classname == 'Citation' and isinstance(self, CitationBase):
             self.replace_citation_references(old_handle, new_handle)
-        elif classname == 'MediaObject' and isinstance(self, MediaBase):
+        elif classname == 'Media' and isinstance(self, MediaBase):
             self.replace_media_references(old_handle, new_handle)
         else:
             self._replace_handle_reference(classname, old_handle, new_handle)

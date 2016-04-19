@@ -621,7 +621,7 @@ class EditPerson(EditPrimary):
             if media_list:
                 media_ref = media_list[0]
                 object_handle = media_ref.get_reference_handle()
-                media_obj = self.db.get_object_from_handle(object_handle)
+                media_obj = self.db.get_media_from_handle(object_handle)
 
                 try:
                     EditMediaRef(self.dbstate, self.uistate, self.track,
@@ -645,7 +645,7 @@ class EditPerson(EditPrimary):
         self.imgmenu = Gtk.Menu()
         menu = self.imgmenu
         menu.set_title(_("Media Object"))
-        obj = self.db.get_object_from_handle(photo.get_reference_handle())
+        obj = self.db.get_media_from_handle(photo.get_reference_handle())
         if obj:
             add_menuitem(menu, _("View"), photo,
                                    self._popup_view_photo)
@@ -661,7 +661,7 @@ class EditPerson(EditPrimary):
         if media_list:
             photo = media_list[0]
             object_handle = photo.get_reference_handle()
-            ref_obj = self.db.get_object_from_handle(object_handle)
+            ref_obj = self.db.get_media_from_handle(object_handle)
             photo_path = media_path_full(self.db, ref_obj.get_path())
             open_file_with_default_application(photo_path)
 
@@ -673,7 +673,7 @@ class EditPerson(EditPrimary):
         if media_list:
             media_ref = media_list[0]
             object_handle = media_ref.get_reference_handle()
-            media_obj = self.db.get_object_from_handle(object_handle)
+            media_obj = self.db.get_media_from_handle(object_handle)
             EditMediaRef(self.dbstate, self.uistate, self.track,
                          media_obj, media_ref, self.load_photo)
 
@@ -769,10 +769,9 @@ class EditPerson(EditPrimary):
             f.set_child_ref_list(new_order)
 
         error = False
-        if not self.added:
-            original = self.db.get_person_from_handle(self.obj.handle)
+        if self.original:
             (female, male, unknown) = _select_gender[self.obj.get_gender()]
-            if male and original.get_gender() != Person.MALE:
+            if male and self.original.get_gender() != Person.MALE:
                 for tmp_handle in self.obj.get_family_handle_list():
                     temp_family = self.db.get_family_from_handle(tmp_handle)
                     if self.obj == temp_family.get_mother_handle():
@@ -781,7 +780,7 @@ class EditPerson(EditPrimary):
                         else:
                             temp_family.set_mother_handle(None)
                             temp_family.set_father_handle(self.obj)
-            elif female and original != Person.FEMALE:
+            elif female and self.original != Person.FEMALE:
                 for tmp_handle in self.obj.get_family_handle_list():
                     temp_family = self.db.get_family_from_handle(tmp_handle)
                     if self.obj == temp_family.get_father_handle():
@@ -790,7 +789,7 @@ class EditPerson(EditPrimary):
                         else:
                             temp_family.set_father_handle(None)
                             temp_family.set_mother_handle(self.obj)
-            elif unknown and original.get_gender() != Person.UNKNOWN:
+            elif unknown and self.original.get_gender() != Person.UNKNOWN:
                 for tmp_handle in self.obj.get_family_handle_list():
                     temp_family = self.db.get_family_from_handle(tmp_handle)
                     if self.obj == temp_family.get_father_handle():
@@ -871,7 +870,7 @@ class EditPerson(EditPrimary):
                         self.name_displayer.display(self.obj)
             trans.set_description(msg)
 
-        self.close()
+        self._do_close()
         if self.callback:
             self.callback(self.obj)
         self.callback = None
@@ -953,7 +952,7 @@ class EditPerson(EditPrimary):
         if media_list:
             ref = media_list[0]
             handle = ref.get_reference_handle()
-            obj = self.dbstate.db.get_object_from_handle(handle)
+            obj = self.dbstate.db.get_media_from_handle(handle)
             if obj is None :
                 #notify user of error
                 from ..dialog import RunDatabaseRepair

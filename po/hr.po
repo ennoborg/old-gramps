@@ -1663,6 +1663,9 @@ msgid "Missing Surname"
 msgstr "Nedostajuće prezime"
 
 #: ../gramps/gen/config.py:310 ../gramps/gen/config.py:312
+msgid "[Living]"
+msgstr "[Živuči]"
+
 msgid "Living"
 msgstr "Živuči"
 
@@ -27285,7 +27288,7 @@ msgid "Filtering_on|Inverse Repository"
 msgstr "inverzna spremišta"
 
 #: ../gramps/plugins/quickview/filterbyname.py:48
-msgid "Filtering_on|Inverse MediaObject"
+msgid "Filtering_on|Inverse Media"
 msgstr "inverzni mediji"
 
 #: ../gramps/plugins/quickview/filterbyname.py:49

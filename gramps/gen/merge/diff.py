@@ -28,7 +28,7 @@ from gramps.cli.user import User
 from ..dbstate import DbState
 from gramps.cli.grampscli import CLIManager
 from ..plug import BasePluginManager
-from gramps.plugins.database.dictionarydb import DictionaryDb
+from gramps.gen.db import make_database
 from ..const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 
@@ -84,11 +84,11 @@ def parse(string):
 
 def import_as_dict(filename, user=None):
     """
-    Import the filename into a DictionaryDb and return it.
+    Import the filename into a InMemoryDB and return it.
     """
     if user is None:
         user = User()
-    db = DictionaryDb()
+    db = make_database("inmemorydb")
     db.load(None)
     db.set_feature("skip-import-additions", True)
     dbstate = DbState()
@@ -190,14 +190,14 @@ def diff_dbs(db1, db2, user=None):
         for item in ['Person', 'Family', 'Source', 'Citation', 'Event', 'Media',
                      'Place', 'Repository', 'Note', 'Tag']:
             step()
-            handles1 = sorted([handle.decode('utf-8') for handle in db1._tables[item]["handles_func"]()])
-            handles2 = sorted([handle.decode('utf-8') for handle in db2._tables[item]["handles_func"]()])
+            handles1 = sorted([handle for handle in db1.get_table_func(item,"handles_func")()])
+            handles2 = sorted([handle for handle in db2.get_table_func(item,"handles_func")()])
             p1 = 0
             p2 = 0
             while p1 < len(handles1) and p2 < len(handles2):
                 if handles1[p1] == handles2[p2]: # in both
-                    item1 = db1._tables[item]["handle_func"](handles1[p1])
-                    item2 = db2._tables[item]["handle_func"](handles2[p2])
+                    item1 = db1.get_table_func(item,"handle_func")(handles1[p1])
+                    item2 = db2.get_table_func(item,"handle_func")(handles2[p2])
                     diff = diff_items(item, item1.to_struct(), item2.to_struct())
                     if diff:
                         diffs += [(item, item1, item2)]
@@ -205,19 +205,19 @@ def diff_dbs(db1, db2, user=None):
                     p1 += 1
                     p2 += 1
                 elif handles1[p1] < handles2[p2]: # p1 is mssing in p2
-                    item1 = db1._tables[item]["handle_func"](handles1[p1])
+                    item1 = db1.get_table_func(item,"handle_func")(handles1[p1])
                     missing_from_new += [(item, item1)]
                     p1 += 1
                 elif handles1[p1] > handles2[p2]: # p2 is mssing in p1
-                    item2 = db2._tables[item]["handle_func"](handles2[p2])
+                    item2 = db2.get_table_func(item,"handle_func")(handles2[p2])
                     missing_from_old += [(item, item2)]
                     p2 += 1
             while p1 < len(handles1):
-                item1 = db1._tables[item]["handle_func"](handles1[p1])
+                item1 = db1.get_table_func(item,"handle_func")(handles1[p1])
                 missing_from_new += [(item, item1)]
                 p1 += 1
             while p2 < len(handles2):
-                item2 = db2._tables[item]["handle_func"](handles2[p2])
+                item2 = db2.get_table_func(item,"handle_func")(handles2[p2])
                 missing_from_old += [(item, item2)]
                 p2 += 1
     return diffs, missing_from_old, missing_from_new
@@ -225,7 +225,7 @@ def diff_dbs(db1, db2, user=None):
 def diff_db_to_file(old_db, filename, user=None):
     if user is None:
         user = User()
-    # First, get data as a DictionaryDb
+    # First, get data as a InMemoryDB
     new_db = import_as_dict(filename, user, user)
     if new_db is not None:
         # Next get differences:

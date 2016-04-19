@@ -28,7 +28,7 @@ AttributeRootBase class for Gramps.
 # Gramps modules
 #
 #-------------------------------------------------------------------------
-from .attribute import Attribute
+from .attribute import Attribute, AttributeRoot
 from .srcattribute import SrcAttribute
 from .const import IDENTICAL, EQUAL
 
@@ -41,7 +41,7 @@ class AttributeRootBase(object):
     """
     Base class for attribute-aware objects.
     """
-    _CLASS = None
+    _CLASS = AttributeRoot
 
     def __init__(self, source=None):
         """
@@ -55,7 +55,7 @@ class AttributeRootBase(object):
         """
         if source:
             self.attribute_list = [self._CLASS(attribute)
-                                    for attribute in source.attribute_list]
+                                   for attribute in source.attribute_list]
         else:
             self.attribute_list = []
 

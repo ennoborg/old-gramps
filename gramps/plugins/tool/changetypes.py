@@ -127,7 +127,7 @@ class ChangeTypes(tool.BatchTool, ManagedWindow):
                            "{number_of} event records were modified.", modified
                           ).format(number_of=modified)
 
-        self.user.info(_('Change types'), msg, parent_window)
+        self.user.info(_('Change types'), msg, parent=parent_window)
         return (bool(modified),msg)
 
     def on_apply_clicked(self, obj):
@@ -140,7 +140,7 @@ class ChangeTypes(tool.BatchTool, ManagedWindow):
         the_type.set(self.auto2.get_child().get_text())
         self.options.handler.options_dict['totype'] = the_type.xml_str()
 
-        self.run_tool(self.window)
+        self.run_tool(self.parent_window)
 
         # Save options
         self.options.handler.save_options()

@@ -404,7 +404,6 @@ class GeoGraphyView(OsmGps, NavigationView):
 
         path = "%s%c%s" % ( config.get('geography.path'), os.sep, the_map )
         shutil.rmtree(path)
-        pass
 
     def add_specific_menu(self, menu, event, lat, lon):
         """
@@ -781,10 +780,13 @@ class GeoGraphyView(OsmGps, NavigationView):
         fnam = mnam = _("Unknown")
         if family_list:
             for family in family_list:
+                father = mother = None
                 handle = family.get_father_handle()
-                father = dbstate.db.get_person_from_handle(handle)
+                if handle:
+                    father = dbstate.db.get_person_from_handle(handle)
                 handle = family.get_mother_handle()
-                mother = dbstate.db.get_person_from_handle(handle)
+                if handle:
+                    mother = dbstate.db.get_person_from_handle(handle)
                 fnam = _nd.display(father) if father else _("Unknown")
                 mnam = _nd.display(mother) if mother else _("Unknown")
         return ( fnam, mnam )
@@ -802,7 +804,7 @@ class GeoGraphyView(OsmGps, NavigationView):
         if media_list:
             for media_ref in media_list:
                 object_handle = media_ref.get_reference_handle()
-                media_obj = self.dbstate.db.get_object_from_handle(object_handle)
+                media_obj = self.dbstate.db.get_media_from_handle(object_handle)
                 path = media_obj.get_path()
                 name, extension = os.path.splitext(path)
                 if extension == ".kml":
@@ -936,6 +938,7 @@ class GeoGraphyView(OsmGps, NavigationView):
         kml = Gtk.FileChooserDialog(
             _("Select a kml file used to add places"),
             action=Gtk.FileChooserAction.OPEN,
+            parent=self.uistate.window,
             buttons=(_('_Cancel'), Gtk.ResponseType.CANCEL,
                      _('_Apply'), Gtk.ResponseType.OK))
         mpath = HOME_DIR
@@ -1107,7 +1110,6 @@ class GeoGraphyView(OsmGps, NavigationView):
         else:
             config.set("geography.lock", True)
         self.lock = config.get("geography.lock")
-        pass
 
     def config_crosshair(self, client, cnxn_id, entry, data):
         """
@@ -1118,7 +1120,6 @@ class GeoGraphyView(OsmGps, NavigationView):
         else:
             config.set("geography.show_cross", True)
         self.set_crosshair(config.get("geography.show_cross"))
-        pass
 
     def specific_options(self, configdialog):
         """
@@ -1182,6 +1183,7 @@ class GeoGraphyView(OsmGps, NavigationView):
         f = Gtk.FileChooserDialog(
             _("Select tile cache directory for offline mode"),
             action=Gtk.FileChooserAction.SELECT_FOLDER,
+            parent=self.uistate.window,
             buttons=(_('_Cancel'),
                      Gtk.ResponseType.CANCEL,
                      _('_Apply'),

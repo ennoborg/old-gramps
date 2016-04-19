@@ -1221,6 +1221,9 @@ msgstr "Nom de famille manquant"
 
 #: ../gramps/gen/config.py:310
 #: ../gramps/gen/config.py:312
+msgid "[Living]"
+msgstr "[Vivant]"
+
 msgid "Living"
 msgstr "Vivant"
 
@@ -27150,7 +27153,7 @@ msgid "Filtering_on|Inverse Repository"
 msgstr "les dépôts non-présents"
 
 #: ../gramps/plugins/quickview/filterbyname.py:48
-msgid "Filtering_on|Inverse MediaObject"
+msgid "Filtering_on|Inverse Media"
 msgstr "les objets media non-présents"
 
 #: ../gramps/plugins/quickview/filterbyname.py:49

@@ -78,6 +78,8 @@ gramps/gen/filters/_searchfilter.py
 #
 gramps/gen/filters/rules/_hastextmatchingregexpof.py
 gramps/gen/filters/rules/__init__.py
+gramps/gen/filters/rules/test/person_rules_test.py
+gramps/gen/filters/rules/test/family_rules_test.py
 #
 # gen.filters.rules.person package
 #
@@ -148,7 +150,6 @@ gramps/gen/lib/place.py
 gramps/gen/lib/placebase.py
 gramps/gen/lib/primaryobj.py
 gramps/gen/lib/privacybase.py
-gramps/gen/lib/privsrcnote.py
 gramps/gen/lib/refbase.py
 gramps/gen/lib/repo.py
 gramps/gen/lib/reporef.py
@@ -156,7 +157,6 @@ gramps/gen/lib/researcher.py
 gramps/gen/lib/secondaryobj.py
 gramps/gen/lib/src.py
 gramps/gen/lib/srcbase.py
-gramps/gen/lib/srcnote.py
 gramps/gen/lib/srcref.py
 gramps/gen/lib/styledtext.py
 gramps/gen/lib/styledtexttag.py
@@ -169,7 +169,6 @@ gramps/gen/lib/test/grampstype_test.py
 gramps/gen/lib/test/merge_test.py
 gramps/gen/lib/url.py
 gramps/gen/lib/urlbase.py
-gramps/gen/lib/witness.py
 #
 # gen.merge package
 #
@@ -377,20 +376,6 @@ gramps/gui/widgets/validatedcomboentry.py
 gramps/gui/widgets/valueaction.py
 gramps/gui/widgets/valuetoolitem.py
 #
-# gui qt (do not need translation yet)
-#
-gramps/guiQML/__init__.py
-gramps/guiQML/qmlwidgets/TextButton.qml
-gramps/guiQML/qmlwidgets/TopBar.qml
-gramps/guiQML/questiondialog.py
-gramps/guiQML/viewmanager.py
-gramps/guiQML/views/centralview.py
-gramps/guiQML/views/centralview.qml
-gramps/guiQML/views/dbman.qml
-gramps/guiQML/views/__init__.py
-gramps/guiQML/views/peopleview.qml
-gramps/guiQML/views/personview.py
-#
 # plugins .gpr.py
 #
 gramps/plugins/__init__.py
@@ -514,21 +499,6 @@ gramps/test/test/gedread_util_test.py
 gramps/test/test/test_util_test.py
 gramps/test/test_util.py
 gramps/test/utils_test.py
-#
-#   webapp
-#
-gramps/webapp/connection.py
-gramps/webapp/context.py
-gramps/webapp/dbdjango.py
-gramps/webapp/grampsdb/admin.py
-gramps/webapp/grampsdb/forms.py
-gramps/webapp/grampsdb/__init__.py
-gramps/webapp/grampsdb/models.py
-gramps/webapp/grampsdb/profile.py
-gramps/webapp/grampsdb/templatetags/__init__.py
-gramps/webapp/grampsdb/templatetags/my_tags.py
-gramps/webapp/grampsdb/view/__init__.py
-gramps/webapp/grampsdb/view/png.py
 #
 #   Glade files
 #

@@ -1780,6 +1780,9 @@ msgid "Missing Surname"
 msgstr "Brakujące nazwisko"
 
 #: ../gramps/gen/config.py:310 ../gramps/gen/config.py:312
+msgid "[Living]"
+msgstr "[Żyjący]"
+
 msgid "Living"
 msgstr "Żyjący"
 
@@ -2185,7 +2188,7 @@ msgstr "Lut"
 
 #: ../gramps/gen/datehandler/_datestrings.py:84
 msgid "localized lexeme inflections - short month form||Mar"
-msgstr "mars"
+msgstr "Mar"
 
 #: ../gramps/gen/datehandler/_datestrings.py:85
 msgid "localized lexeme inflections - short month form||Apr"
@@ -28027,7 +28030,7 @@ msgid "Filtering_on|Inverse Repository"
 msgstr "odwróć magazyny"
 
 #: ../gramps/plugins/quickview/filterbyname.py:48
-msgid "Filtering_on|Inverse MediaObject"
+msgid "Filtering_on|Inverse Media"
 msgstr "odwróć obiekty medialne"
 
 #: ../gramps/plugins/quickview/filterbyname.py:49

@@ -1769,6 +1769,9 @@ msgid "Missing Surname"
 msgstr "Cognome mancante"
 
 #: ../gramps/gen/config.py:310 ../gramps/gen/config.py:312
+msgid "[Living]"
+msgstr "[In vita]"
+
 msgid "Living"
 msgstr "In vita"
 
@@ -27904,7 +27907,7 @@ msgid "Filtering_on|Inverse Repository"
 msgstr "depositi non presenti"
 
 #: ../gramps/plugins/quickview/filterbyname.py:48
-msgid "Filtering_on|Inverse MediaObject"
+msgid "Filtering_on|Inverse Media"
 msgstr "oggetti multimediali non presenti"
 
 #: ../gramps/plugins/quickview/filterbyname.py:49

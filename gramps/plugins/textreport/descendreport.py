@@ -225,7 +225,7 @@ class Printinfo():
         else:
             self.doc.start_paragraph("DR-Spouse%d" % min(level, 32))
             self.doc.write_text(
-                    self._("sp. %(spouse)s") % {'spouse':_('Unknown')})
+                    self._("sp. %(spouse)s") % {'spouse':self._('Unknown')})
             self.doc.end_paragraph()
 
     def print_reference(self, level, person, display_num):
@@ -328,13 +328,19 @@ class DescendantReport(Report):
         name_format   - Preferred format to display names
         dups          - Whether to include duplicate descendant trees
         incl_private  - Whether to include private data
+        living_people - How to handle living people
+        years_past_death - Consider as living this many years after death
         """
 
         Report.__init__(self, database, options, user)
 
         menu = options.menu
 
+        lang = menu.get_option_by_name('trans').get_value()
+        self._locale = self.set_locale(lang)
+
         stdoptions.run_private_data_option(self, menu)
+        stdoptions.run_living_people_option(self, menu, self._locale)
 
         self.max_generations = menu.get_option_by_name('gen').get_value()
         pid = menu.get_option_by_name('pid').get_value()
@@ -343,9 +349,6 @@ class DescendantReport(Report):
             raise ReportError(_("Person %s is not in the Database") % pid )
 
         sort = Sort(self.database)
-
-        lang = menu.get_option_by_name('trans').get_value()
-        self._locale = self.set_locale(lang)
 
         #Initialize the Printinfo class
         self._showdups = menu.get_option_by_name('dups').get_value()
@@ -404,6 +407,8 @@ class DescendantOptions(MenuReportOptions):
         stdoptions.add_name_format_option(menu, category_name)
 
         stdoptions.add_private_data_option(menu, category_name)
+
+        stdoptions.add_living_people_option(menu, category_name)
 
         numbering = EnumeratedListOption(_("Numbering system"), "Simple")
         numbering.set_items([

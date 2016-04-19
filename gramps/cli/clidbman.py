@@ -33,6 +33,7 @@ creating, and deleting of databases.
 import re
 import os
 import sys
+import ast
 import time
 from urllib.parse import urlparse
 from urllib.request import urlopen, url2pathname
@@ -158,9 +159,9 @@ class CLIDbManager(object):
         if not self.is_locked(dirpath):
             try:
                 database = self.dbstate.make_database(dbid)
-                database.load(dirpath, None)
+                database.load(dirpath, None, update=False)
                 retval = database.get_summary()
-                database.close()
+                database.close(update=False)
             except Exception as msg:
                 retval = {_("Unavailable"): str(msg)[:74] + "..."}
         else:
@@ -173,24 +174,26 @@ class CLIDbManager(object):
                    })
         return retval
 
-    def print_family_tree_summaries(self):
+    def print_family_tree_summaries(self, database_names=None):
         """
         Prints a detailed list of the known family trees.
         """
         print(_('Gramps Family Trees:'))
         for item in self.current_names:
             (name, dirpath, path_name, last,
-             tval, enable, stock_id) = item
-            summary = self.get_dbdir_summary(dirpath, name)
-            print(_("Family Tree \"%s\":") % summary[_("Family Tree")])
-            for item in sorted(summary):
-                if item != "Family Tree":
-                    # translators: needed for French, ignore otherwise
-                    print(_("   %(item)s: %(summary)s") % {
-                        'item' : item,
-                        'summary' : summary[item] } )
+             tval, enable, stock_id, backend_type, version) = item
+            if (database_names is None or 
+                any([re.match(dbname, name) for dbname in database_names])):
+                summary = self.get_dbdir_summary(dirpath, name)
+                print(_("Family Tree \"%s\":") % summary[_("Family Tree")])
+                for item in sorted(summary):
+                    if item != "Family Tree":
+                        # translators: needed for French, ignore otherwise
+                        print(_("   %(item)s: %(summary)s") % {
+                            'item' : item,
+                            'summary' : summary[item] } )
 
-    def family_tree_summary(self):
+    def family_tree_summary(self, database_names=None):
         """
         Return a list of dictionaries of the known family trees.
         """
@@ -198,9 +201,11 @@ class CLIDbManager(object):
         summary_list = []
         for item in self.current_names:
             (name, dirpath, path_name, last,
-             tval, enable, stock_id) = item
-            retval = self.get_dbdir_summary(dirpath, name)
-            summary_list.append( retval )
+             tval, enable, stock_id, backend_type, version) = item
+            if (database_names is None or 
+                any([re.match(dbname, name) for dbname in database_names])):
+                retval = self.get_dbdir_summary(dirpath, name)
+                summary_list.append( retval )
         return summary_list
 
     def _populate_cli(self):
@@ -216,6 +221,18 @@ class CLIDbManager(object):
             for dpath in os.listdir(dbdir):
                 dirpath = os.path.join(dbdir, dpath)
                 path_name = os.path.join(dirpath, NAME_FILE)
+                try:
+                    backend_type = open(os.path.join(dirpath, "database.txt")).read()
+                except:
+                    backend_type = "bsddb"
+                try:
+                    version = open(os.path.join(dirpath, "bdbversion.txt")).read()
+                except:
+                    version = "(0, 0, 0)"
+                try:
+                    version = ast.literal_eval(version)
+                except:
+                    version = (0, 0, 0)
                 if os.path.isfile(path_name):
                     file = open(path_name, 'r', encoding='utf8')
                     name = file.readline().strip()
@@ -227,10 +244,10 @@ class CLIDbManager(object):
 
                     if (stock_id == 'gramps-lock'):
                         last = find_locker_name(dirpath)
-
+                        
                     self.current_names.append(
                         (name, os.path.join(dbdir, dpath), path_name,
-                         last, tval, enable, stock_id))
+                         last, tval, enable, stock_id, backend_type, version))
 
         self.current_names.sort()
 
@@ -290,7 +307,7 @@ class CLIDbManager(object):
         (tval, last) = time_val(new_path)
 
         self.current_names.append((title, new_path, path_name,
-                                   last, tval, False, ""))
+                                   last, tval, False, "", dbid))
         return new_path, title
 
     def _create_new_db(self, title=None, dbid=None):
@@ -405,7 +422,7 @@ class CLIDbManager(object):
             if user is None or user.prompt(
                     _('Remove family tree warning'),
                     _('Are you sure you want to remove the family tree named\n"%s"?' % name),
-                    _('Yes'), _('No'), None):
+                    _('yes'), _('no'), default_label=_('no')):
                 try:
                     for (top, dirs, files) in os.walk(directory):
                         for filename in files:

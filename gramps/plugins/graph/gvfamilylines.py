@@ -181,8 +181,11 @@ class FamilyLinesOptions(MenuReportOptions):
         add_option('maxchildren', self.max_children)
 
         # --------------------
-        add_option = partial(menu.add_option, _('Include'))
+        category_name = _('Include')
+        add_option = partial(menu.add_option, category_name)
         # --------------------
+
+        stdoptions.add_living_people_option(menu, category_name)
 
         include_id = EnumeratedListOption(_('Include Gramps ID'), 0)
         include_id.add_item(0, _('Do not include'))
@@ -302,6 +305,8 @@ class FamilyLinesReport(Report):
         name_format  - Preferred format to display names
         incl_private - Whether to include private data
         incid        - Whether to include IDs.
+        living_people - How to handle living people
+        years_past_death - Consider as living this many years after death
         """
         Report.__init__(self, database, options, user)
 
@@ -309,7 +314,11 @@ class FamilyLinesReport(Report):
         get_option_by_name = menu.get_option_by_name
         get_value = lambda name: get_option_by_name(name).get_value()
 
+        lang = menu.get_option_by_name('trans').get_value()
+        self._locale = self.set_locale(lang)
+
         stdoptions.run_private_data_option(self, menu)
+        stdoptions.run_living_people_option(self, menu, self._locale)
         self._db = self.database
 
         # initialize several convenient variables
@@ -353,9 +362,6 @@ class FamilyLinesReport(Report):
             if person:
                 #option can be from another family tree, so person can be None
                 self._interest_set.add(person.get_handle())
-
-        lang = menu.get_option_by_name('trans').get_value()
-        self._locale = self.set_locale(lang)
 
         stdoptions.run_name_format_option(self, menu)
 
@@ -486,18 +492,19 @@ class FamilyLinesReport(Report):
                 for family_handle in person.get_parent_family_handle_list():
                     family = self._db.get_family_from_handle(family_handle)
 
-                    father = self._db.get_person_from_handle(
-                                             family.get_father_handle())
-                    mother = self._db.get_person_from_handle(
-                                             family.get_mother_handle())
-                    if father:
-                        ancestorsNotYetProcessed.add(
-                                         family.get_father_handle())
-                        self._families.add(family_handle)
-                    if mother:
-                        ancestorsNotYetProcessed.add(
-                                         family.get_mother_handle())
-                        self._families.add(family_handle)
+                    father_handle = family.get_father_handle()
+                    if father_handle:
+                        father = self._db.get_person_from_handle(father_handle)
+                        if father:
+                            ancestorsNotYetProcessed.add(father_handle)
+                            self._families.add(family_handle)
+
+                    mother_handle = family.get_mother_handle()
+                    if mother_handle:
+                        mother = self._db.get_person_from_handle(mother_handle)
+                        if mother:
+                            ancestorsNotYetProcessed.add(mother_handle)
+                            self._families.add(family_handle)
 
     def removeUninterestingParents(self):
         # start with all the people we've already identified
@@ -750,16 +757,7 @@ class FamilyLinesReport(Report):
             # get birth place (one of:  city, state, or country) we can use
             birthplace = None
             if bth_event and self._incplaces:
-                place = self._db.get_place_from_handle(
-                                             bth_event.get_place_handle())
-                if place:
-                    location = get_main_location(self._db, place)
-                    if location.get(PlaceType.CITY):
-                        birthplace = location.get(PlaceType.CITY)
-                    elif location.get(PlaceType.STATE):
-                        birthplace = location.get(PlaceType.STATE)
-                    elif location.get(PlaceType.COUNTRY):
-                        birthplace = location.get(PlaceType.COUNTRY)
+                birthplace = self.get_event_place(bth_event)
 
             # see if we have a deceased date we can use
             deathStr = None
@@ -773,16 +771,7 @@ class FamilyLinesReport(Report):
             # get death place (one of:  city, state, or country) we can use
             deathplace = None
             if dth_event and self._incplaces:
-                place = self._db.get_place_from_handle(
-                                             dth_event.get_place_handle())
-                if place:
-                    location = get_main_location(self._db, place)
-                    if location.get(PlaceType.CITY):
-                        deathplace = location.get(PlaceType.CITY)
-                    elif location.get(PlaceType.STATE):
-                        deathplace = location.get(PlaceType.STATE)
-                    elif location.get(PlaceType.COUNTRY):
-                        deathplace = location.get(PlaceType.COUNTRY)
+                deathplace = self.get_event_place(dth_event)
 
             # see if we have an image to use for this person
             imagePath = None
@@ -790,7 +779,7 @@ class FamilyLinesReport(Report):
                 mediaList = person.get_media_list()
                 if len(mediaList) > 0:
                     mediaHandle = mediaList[0].get_reference_handle()
-                    media = self._db.get_object_from_handle(mediaHandle)
+                    media = self._db.get_media_from_handle(mediaHandle)
                     mediaMimeType = media.get_mime_type()
                     if mediaMimeType[0:5] == "image":
                         imagePath = get_thumbnail_path(
@@ -902,16 +891,7 @@ class FamilyLinesReport(Report):
                                 weddingDate = self._get_date(date)
                         # get the wedding location
                         if self._incplaces:
-                            place = self._db.get_place_from_handle(
-                                                   event.get_place_handle())
-                            if place:
-                                location = get_main_location(self._db, place)
-                                if location.get(PlaceType.CITY):
-                                    weddingPlace = location.get(PlaceType.CITY)
-                                elif location.get(PlaceType.STATE):
-                                    weddingPlace = location.get(PlaceType.STATE)
-                                elif location.get(PlaceType.COUNTRY):
-                                    weddingPlace = location.get(PlaceType.COUNTRY)
+                            weddingPlace = self.get_event_place(event)
                         break
 
             # figure out the number of children (if any)
@@ -1012,3 +992,18 @@ class FamilyLinesReport(Report):
                     child = self._db.get_person_from_handle(childRef.ref)
                     comment = "child:  %s" % child.get_primary_name().get_regular_name()
                     self.doc.add_link(fgid, child.get_gramps_id(), comment=comment)
+
+    def get_event_place(self, event):
+        place_text = None
+        place_handle = event.get_place_handle()
+        if place_handle:
+            place = self._db.get_place_from_handle(place_handle)
+            if place:
+                location = get_main_location(self._db, place)
+                if location.get(PlaceType.CITY):
+                    place_text = location.get(PlaceType.CITY)
+                elif location.get(PlaceType.STATE):
+                    place_text = location.get(PlaceType.STATE)
+                elif location.get(PlaceType.COUNTRY):
+                    place_text = location.get(PlaceType.COUNTRY)
+        return place_text

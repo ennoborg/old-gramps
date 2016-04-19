@@ -323,7 +323,7 @@ class EditCitation(EditPrimary):
 
         if self.callback:
             self.callback(self.obj.get_handle())
-        self.close()
+        self._do_close()
 
     def data_has_changed(self):
         """
@@ -388,9 +388,9 @@ class DeleteCitationQuery(object):
                 self.db.commit_source(source, trans)
 
             for handle in media_list:
-                media = self.db.get_object_from_handle(handle)
+                media = self.db.get_media_from_handle(handle)
                 media.remove_citation_references(ctn_handle_list)
-                self.db.commit_media_object(media, trans)
+                self.db.commit_media(media, trans)
 
             for handle in repo_list:
                 repo = self.db.get_repository_from_handle(handle)

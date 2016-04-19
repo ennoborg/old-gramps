@@ -43,8 +43,40 @@ from subprocess import Popen, PIPE
 #
 #-------------------------------------------------------------------------
 from .gen.const import APP_GRAMPS, USER_DIRLIST, HOME_DIR
+from .gen.constfunc import mac
 from .version import VERSION_TUPLE
 from .gen.constfunc import win, get_env_var
+
+#-------------------------------------------------------------------------
+#
+# Instantiate Localization
+#
+#-------------------------------------------------------------------------
+
+from .gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
+
+#-------------------------------------------------------------------------
+#
+# Ensure that output is encoded correctly to stdout and
+# stderr. This is much less cumbersome and error-prone than
+# encoding individual outputs:
+#
+#-------------------------------------------------------------------------
+
+try:
+    # On Darwin sys.getdefaultencoding() is correct, on Win32 it's
+    # sys.stdout.enoding, and on Linux they're both right.
+    if mac():
+        _encoding =  sys.getdefaultencoding()
+    else:
+        _encoding = sys.stdout.encoding
+except:
+    _encoding = "UTF-8"
+sys.stdout = open(sys.stdout.fileno(), mode='w', encoding=_encoding,
+                  buffering=1, errors='backslashreplace')
+sys.stderr = open(sys.stderr.fileno(), mode='w', encoding=_encoding,
+                  buffering=1, errors='backslashreplace')
 
 #-------------------------------------------------------------------------
 #
@@ -110,14 +142,6 @@ sys.excepthook = exc_hook
 
 from .gen.mime import mime_type_is_defined
 
-#-------------------------------------------------------------------------
-#
-# Instantiate Localization
-#
-#-------------------------------------------------------------------------
-
-from .gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
@@ -288,7 +312,10 @@ def show_settings():
 
     try:
         if win():
-            gsversion_str = Popen(['gswin32c', '--version'], stdout=PIPE).communicate(input=None)[0]
+            try:
+                gsversion_str = Popen(['gswin32c', '--version'], stdout=PIPE).communicate(input=None)[0]
+            except:
+                gsversion_str = Popen(['gswin64c', '--version'], stdout=PIPE).communicate(input=None)[0]
         else:
             gsversion_str = Popen(['gs', '--version'], stdout=PIPE).communicate(input=None)[0]
         if isinstance(gsversion_str, bytes) and sys.stdin.encoding:
@@ -395,26 +422,25 @@ def run():
 
     if argpars.need_gui():
         LOG.debug("A GUI is needed, set it up")
-        if "--qml" in sys.argv:
-            from .guiQML.grampsqml import startqml
-            startqml(error, argpars)
-        else:
-            try:
-                from .gui.grampsgui import startgtkloop
+        try:
+            from .gui.grampsgui import startgtkloop
             # no DISPLAY is a RuntimeError in an older pygtk (e.g. F14's 2.17)
-            except RuntimeError as msg:
-                error += [(_("Configuration error:"), str(msg))]
-                return error
-            startgtkloop(error, argpars)
+        except RuntimeError as msg:
+            error += [(_("Configuration error:"), str(msg))]
+            return error
+        startgtkloop(error, argpars)
     else:
         # CLI use of Gramps
-
         argpars.print_help()
         argpars.print_usage()
         from .cli.grampscli import startcli
         startcli(error, argpars)
 
 def main():
+    if 'GRAMPS_RESOURCES' not in os.environ:
+        resource_path, filename = os.path.split(os.path.abspath(__file__))
+        resource_path, dirname = os.path.split(resource_path)
+        os.environ['GRAMPS_RESOURCES'] = resource_path
     errors = run()
     if errors and isinstance(errors, list):
         for error in errors:

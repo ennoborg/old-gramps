@@ -46,7 +46,7 @@ from .handle import Handle
 #
 #-------------------------------------------------------------------------
 class EventRef(PrivacyBase, NoteBase, AttributeBase, RefBase,
-        IndirectCitationBase, SecondaryObject):
+               IndirectCitationBase, SecondaryObject):
     """
     Event reference class.
 
@@ -63,7 +63,7 @@ class EventRef(PrivacyBase, NoteBase, AttributeBase, RefBase,
         AttributeBase.__init__(self, source)
         RefBase.__init__(self, source)
         if source:
-            self.__role = EventRoleType(source.__role)
+            self.__role = EventRoleType(source.role)
         else:
             self.__role = EventRoleType()
 
@@ -109,7 +109,31 @@ class EventRef(PrivacyBase, NoteBase, AttributeBase, RefBase,
             }
 
     @classmethod
+    def get_schema(cls):
+        """
+        Returns the schema for EventRef.
+
+        :returns: Returns a dict containing the fields to types.
+        :rtype: dict
+        """
+        from .attribute import Attribute
+        return {
+            "private": bool,
+            "note_list": [Handle("Note", "NOTE-HANDLE")],
+            "attribute_list": [Attribute],
+            "ref": Handle("Event", "EVENT-HANDLE"),
+            "role": EventRoleType,
+        }
+
+    @classmethod
     def get_labels(cls, _):
+        """
+        Given a translation function, returns the labels for
+        each field of this object.
+
+        :returns: Returns a dict containing the fields to labels.
+        :rtype: dict
+        """
         return {
             "private": _("Private"),
             "note_list": _("Notes"),
@@ -252,4 +276,3 @@ class EventRef(PrivacyBase, NoteBase, AttributeBase, RefBase,
         """
         self.__role.set(role)
     role = property(get_role, set_role, None, 'Returns or sets role property')
-

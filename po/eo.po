@@ -1752,6 +1752,9 @@ msgid "Missing Surname"
 msgstr "Mankas Familinomo"
 
 #: ../gramps/gen/config.py:310 ../gramps/gen/config.py:312
+msgid "[Living]"
+msgstr "[Vivanta]"
+
 msgid "Living"
 msgstr "Vivanta"
 
@@ -27890,7 +27893,7 @@ msgid "Filtering_on|Inverse Repository"
 msgstr "Deponejoj mankantaj"
 
 #: ../gramps/plugins/quickview/filterbyname.py:48
-msgid "Filtering_on|Inverse MediaObject"
+msgid "Filtering_on|Inverse Media"
 msgstr "Aŭdvidaĵoj mankantaj"
 
 #: ../gramps/plugins/quickview/filterbyname.py:49

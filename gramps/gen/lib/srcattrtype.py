@@ -24,47 +24,25 @@ Provide the different Source Attribute Types for Gramps.
 
 #-------------------------------------------------------------------------
 #
-# Standard Python modules
-#
-#-------------------------------------------------------------------------
-from ..const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
-
-#-------------------------------------------------------------------------
-#
 # Gramps modules
 #
 #-------------------------------------------------------------------------
 from .grampstype import GrampsType
+from ..const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 
 class SrcAttributeType(GrampsType):
 
-    UNKNOWN     = -1
-    CUSTOM      = 0
+    UNKNOWN = -1
+    CUSTOM = 0
 
     _CUSTOM = CUSTOM
     _DEFAULT = UNKNOWN
 
     _DATAMAP = [
-        (UNKNOWN     , _("Unknown"), "Unknown"),
-        (CUSTOM      , _("Custom"), "Custom"),
+        (UNKNOWN, _("Unknown"), "Unknown"),
+        (CUSTOM, _("Custom"), "Custom"),
         ]
 
     def __init__(self, value=None):
         GrampsType.__init__(self, value)
-
-    def get_ignore_list(self, exception=None):
-        """
-        Return a list of the types to ignore and not include in default lists.
-
-        Exception is a sublist of types that may not be ignored
-
-        :param exception: list of integer values corresponding with types that
-                          have to be excluded from the ignore list
-        :type exception: list
-        :returns: list of integers corresponding with the types to ignore when
-                  showing a list of different types
-        :rtype: list
-
-        """
-        return []

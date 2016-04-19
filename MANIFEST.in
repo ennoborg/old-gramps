@@ -22,11 +22,9 @@ recursive-include windows *
 
 # Remove files created in the build
 exclude data/tips.xml
-exclude gramps/plugins/lib/holidays.xml
+exclude data/holidays.xml
 exclude po/.intltool-merge-cache
 global-exclude *.pyc
 global-exclude *.pyo
 
 # Remove directories which should not be included in the distribution
-prune gramps/guiQML
-#prune gramps/webapp

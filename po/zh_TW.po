@@ -1578,6 +1578,9 @@ msgid "Missing Surname"
 msgstr "缺失的姓"
 
 #: ../gramps/gen/config.py:310 ../gramps/gen/config.py:312
+msgid "[Living]"
+msgstr "[健在]"
+
 msgid "Living"
 msgstr "健在"
 
@@ -27674,7 +27677,7 @@ msgstr "基於獨特的媒體資料進行篩選"
 
 #: ../gramps/plugins/quickview/filterbyname.py:48
 #, fuzzy
-msgid "Filtering_on|Inverse MediaObject"
+msgid "Filtering_on|Inverse Media"
 msgstr "基於獨特的媒體資料進行篩選"
 
 #: ../gramps/plugins/quickview/filterbyname.py:49

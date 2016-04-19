@@ -41,7 +41,7 @@ from .handle import Handle
 
 #-------------------------------------------------------------------------
 #
-# MediaObject References for Person/Place/Source
+# Media References for Person/Place/Source
 #
 #-------------------------------------------------------------------------
 class MediaRef(SecondaryObject, PrivacyBase, CitationBase, NoteBase, RefBase,
@@ -96,7 +96,27 @@ class MediaRef(SecondaryObject, PrivacyBase, CitationBase, NoteBase, RefBase,
                 "note_list": NoteBase.to_struct(self),
                 "attribute_list": AttributeBase.to_struct(self),
                 "ref": Handle("Media", self.ref),
-                "rect": self.rect if self.rect != (0,0,0,0) else None}
+                "rect": self.rect if self.rect != (0, 0, 0, 0) else None}
+
+    @classmethod
+    def get_schema(cls):
+        """
+        Returns the schema for MediaRef.
+
+        :returns: Returns a dict containing the fields to types.
+        :rtype: dict
+        """
+        from .attribute import Attribute
+        from .citation import Citation
+        from .note import Note
+        return {
+            "private": bool,
+            "citation_list": [Citation],
+            "note_list": [Note],
+            "attribute_list": [Attribute],
+            "ref": Handle("Media", "MEDIA-HANDLE"),
+            "rect": tuple, # or None if (0,0,0,0)
+        }
 
     @classmethod
     def from_struct(cls, struct):
@@ -107,9 +127,12 @@ class MediaRef(SecondaryObject, PrivacyBase, CitationBase, NoteBase, RefBase,
         """
         default = MediaRef()
         return (PrivacyBase.from_struct(struct.get("private", default.private)),
-                CitationBase.from_struct(struct.get("citation_list", default.citation_list)),
-                NoteBase.from_struct(struct.get("note_list", default.note_list)),
-                AttributeBase.from_struct(struct.get("attribute_list", default.attribute_list)),
+                CitationBase.from_struct(struct.get("citation_list",
+                                                    default.citation_list)),
+                NoteBase.from_struct(struct.get("note_list",
+                                                default.note_list)),
+                AttributeBase.from_struct(struct.get("attribute_list",
+                                                     default.attribute_list)),
                 RefBase.from_struct(struct.get("ref", default.ref)),
                 struct.get("rect", default.rect))
 
@@ -117,7 +140,8 @@ class MediaRef(SecondaryObject, PrivacyBase, CitationBase, NoteBase, RefBase,
         """
         Convert a serialized tuple of data to an object.
         """
-        (privacy, citation_list, note_list,attribute_list,ref,self.rect) = data
+        (privacy, citation_list, note_list, attribute_list, ref,
+         self.rect) = data
         PrivacyBase.unserialize(self, privacy)
         CitationBase.unserialize(self, citation_list)
         NoteBase.unserialize(self, note_list)
@@ -165,7 +189,7 @@ class MediaRef(SecondaryObject, PrivacyBase, CitationBase, NoteBase, RefBase,
         ret = self.get_referenced_note_handles() + \
                 self.get_referenced_citation_handles()
         if self.ref:
-            ret += [('MediaObject', self.ref)]
+            ret += [('Media', self.ref)]
         return ret
 
     def get_handle_referents(self):

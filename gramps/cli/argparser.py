@@ -62,14 +62,14 @@ Application options
   -C, --create=FAMILY_TREE               Create on open if new Family Tree
   -i, --import=FILENAME                  Import file
   -e, --export=FILENAME                  Export file
-  -r, --remove=FAMILY_TREE_PATTERN       Remove matching Family Tree(s)
+  -r, --remove=FAMILY_TREE_PATTERN       Remove matching Family Tree(s) (use regular expressions)
   -f, --format=FORMAT                    Specify Family Tree format
   -a, --action=ACTION                    Specify action
   -p, --options=OPTIONS_STRING           Specify options
   -d, --debug=LOGGER_NAME                Enable debug logs
-  -l                                     List Family Trees
-  -L                                     List Family Trees in Detail
-  -t                                     List Family Trees, tab delimited
+  -l [FAMILY_TREE_PATTERN...]            List Family Trees
+  -L [FAMILY_TREE_PATTERN...]            List Family Trees in Detail
+  -t [FAMILY_TREE_PATTERN...]            List Family Trees, tab delimited
   -u, --force-unlock                     Force unlock of Family Tree
   -s, --show                             Show config settings
   -c, --config=[config.setting[:value]]  Set config setting(s) and start Gramps
@@ -143,9 +143,9 @@ class ArgParser(object):
     -a, --action=ACTION             Specify action
     -p, --options=OPTIONS_STRING    Specify options
     -d, --debug=LOGGER_NAME         Enable debug logs
-    -l                              List Family Trees
-    -L                              List Family Trees in Detail
-    -t                              List Family Trees, tab delimited
+    -l [FAMILY_TREE...]             List Family Trees
+    -L [FAMILY_TREE...]             List Family Trees in Detail
+    -t [FAMILY_TREE...]             List Family Trees, tab delimited
     -u, --force-unlock              Force unlock of Family Tree
     -s, --show                      Show config settings
     -c, --config=SETTINGS           Set config setting(s) and start Gramps
@@ -201,6 +201,7 @@ class ArgParser(object):
         self.list = False
         self.list_more = False
         self.list_table = False
+        self.database_names = None
         self.help = False
         self.usage = False
         self.force_unlock = False
@@ -240,6 +241,14 @@ class ArgParser(object):
                         "Type gramps --help for an overview of commands, or "
                         "read the manual pages.") % cliargs)]
             return
+
+        # Some args can work on a list of databases:
+        if leftargs:
+            for opt_ix in range(len(options)):
+                option, value = options[opt_ix]
+                if option in ['-L', '-l', '-t']:
+                    self.database_names = leftargs
+                    leftargs = []
 
         if leftargs:
             # if there were an argument without option,

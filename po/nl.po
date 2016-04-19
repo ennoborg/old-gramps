@@ -1545,6 +1545,9 @@ msgid "Missing Surname"
 msgstr "Ontbrekende achternaam"
 
 #: ../gramps/gen/config.py:310 ../gramps/gen/config.py:312
+msgid "[Living]"
+msgstr "[Levend]"
+
 msgid "Living"
 msgstr "Levend"
 
@@ -25258,7 +25261,7 @@ msgid "Filtering_on|Inverse Repository"
 msgstr "Omgekeerde bibliotheek"
 
 #: ../gramps/plugins/quickview/filterbyname.py:48
-msgid "Filtering_on|Inverse MediaObject"
+msgid "Filtering_on|Inverse Media"
 msgstr "Omgekeerd media-object"
 
 #: ../gramps/plugins/quickview/filterbyname.py:49

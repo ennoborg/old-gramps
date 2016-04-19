@@ -1,4 +1,4 @@
-The Gramps Project ( https://gramps-project.org ) [![Build Status](https://travis-ci.org/gramps-project/gramps.svg?branch=master)](https://travis-ci.org/gramps-project/gramps)
+The Gramps Project ( https://gramps-project.org ) [![Build Status](https://travis-ci.org/gramps-project/gramps.svg?branch=master)](https://travis-ci.org/gramps-project/gramps)[![codecov.io](https://codecov.io/github/gramps-project/gramps/coverage.svg?branch=master)](https://codecov.io/github/gramps-project/gramps?branch=master)
 ===================
 We strive to produce a genealogy program that is both intuitive for hobbyists and feature-complete for professional genealogists.
 
@@ -105,8 +105,6 @@ Optional packages required by Third-party Addons
 For more information about Addons see:  https://gramps-project.org/wiki/index.php?title=Third-party_Plugins
 
 Prerequistes required for the following Addons to work:
-
-* **Django Exporter/Importer** - Requires:Django 1.7 or 1.8+ ( https://gramps-project.org/wiki/index.php?title=GEPS_013:_Gramps_Webapp#Getting_Started_with_Gramps_in_Django )
 
 * **Family Sheet** - Requires: PIL (Python Imaging Library) or PILLOW.
 ( https://gramps-project.org/wiki/index.php?title=Family_Sheet )

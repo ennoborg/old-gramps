@@ -82,7 +82,8 @@ class ChangeNames(tool.BatchTool, ManagedWindow):
         if self.fail:
             return
 
-        self.progress = ProgressMeter(_('Checking Family Names'),'')
+        self.progress = ProgressMeter(_('Checking Family Names'),'',
+                                    parent=uistate.window)
         self.progress.set_pass(_('Searching family names'),
                                len(self.db.get_surname_list()))
         self.name_list = []
@@ -253,7 +254,7 @@ class ChangeNames(tool.BatchTool, ManagedWindow):
                             surn.set_surname(sname)
                 if change:
                     #cursor.update(handle, person.serialize())
-                    self.db.commit_person(person, transaction=self.trans)
+                    self.db.commit_person(person, self.trans)
 
         self.db.enable_signals()
         self.db.request_rebuild()

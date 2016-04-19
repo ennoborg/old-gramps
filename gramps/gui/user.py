@@ -91,7 +91,8 @@ class User(user.User):
             self._progress.close()
             self._progress = None
 
-    def prompt(self, title, message, accept_label, reject_label, parent=None):
+    def prompt(self, title, message, accept_label, reject_label, parent=None,
+               default_label=None):
         """
         Prompt the user with a message to select an alternative.
 
@@ -105,6 +106,8 @@ class User(user.User):
         :param accept_label: what to call the positive choice, e.g.: "Proceed"
         :type accept_label: str
         :param reject_label: what to call the negative choice, e.g.: "Stop"
+        :param default_label: the label of the default
+        :type default_label: str or None
         :type reject_label: str
         :returns: the user's answer to the question
         :rtype: bool
@@ -123,7 +126,10 @@ class User(user.User):
         :type warning: str
         :returns: none
         """
-        WarningDialog(title, warning)
+        if self.uistate:
+            WarningDialog(title, warning, parent=self.uistate.window)
+        else:
+            WarningDialog(title, warning)
 
     def notify_error(self, title, error=""):
         """
@@ -137,6 +143,8 @@ class User(user.User):
         """
         if self.error_function:
             self.error_function(title, error)
+        elif self.uistate:
+            ErrorDialog(title, error, parent=self.uistate.window)
         else:
             ErrorDialog(title, error)
 
@@ -148,7 +156,10 @@ class User(user.User):
         :type error: str
         :returns: none
         """
-        DBErrorDialog(error)
+        if self.uistate:
+            DBErrorDialog(error, parent=self.uistate.window)
+        else:
+            DBErrorDialog(error)
 
     def info(self, msg1, infotext, parent=None, monospaced=False):
         """
