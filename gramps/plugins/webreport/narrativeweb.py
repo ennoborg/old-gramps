@@ -532,6 +532,11 @@ def format_date(date):
         return val
     return ""
 
+def sort_on_name_and_grampsid(obj, dbase):
+    person = dbase.get_person_from_handle(obj)
+    name = _nd.display(person)
+    return (name, person.get_gramps_id())
+
 def copy_thumbnail(report, handle, photo, region=None):
     """
     Given a handle (and optional region) make (if needed) an
@@ -2397,7 +2402,10 @@ class BasePage(object):
                                 if mime_type:
                                     if mime_type.startswith("image/"):
                                         real_path, newpath = self.report.prepare_copy_media(media)
-                                        newpath = self.report.build_url_fname(newpath)
+                                        newpath = self.report.build_url_fname(newpath, up=self.up)
+                                        dest_dir = os.path.dirname(self.report.cur_fname)
+                                        if dest_dir:
+                                            newpath = os.path.join(dest_dir, newpath)
                                         self.report.copy_file(media_path_full(
                                             self.report.database, media.get_path()), newpath)
     
@@ -2955,7 +2963,7 @@ class SurnamePage(BasePage):
                 tbody = Html("tbody")
                 table += tbody
 
-                for person_handle in ppl_handle_list:
+                for person_handle in sorted(ppl_handle_list, key=lambda x: sort_on_name_and_grampsid(x, self.dbase_)):
  
                     person = self.dbase_.get_person_from_handle(person_handle)
                     if person.get_change_time() > ldatec: ldatec = person.get_change_time()
@@ -3175,7 +3183,7 @@ class FamilyPages(BasePage):
                         letter ='&nbsp;'
 
                     # get person from sorted database list
-                    for person_handle in sorted(handle_list):
+                    for person_handle in sorted(handle_list, key=lambda x: sort_on_name_and_grampsid(x, self.dbase_)):
                         person = self.dbase_.get_person_from_handle(person_handle)
                         if person:
                             family_list = sorted(pers_fam_dict[person_handle], key=lambda x:x.get_gramps_id())
@@ -5333,7 +5341,7 @@ class PersonPages(BasePage):
                     surname = _ABSENT
                 
                 first_surname = True
-                for person_handle in sorted(handle_list):
+                for person_handle in sorted(handle_list, key=lambda x: sort_on_name_and_grampsid(x, self.dbase_)):
                     person = self.dbase_.get_person_from_handle(person_handle)
                     if person.get_change_time() > date: date = person.get_change_time()
 
