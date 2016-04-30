@@ -65,7 +65,9 @@ class DbState(Callback):
         just a place holder until a real DB is assigned.
         """
         Callback.__init__(self)
-        self.db = self.make_database("bsddb")
+        self.db = self.make_database("inmemorydb")
+        self.db.load(None)
+        self.db.db_is_open = False
         self.open = False
         self.stack = []
 
@@ -108,7 +110,8 @@ class DbState(Callback):
         """
         self.emit('no-database', ())
         self.db.close()
-        self.db = self.make_database("bsddb")
+        self.db = self.make_database("inmemorydb")
+        self.db.load(None)
         self.db.db_is_open = False
         self.open = False
         self.emit('database-changed', (self.db, ))
@@ -203,26 +206,23 @@ class DbState(Callback):
             dirpath = os.path.join(dbdir, dpath)
             path_name = os.path.join(dirpath, "name.txt")
             if os.path.isfile(path_name):
-                file = open(path_name, 'r', encoding='utf8')
-                name = file.readline().strip()
-                file.close()
+                with open(path_name, 'r', encoding='utf8') as file:
+                    name = file.readline().strip()
                 if dbname == name:
                     locked = False
                     locked_by = None
                     backend = None
                     fname = os.path.join(dirpath, "database.txt")
                     if os.path.isfile(fname):
-                        ifile = open(fname, 'r', encoding='utf8')
-                        backend = ifile.read().strip()
-                        ifile.close()
+                        with open(fname, 'r', encoding='utf8') as ifile:
+                            backend = ifile.read().strip()
                     else:
                         backend = "bsddb"
                     try:
                         fname = os.path.join(dirpath, "lock")
-                        ifile = open(fname, 'r', encoding='utf8')
-                        locked_by = ifile.read().strip()
-                        locked = True
-                        ifile.close()
+                        with open(fname, 'r', encoding='utf8') as ifile:
+                            locked_by = ifile.read().strip()
+                            locked = True
                     except (OSError, IOError):
                         pass
                     return (dirpath, locked, locked_by, backend)

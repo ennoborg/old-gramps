@@ -29,12 +29,16 @@ Commonly used report options. Call the function, don't copy the code!
 #
 #-------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
+_ = glocale.translation.sgettext
 from gramps.gen.config import config
 from gramps.gen.display.name import displayer as global_name_display
 from gramps.gen.plug.menu import (EnumeratedListOption, BooleanOption,
                                   NumberOption)
 from gramps.gen.proxy import PrivateProxyDb, LivingProxyDb
+
+# _T_ is a gramps-defined keyword -- see po/update_po.py and po/genpot.sh
+def _T_(value): # enable deferred translations (see Python docs 22.1.3.4)
+    return value
 
 #-------------------------------------------------------------------------
 #
@@ -109,7 +113,8 @@ def run_private_data_option(report, menu):
 
 def add_living_people_option(menu, category,
                              mode=LivingProxyDb.MODE_INCLUDE_ALL,
-                             after_death_years=0):
+                             after_death_years=0,
+                             process_names=True):
     """
     Insert an option for deciding how the information in the
     database for living people shall be handled by the report
@@ -146,6 +151,8 @@ def add_living_people_option(menu, category,
         still consider them as living.
     :type after_death_years: int
     :return: nothing
+    :param process_names: whether to offer name-oriented option choices
+    :type process_names: Boolean
     """
 
     def living_people_changed():
@@ -158,16 +165,19 @@ def add_living_people_option(menu, category,
             years_past_death.set_available(True)
 
     living_people = EnumeratedListOption(_("Living People"), mode)
-    living_people.add_item(LivingProxyDb.MODE_INCLUDE_ALL,
-                           _("Include living people and their data"))
-    living_people.add_item(LivingProxyDb.MODE_INCLUDE_FULL_NAME_ONLY,
-                           _("Include full names but no data"))
-    living_people.add_item(LivingProxyDb.MODE_INCLUDE_LAST_NAME_ONLY,
-                           _("Replace given names and include no data"))
-    living_people.add_item(LivingProxyDb.MODE_REPLACE_COMPLETE_NAME,
-                           _("Replace complete names and include no data"))
-    living_people.add_item(LivingProxyDb.MODE_EXCLUDE_ALL,
-                           _("Do not include living people"))
+    items = [(LivingProxyDb.MODE_INCLUDE_ALL,
+              _T_("'living people'|Included, and all data"))]
+    if process_names:
+        items += [
+            (LivingProxyDb.MODE_INCLUDE_FULL_NAME_ONLY,
+             _T_("'living people'|Full names, but data removed")),
+            (LivingProxyDb.MODE_INCLUDE_LAST_NAME_ONLY,
+             _T_("'living people'|Given names replaced, and data removed")),
+            (LivingProxyDb.MODE_REPLACE_COMPLETE_NAME,
+             _T_("'living people'|Complete names replaced, and data removed"))]
+    items += [(LivingProxyDb.MODE_EXCLUDE_ALL,
+               _T_("'living people'|Not included"))]
+    living_people.set_items(items, xml_items=True) # for deferred translation
     living_people.set_help(_("How to handle living people"))
     menu.add_option(category, "living_people", living_people)
     living_people.connect('value-changed', living_people_changed)
@@ -190,9 +200,11 @@ def run_living_people_option(report, menu, llocale=glocale):
     :param llocale: allow deferred translation of "[Living]"
     :type llocale: a :class:`.GrampsLocale` instance
     """
-    living_people = menu.get_option_by_name('living_people').get_value()
+    option = menu.get_option_by_name('living_people')
+    living_value = option.get_value()
     years_past_death = menu.get_option_by_name('years_past_death').get_value()
-    if living_people != LivingProxyDb.MODE_INCLUDE_ALL:
-        report.database = LivingProxyDb(report.database, living_people,
+    if living_value != LivingProxyDb.MODE_INCLUDE_ALL:
+        report.database = LivingProxyDb(report.database, living_value,
                                         years_after_death=years_past_death,
                                         llocale=llocale)
+    return option

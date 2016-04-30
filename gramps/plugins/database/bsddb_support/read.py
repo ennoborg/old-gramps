@@ -1817,8 +1817,8 @@ class DbBsddbRead(DbReadBase, Callback):
     def __sortbyperson_key(self, handle):
         if isinstance(handle, str):
             handle = handle.encode('utf-8')
-        return glocale.sort_key(find_surname(handle,
-                                           self.person_map.get(handle)))
+        return glocale.sort_key(find_fullname(handle,
+                                              self.person_map.get(handle)))
 
     def __sortbyfamily_key(self, handle):
         if isinstance(handle, str):
@@ -2040,9 +2040,8 @@ class DbBsddbRead(DbReadBase, Callback):
         """
         filepath = os.path.join(self.path, "name.txt")
         try:
-            name_file = open(filepath, "r", encoding='utf-8')
-            name = name_file.readline().strip()
-            name_file.close()
+            with open(filepath, "r", encoding='utf-8') as name_file:
+                name = name_file.readline().strip()
         except (OSError, IOError) as msg:
             self.__log_error()
             name = None
@@ -2051,9 +2050,8 @@ class DbBsddbRead(DbReadBase, Callback):
     def get_version(self):
         filepath = os.path.join(self.path, "bdbversion.txt")
         try:
-            name_file = open(filepath, "r", encoding='utf-8')
-            version = name_file.readline().strip()
-            name_file.close()
+            with open(filepath, "r", encoding='utf-8') as name_file:
+                version = name_file.readline().strip()
         except (OSError, IOError) as msg:
             self.__log_error()
             version = "(0, 0, 0)"

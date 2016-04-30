@@ -28,6 +28,13 @@ class InMemoryDB(DBAPI):
     """
     A DB-API 2.0 In-memory SQL database.
     """
+    @classmethod
+    def get_class_summary(cls):
+        summary = DBAPI.get_class_summary()
+        summary.update({
+            "Database location": "in memory",
+        })
+        return summary
 
     def initialize_backend(self, directory):
         """
@@ -45,6 +52,13 @@ class InMemoryDB(DBAPI):
         versionpath = os.path.join(directory, "bdbversion.txt")
         with open(versionpath, "w") as version_file:
             version_file.write(str(self.VERSION))
+
+    def autobackup(self, user=None):
+        """
+        Nothing to do, as we write it out anyway.
+        No backups for inmemory databases.
+        """
+        pass
 
     def load(self, directory, callback=None, mode=None,
              force_schema_upgrade=False,

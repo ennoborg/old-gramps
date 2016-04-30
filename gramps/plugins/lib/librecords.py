@@ -126,6 +126,8 @@ def find_records(db, filter, top_size, callname,
 
     for person_handle in person_handle_list:
         person = db.get_person_from_handle(person_handle)
+        if person is None:
+            continue
 
         # FIXME this should check for a "fallback" birth also/instead
         birth_ref = person.get_birth_ref()
@@ -243,7 +245,11 @@ def find_records(db, filter, top_size, callname,
                 continue
 
         father = db.get_person_from_handle(father_handle)
+        if father is None:
+            continue
         mother = db.get_person_from_handle(mother_handle)
+        if mother is None:
+            continue
 
         name = StyledText(trans_text("%(father)s and %(mother)s")) % {
                 'father': _get_styled_primary_name(father, callname,

@@ -170,7 +170,8 @@ class BasicPrimaryObject(TableObject, PrivacyBase, TagBase):
         Return all seconday fields and their types
         """
         from .handle import HandleClass
-        return ([(key, value) for (key, value) in cls.get_schema().items()
+        return ([(key.lower(), value) 
+                 for (key, value) in cls.get_schema().items()
                  if value in [str, int, float, bool] or 
                  isinstance(value, HandleClass)] +
                 cls.get_extra_secondary_fields())
@@ -214,7 +215,7 @@ class BasicPrimaryObject(TableObject, PrivacyBase, TagBase):
             elif part in schema.keys():
                 path = schema[part]
             else:
-                raise Exception("No such '%s' in %s" % (part, list(schema.keys())))
+                raise Exception("No such field. Valid fields are: %s" % list(schema.keys()))
             if isinstance(path, (list, tuple)):
                 path = path[0]
         return path
@@ -335,7 +336,7 @@ class BasicPrimaryObject(TableObject, PrivacyBase, TagBase):
         """
         field = self.__class__.get_field_alias(field)
         chain = field.split(".")
-        path = self._follow_field_path(chain[:-1] + ["self"], db, ignore_errors)
+        path = self._follow_field_path(chain[:-1], db, ignore_errors)
         ftype = self.get_field_type(field)
         # ftype is str, bool, float, or int
         value = (value in ['True', True]) if ftype is bool else value
@@ -345,10 +346,14 @@ class BasicPrimaryObject(TableObject, PrivacyBase, TagBase):
         """
         Helper function to handle recursive lists of items.
         """
+        from .handle import HandleClass
         if isinstance(path, (list, tuple)):
             count = 0
             for item in path:
                 count += self._set_fields(item, attr, value, ftype)
+        elif isinstance(ftype, HandleClass):
+            setattr(path, attr, value)
+            count = 1
         else:
             setattr(path, attr, ftype(value))
             count = 1

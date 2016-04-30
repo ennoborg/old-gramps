@@ -4,7 +4,7 @@
 #
 # Copyright (C) 2008-2011 Reinhard Müller
 # Copyright (C) 2010      Jakim Friant
-# Copyright (C) 2013-2015 Paul Franklin
+# Copyright (C) 2013-2016 Paul Franklin
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -48,6 +48,8 @@ from gramps.gen.plug.report import utils as ReportUtils
 from gramps.gen.plug.report import MenuReportOptions
 from gramps.gen.plug.report import stdoptions
 from gramps.gen.lib import Span
+from gramps.gen.errors import ReportError
+from gramps.gen.proxy import LivingProxyDb
 
 #------------------------------------------------------------------------
 #
@@ -62,15 +64,30 @@ class RecordsReport(Report):
         that come in the options class.
 
         incl_private    - Whether to include private data
+        living_people - How to handle living people
+        years_past_death - Consider as living this many years after death
         """
 
         Report.__init__(self, database, options, user)
         menu = options.menu
 
-        stdoptions.run_private_data_option(self, menu)
+        lang = options.menu.get_option_by_name('trans').get_value()
+        self._locale = self.set_locale(lang)
 
-        self.filter_option =  menu.get_option_by_name('filter')
-        self.filter = self.filter_option.get_filter()
+        stdoptions.run_private_data_option(self, menu)
+        living_opt = stdoptions.run_living_people_option(self, menu,
+                                                         self._locale)
+
+        self._lv = menu.get_option_by_name('living_people').get_value()
+        for (value, description) in living_opt.get_items(xml_items=True):
+            if value == self._lv:
+                living_desc = self._(description)
+                break
+        self.living_desc = self._("(Living people: %(option_name)s)"
+                                  % {'option_name': living_desc})
+
+        filter_option = menu.get_option_by_name('filter')
+        self.filter = filter_option.get_filter()
 
         self.top_size = menu.get_option_by_name('top_size').get_value()
         self.callname = menu.get_option_by_name('callname').get_value()
@@ -80,9 +97,6 @@ class RecordsReport(Report):
         self.include = {}
         for (text, varname, default) in RECORDS:
             self.include[varname] = menu.get_option_by_name(varname).get_value()
-
-        self._lang = options.menu.get_option_by_name('trans').get_value()
-        self._locale = self.set_locale(self._lang)
 
         self._nf = stdoptions.run_name_format_option(self, menu)
 
@@ -102,8 +116,13 @@ class RecordsReport(Report):
         self.doc.end_paragraph()
 
         self.doc.start_paragraph('REC-Subtitle')
-        self.doc.write_text(self.filter.get_name(self._locale))
+        filter_name = self.filter.get_name(self._locale)
+        self.doc.write_text("(%s)" % filter_name)
         self.doc.end_paragraph()
+        if self._lv != LivingProxyDb.MODE_INCLUDE_ALL:
+            self.doc.start_paragraph('REC-Subtitle')
+            self.doc.write_text(self.living_desc)
+            self.doc.end_paragraph()
 
         for (text, varname, top) in records:
             if not self.include[varname]:
@@ -117,16 +136,39 @@ class RecordsReport(Report):
             rank = 0
             for (number,
                  (sort, value, name, handletype, handle)) in enumerate(top):
-                # FIXME check whether person or family, if a family mark BOTH
-                person = self.database.get_person_from_handle(handle)
-                mark = ReportUtils.get_person_mark(self.database, person)
+                mark = None
+                if handletype == 'Person':
+                    person = self.database.get_person_from_handle(handle)
+                    mark = ReportUtils.get_person_mark(self.database, person)
+                elif handletype == 'Family':
+                    family = self.database.get_family_from_handle(handle)
+                    # librecords.py checks that the family has both
+                    # a father and a mother and also that each one is
+                    # in the filter if any filter was used, so we don't
+                    # have to do any similar checking here, it's been done
+                    f_handle = family.get_father_handle()
+                    dad = self.database.get_person_from_handle(f_handle)
+                    f_mark = ReportUtils.get_person_mark(self.database, dad)
+                    m_handle = family.get_mother_handle()
+                    mom = self.database.get_person_from_handle(m_handle)
+                    m_mark = ReportUtils.get_person_mark(self.database, mom)
+                else:
+                    raise ReportError(_("Option '%(opt_name)s' is present "
+                                        "in %(file)s\n  but is not known to "
+                                        "the module.  Ignoring...") %
+                                            {'opt_name': handletype,
+                                             'file': 'libnarrate.py'})
+                    # since the error is very unlikely I reused the string
                 if value != last_value:
                     last_value = value
                     rank = number
                 self.doc.start_paragraph('REC-Normal')
-                # FIXME this won't work for RTL languages:
-                self.doc.write_text(self._("%(number)s. ") % {'number': rank+1})
+                self.doc.write_text(self._("%(number)s. ")
+                                               % {'number': rank+1})
                 self.doc.write_markup(str(name), name.get_tags(), mark)
+                if handletype == 'Family':
+                    self.doc.write_text('', f_mark)
+                    self.doc.write_text('', m_mark)
                 if isinstance(value, Span):
                     tvalue = value.get_repr(dlocale=self._locale)
                 else:
@@ -178,6 +220,8 @@ class RecordsReportOptions(MenuReportOptions):
         self.__update_filters()
 
         stdoptions.add_private_data_option(menu, category_name)
+
+        stdoptions.add_living_people_option(menu, category_name)
 
         top_size = NumberOption(_("Number of ranks to display"), 3, 1, 100)
         menu.add_option(category_name, "top_size", top_size)
@@ -237,7 +281,7 @@ class RecordsReportOptions(MenuReportOptions):
         para = ParagraphStyle()
         para.set_font(font)
         para.set_alignment(PARA_ALIGN_CENTER)
-        para.set_description(_("The style used for the report title."))
+        para.set_description(_("The style used for the title."))
         default_style.add_paragraph_style('REC-Title', para)
 
         font = FontStyle()
@@ -247,9 +291,7 @@ class RecordsReportOptions(MenuReportOptions):
         para = ParagraphStyle()
         para.set_font(font)
         para.set_alignment(PARA_ALIGN_CENTER)
-        para.set_bottom_border(True)
-        para.set_bottom_margin(ReportUtils.pt2cm(8))
-        para.set_description(_("The style used for the report subtitle."))
+        para.set_description(_("The style used for the subtitle."))
         default_style.add_paragraph_style('REC-Subtitle', para)
 
         font = FontStyle()

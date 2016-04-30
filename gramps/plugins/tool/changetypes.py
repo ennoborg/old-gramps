@@ -22,6 +22,14 @@
 
 """Database Processing/Rename Event Types"""
 
+#-------------------------------------------------------------------------
+#
+# GNOME modules
+#
+#-------------------------------------------------------------------------
+from gi.repository import Gtk
+from gi.repository import GObject
+
 #------------------------------------------------------------------------
 #
 # Gramps modules
@@ -32,7 +40,6 @@ _ = glocale.translation.gettext
 ngettext = glocale.translation.ngettext # else "nearby" comments are ignored
 from gramps.gui.utils import ProgressMeter
 from gramps.gui.managedwindow import ManagedWindow
-from gramps.gui.autocomp import fill_combo
 from gramps.gen.lib import EventType
 from gramps.gen.db import DbTxn
 from gramps.gui.plug import tool
@@ -48,6 +55,7 @@ class ChangeTypes(tool.BatchTool, ManagedWindow):
     def __init__(self, dbstate, user, options_class, name, callback=None):
         uistate = user.uistate
         self.user = user
+        self.dbstate = dbstate
 
         tool.BatchTool.__init__(self, dbstate, user, options_class, name)
         if self.fail:
@@ -71,10 +79,12 @@ class ChangeTypes(tool.BatchTool, ManagedWindow):
 
         # Need to display localized event names
         etype = EventType()
-        event_names = sorted(etype.get_standard_names(), key=glocale.sort_key)
+        custom_events = self.dbstate.db.get_event_types()
+        event_names = sorted(etype.get_standard_names() + custom_events,
+                             key=glocale.sort_key)
 
-        fill_combo(self.auto1,event_names)
-        fill_combo(self.auto2,event_names)
+        self.fill_combo(self.auto1,event_names)
+        self.fill_combo(self.auto2,event_names)
 
         etype.set_from_xml_str(self.options.handler.options_dict['fromtype'])
         self.auto1.get_child().set_text(str(etype))
@@ -146,6 +156,26 @@ class ChangeTypes(tool.BatchTool, ManagedWindow):
         self.options.handler.save_options()
 
         self.close()
+
+    def fill_combo(self, combo, data_list):
+        """
+        Fill a combo box with completion data
+        """
+        store = Gtk.ListStore(GObject.TYPE_STRING)
+
+        for data in data_list:
+            if data:
+                store.append(row=[data])
+
+        combo.set_popup_fixed_width(False)
+        combo.set_wrap_width(4)
+        combo.set_model(store)
+        combo.set_entry_text_column(0)
+        completion = Gtk.EntryCompletion()
+        completion.set_model(store)
+        completion.set_minimum_key_length(1)
+        completion.set_text_column(0)
+        combo.get_child().set_completion(completion)
 
 #------------------------------------------------------------------------
 #

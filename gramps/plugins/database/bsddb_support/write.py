@@ -38,6 +38,7 @@ import bisect
 from functools import wraps
 import logging
 from sys import maxsize, getfilesystemencoding, version_info
+from ast import literal_eval as safe_eval
 
 from bsddb3 import dbshelve, db
 from bsddb3.db import DB_CREATE, DB_AUTO_COMMIT, DB_DUP, DB_DUPSORT, DB_RDONLY
@@ -207,6 +208,27 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
     """
     Gramps database write access object.
     """
+
+    @classmethod
+    def get_class_summary(cls):
+        """
+        Return a diction of information about this database.
+        """
+        try:
+            import bsddb3 as bsddb
+            bsddb_str = bsddb.__version__
+            bsddb_db_str = str(bsddb.db.version()).replace(', ', '.')\
+                                                  .replace('(', '').replace(')', '')
+        except:
+            bsddb_str = 'not found'
+            bsddb_db_str = 'not found'
+        summary = {
+            "DB-API version": "n/a",
+            "Database type": cls.__name__,
+            'Database version': bsddb_str,
+            'Database db version': bsddb_db_str
+        }
+        return summary
 
     # Set up dictionary for callback signal handler
     # ---------------------------------------------
@@ -436,8 +458,8 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
 
     def __log_error(self):
         mypath = os.path.join(self.get_save_path(),DBRECOVFN)
-        ofile = open(mypath, "w")
-        ofile.close()
+        with open(mypath, "w") as ofile:
+            pass
         try:
             clear_lock_file(self.get_save_path())
         except:
@@ -1488,13 +1510,14 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         self.db_is_open = False
 
     @catch_db_error
-    def close(self, update=True):
+    def close(self, update=True, user=None):
         """
         Close the database.
         if update is False, don't change access times, etc.
         """
         if not self.db_is_open:
             return
+        self.autobackup(user)
         if self.txn:
             self.transaction_abort(self.transaction)
         self.env.txn_checkpoint()
@@ -2515,11 +2538,13 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
         schema_version = self.metadata.get(b'version', default=None)
         bdbversion_file = os.path.join(self.path, BDBVERSFN)
         if os.path.isfile(bdbversion_file):
-            vers_file = open(bdbversion_file)
-            bsddb_version = vers_file.readline().strip()
+            with open(bdbversion_file) as vers_file:
+                bsddb_version = vers_file.readline().strip()
+                bsddb_version = ".".join([str(v) for v in safe_eval(bsddb_version)])
         else:
             bsddb_version = _("Unknown")
         return {
+            _("DB-API version"): "n/a", 
             _("Number of people"): self.get_number_of_people(),
             _("Number of families"): self.get_number_of_families(),
             _("Number of sources"): self.get_number_of_sources(),
@@ -2530,8 +2555,8 @@ class DbBsddb(DbBsddbRead, DbWriteBase, UpdateCallback):
             _("Number of repositories"): self.get_number_of_repositories(),
             _("Number of notes"): self.get_number_of_notes(),
             _("Number of tags"): self.get_number_of_tags(),
-            _("Schema version"): schema_version,
-            _("Version"): bsddb_version,
+            _("Data version"): schema_version,
+            _("Database db version"): bsddb_version,
         }
 
 def mk_backup_name(database, base):
@@ -2567,15 +2592,14 @@ def do_export(database):
     try:
         for (base, tbl) in build_tbl_map(database):
             backup_name = mk_tmp_name(database, base)
-            backup_table = open(backup_name, 'wb')
+            with open(backup_name, 'wb') as backup_table:
 
-            cursor = tbl.cursor()
-            data = cursor.first()
-            while data:
-                pickle.dump(data, backup_table, 2)
-                data = cursor.next()
-            cursor.close()
-            backup_table.close()
+                cursor = tbl.cursor()
+                data = cursor.first()
+                while data:
+                    pickle.dump(data, backup_table, 2)
+                    data = cursor.next()
+                cursor.close()
     except (IOError,OSError):
         return
 
@@ -2596,8 +2620,8 @@ def do_restore(database):
     """
     for (base, tbl) in build_tbl_map(database):
         backup_name = mk_backup_name(database, base)
-        backup_table = open(backup_name, 'rb')
-        load_tbl_txn(database, backup_table, tbl)
+        with open(backup_name, 'rb') as backup_table:
+            load_tbl_txn(database, backup_table, tbl)
 
     database.rebuild_secondary()
 
@@ -2654,29 +2678,28 @@ def clear_lock_file(name):
 def write_lock_file(name):
     if not os.path.isdir(name):
         os.mkdir(name)
-    f = open(os.path.join(name, DBLOCKFN), "w", encoding='utf8')
-    if win():
-        user = get_env_var('USERNAME')
-        host = get_env_var('USERDOMAIN')
-        if host is None:
-            host = ""
-    else:
-        host = os.uname()[1]
-        # An ugly workaround for os.getlogin() issue with Konsole
-        try:
-            user = os.getlogin()
-        except:
-            # not win, so don't need get_env_var.
-            # under cron getlogin() throws and there is no USER.
-            user = os.environ.get('USER', 'noUSER')
-    if host:
-        text = "%s@%s" % (user, host)
-    else:
-        text = user
-    # Save only the username and host, so the massage can be
-    # printed with correct locale in DbManager.py when a lock is found
-    f.write(text)
-    f.close()
+    with open(os.path.join(name, DBLOCKFN), "w", encoding='utf8') as f:
+        if win():
+            user = get_env_var('USERNAME')
+            host = get_env_var('USERDOMAIN')
+            if host is None:
+                host = ""
+        else:
+            host = os.uname()[1]
+            # An ugly workaround for os.getlogin() issue with Konsole
+            try:
+                user = os.getlogin()
+            except:
+                # not win, so don't need get_env_var.
+                # under cron getlogin() throws and there is no USER.
+                user = os.environ.get('USER', 'noUSER')
+        if host:
+            text = "%s@%s" % (user, host)
+        else:
+            text = user
+        # Save only the username and host, so the massage can be
+        # printed with correct locale in DbManager.py when a lock is found
+        f.write(text)
 
 def upgrade_researcher(owner_data):
     """

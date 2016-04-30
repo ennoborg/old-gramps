@@ -72,6 +72,12 @@ try:
 except:
     BSDDB_STR = 'not found'
 
+try:
+    import sqlite3
+    sqlite3_version_str = sqlite3.version
+except:
+    sqlite3_version_str = 'not found'
+
 #-------------------------------------------------------------------------
 #
 # GrampsAboutDialog
@@ -96,9 +102,8 @@ class GrampsAboutDialog(Gtk.AboutDialog):
         self.set_artists(artists.split('\n'))
 
         try:
-            ifile = open(LICENSE_FILE, "r")
-            self.set_license(ifile.read().replace('\x0c', ''))
-            ifile.close()
+            with open(LICENSE_FILE, "r") as ifile:
+                self.set_license(ifile.read().replace('\x0c', ''))
         except IOError:
             self.set_license("License file is missing")
 
@@ -132,12 +137,14 @@ class GrampsAboutDialog(Gtk.AboutDialog):
                  "GRAMPS: %s \n" +
                  "Python: %s \n" +
                  "BSDDB: %s \n" +
+                 "sqlite: %s \n" +
                  "LANG: %s\n" +
                  "OS: %s\n" +
                  "Distribution: %s")
                 % (ellipses(str(VERSION)),
                    ellipses(str(sys.version).replace('\n','')),
                    BSDDB_STR,
+                   sqlite3_version_str,
                    ellipses(get_env_var('LANG','')),
                    ellipses(operatingsystem),
                    ellipses(distribution)))
@@ -214,9 +221,8 @@ def _get_authors():
         parser = make_parser()
         parser.setContentHandler(AuthorParser(authors, contributors))
 
-        authors_file = open(AUTHORS_FILE, encoding='utf-8')
-        parser.parse(authors_file)
-        authors_file.close()
+        with open(AUTHORS_FILE, encoding='utf-8') as authors_file:
+            parser.parse(authors_file)
 
         authors_text = [authors, contributors]
 

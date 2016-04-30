@@ -40,6 +40,13 @@ class DBAPI(DbGeneric):
     """
     Database backends class for DB-API 2.0 databases
     """
+    @classmethod
+    def get_class_summary(cls):
+        summary = {
+            "DB-API version": "2.0",
+            "Database type": cls.__name__,
+        }
+        return summary
 
     def restore(self):
         """
@@ -61,6 +68,8 @@ class DBAPI(DbGeneric):
                                 "dbapi_support", "defaults")
         LOG.debug("Copy defaults from: " + defaults)
         for filename in os.listdir(defaults):
+            if filename in ["__init__.py"]: # skip these
+                continue
             fullpath = os.path.abspath(os.path.join(defaults, filename))
             if os.path.isfile(fullpath):
                 shutil.copy2(fullpath, directory)
@@ -370,8 +379,7 @@ class DBAPI(DbGeneric):
         if sort_handles:
             self.dbapi.execute("""SELECT DISTINCT family.handle FROM family 
                                     JOIN person 
-                                    ON (family.father_handle = person.handle OR
-                                        family.mother_handle = person.handle)
+                                    ON family.father_handle = person.handle
                                     ORDER BY person.primary_name__surname_list__0__surname, 
                                              person.primary_name__first_name;""")
         else:
@@ -1074,7 +1082,7 @@ class DBAPI(DbGeneric):
         """
         # first build sort order:
         sorted_items = []
-        query = "SELECT blob_data FROM %s;" % class_.__name__
+        query = "SELECT blob_data FROM %s;" % class_.__name__.lower()
         self.dbapi.execute(query)
         rows = self.dbapi.fetchall()
         for row in rows:
@@ -1102,11 +1110,11 @@ class DBAPI(DbGeneric):
                 return
         ## Continue with dbapi select
         if order_by is None:
-            query = "SELECT blob_data FROM %s;" % class_.__name__
+            query = "SELECT blob_data FROM %s;" % class_.__name__.lower()
         else:
             order_phrases = ["%s %s" % (self._hash_name(class_.__name__, class_.get_field_alias(field)), direction) 
                              for (field, direction) in order_by]
-            query = "SELECT blob_data FROM %s ORDER BY %s;" % (class_.__name__, ", ".join(order_phrases))
+            query = "SELECT blob_data FROM %s ORDER BY %s;" % (class_.__name__.lower(), ", ".join(order_phrases))
         self.dbapi.execute(query)
         rows = self.dbapi.fetchall()
         for row in rows:
@@ -1607,11 +1615,12 @@ class DBAPI(DbGeneric):
             if not hasattr(self.get_table_func(table,"class_func"), "get_secondary_fields"):
                 continue
             # do a select on all; if it works, then it is ok; else, check them all
+            table_name = table.lower()
             try:
                 fields = [self._hash_name(table, field) for (field, ptype) in 
                           self.get_table_func(table,"class_func").get_secondary_fields()]
                 if fields:
-                    self.dbapi.execute("select %s from %s limit 1;" % (", ".join(fields), table))
+                    self.dbapi.execute("select %s from %s limit 1;" % (", ".join(fields), table_name))
                 # if no error, continue
                 LOG.info("Table %s is up to date" % table)
                 continue
@@ -1625,12 +1634,12 @@ class DBAPI(DbGeneric):
                 sql_type = self._sql_type(python_type)
                 try:
                     # test to see if it exists:
-                    self.dbapi.execute("SELECT %s FROM %s LIMIT 1;" % (field, table))
+                    self.dbapi.execute("SELECT %s FROM %s LIMIT 1;" % (field, table_name))
                     LOG.info("    Table %s, field %s is up to date" % (table, field))
                 except:
                     # if not, let's add it
                     LOG.info("    Table %s, field %s was added" % (table, field))
-                    self.dbapi.execute("ALTER TABLE %s ADD COLUMN %s %s;" % (table, field, sql_type))
+                    self.dbapi.execute("ALTER TABLE %s ADD COLUMN %s %s;" % (table_name, field, sql_type))
                     altered = True
             if altered:
                 LOG.info("Table %s is being committed, rebuilt, and indexed..." % table)
@@ -1650,10 +1659,11 @@ class DBAPI(DbGeneric):
         """
         Create secondary indexes for just this table.
         """
+        table_name = table.lower()
         for fields in self.get_table_func(table,"class_func").get_index_fields():
             for field in fields:
                 field = self._hash_name(table, field)
-                self.dbapi.try_execute("CREATE INDEX %s_%s ON %s(%s);" % (table, field, table, field))
+                self.dbapi.try_execute("CREATE INDEX %s_%s ON %s(%s);" % (table, field, table_name, field))
 
     def update_secondary_values_all(self):
         """
@@ -1690,8 +1700,16 @@ class DBAPI(DbGeneric):
             sets.append("%s = ?" % field)
             values.append(value)
         if len(values) > 0:
-            self.dbapi.execute("UPDATE %s SET %s where handle = ?;" % (table, ", ".join(sets)),
-                               values + [item.handle])
+            table_name = table.lower()
+            self.dbapi.execute("UPDATE %s SET %s where handle = ?;" % (table_name, ", ".join(sets)),
+                               self._sql_cast_list(table, sets, values) + [item.handle])
+
+    def _sql_cast_list(self, table, fields, values):
+        """
+        Given a list of field names and values, return the values
+        in the appropriate type.
+        """
+        return [v if type(v) is not bool else int(v) for v in values]
 
     def _sql_repr(self, value):
         """
@@ -1817,6 +1835,7 @@ class DBAPI(DbGeneric):
                             ["handle"]) # handle is a sql field, but not listed in secondaries
         # If no fields, then we need objects:
         # Check to see if where matches SQL fields:
+        table_name = table.lower()
         if ((not self._check_where_fields(table, where, secondary_fields)) or
             (not self._check_order_by_fields(table, order_by, secondary_fields))):
             # If not, then need to do select via Python:
@@ -1842,15 +1861,15 @@ class DBAPI(DbGeneric):
         if get_count_only:
             select_fields = ["1"]
         if start:
-            query = "SELECT %s FROM %s %s %s LIMIT %s, %s" % (
-                ", ".join(select_fields), table, where_clause, order_clause, start, limit
+            query = "SELECT %s FROM %s %s %s LIMIT %s, %s " % (
+                ", ".join(select_fields), table_name, where_clause, order_clause, start, limit
             )
         else:
             query = "SELECT %s FROM %s %s %s LIMIT %s" % (
-                ", ".join(select_fields), table, where_clause, order_clause, limit
+                ", ".join(select_fields), table_name, where_clause, order_clause, limit
             )
         if get_count_only:
-            self.dbapi.execute("SELECT count(1) from (%s);" % query)
+            self.dbapi.execute("SELECT count(1) from (%s) AS temp_select;" % query)
             rows = self.dbapi.fetchall()
             yield rows[0][0]
             return
@@ -1874,3 +1893,16 @@ class DBAPI(DbGeneric):
             else:
                 obj = self.get_table_func(table,"class_func").create(pickle.loads(row[0]))
                 yield obj
+
+    def get_summary(self):
+        """
+        Returns dictionary of summary item.
+        Should include, if possible:
+
+        _("Number of people")
+        _("Version")
+        _("Schema version")
+        """
+        summary = super().get_summary()
+        summary.update(self.dbapi.__class__.get_summary())
+        return summary

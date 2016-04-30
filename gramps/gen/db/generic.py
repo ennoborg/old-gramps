@@ -35,6 +35,7 @@ import bisect
 import ast
 import sys
 import datetime
+import glob
 
 #------------------------------------------------------------------------
 #
@@ -61,6 +62,7 @@ from gramps.gen.lib.researcher import Researcher
 from gramps.gen.lib import (Tag, Media, Person, Family, Source, Citation, Event,
                             Place, Repository, Note, NameOriginType)
 from gramps.gen.lib.genderstats import GenderStats
+from gramps.gen.config import config
 
 LOG = logging.getLogger(DBLOGNAME)
 
@@ -1694,16 +1696,17 @@ class DbGeneric(DbWriteBase, DbReadBase, UpdateCallback, Callback):
                 return False
         return True
 
-    def close(self, update=True):
+    def close(self, update=True, user=None):
         """
         Close the database.
         if update is False, don't change access times, etc.
         """
         if self._directory:
-            # This is just a dummy file to indicate last modified time of the
-            # database for gramps.cli.clidbman:
-            filename = os.path.join(self._directory, "meta_data.db")
             if update:
+                self.autobackup(user)
+                # This is just a dummy file to indicate last modified time of the
+                # database for gramps.cli.clidbman:
+                filename = os.path.join(self._directory, "meta_data.db")
                 touch(filename)
                 # Save metadata
                 self.set_metadata('name_formats', self.name_formats)
@@ -1990,8 +1993,19 @@ class DbGeneric(DbWriteBase, DbReadBase, UpdateCallback, Callback):
 
         _("Number of people")
         _("Version")
-        _("Schema version")
+        _("Data version")
         """
+        last_backup = "n/a"
+        backups = sorted(glob.glob(os.path.join(
+            self._directory, "backup-*.gramps")), reverse=True)
+        if backups:
+            path, filename = os.path.split(backups[0])
+            filename, ext = os.path.splitext(filename)
+            if filename.count("-") == 6:
+                backup, year, month, day, hour, minute, second = filename.split("-")
+                last_backup = time.strftime('%x %X', time.localtime(time.mktime(
+                    (int(year), int(month), int(day), int(hour), int(minute), int(second), 
+                     0, 0, 0))))
         return {
             _("Number of people"): self.get_number_of_people(),
             _("Number of families"): self.get_number_of_families(),
@@ -2003,21 +2017,23 @@ class DbGeneric(DbWriteBase, DbReadBase, UpdateCallback, Callback):
             _("Number of repositories"): self.get_number_of_repositories(),
             _("Number of notes"): self.get_number_of_notes(),
             _("Number of tags"): self.get_number_of_tags(),
-            _("Schema version"): ".".join([str(v) for v in self.VERSION]),
+            _("Data version"): ".".join([str(v) for v in self.VERSION]),
+            _("Backups, count"): str(len(backups)),
+            _("Backups, last"): last_backup,
         }
 
     def get_dbname(self):
         """
         In DbGeneric, the database is in a text file at the path
         """
-        filepath = os.path.join(self._directory, "name.txt")
-        try:
-            name_file = open(filepath, "r")
-            name = name_file.readline().strip()
-            name_file.close()
-        except (OSError, IOError) as msg:
-            LOG.error(str(msg))
-            name = None
+        name = None
+        if self._directory:
+            filepath = os.path.join(self._directory, "name.txt")
+            try:
+                with open(filepath, "r") as name_file:
+                    name = name_file.readline().strip()
+            except (OSError, IOError) as msg:
+                LOG.error(str(msg))
         return name
 
     def _order_by_person_key(self, person):
@@ -2057,7 +2073,8 @@ class DbGeneric(DbWriteBase, DbReadBase, UpdateCallback, Callback):
         from gramps.cli.user import User
         if user is None:
             user = User()
-        writer = XmlWriter(self, user, strip_photos=0, compress=1)
+        compress = config.get('behavior.database-backup-use-compression')
+        writer = XmlWriter(self, user, strip_photos=0, compress=compress)
         timestamp = '{0:%Y-%m-%d-%H-%M-%S}'.format(datetime.datetime.now())
         filename = os.path.join(self._directory, "backup-%s.gramps" % timestamp)
         writer.write(filename)
@@ -2115,9 +2132,8 @@ class DbGeneric(DbWriteBase, DbReadBase, UpdateCallback, Callback):
         if self._directory:
             filepath = os.path.join(self._directory, "bdbversion.txt")
             try:
-                name_file = open(filepath, "r", encoding='utf-8')
-                version = name_file.readline().strip()
-                name_file.close()
+                with open(filepath, "r", encoding='utf-8') as name_file:
+                    version = name_file.readline().strip()
             except (OSError, IOError) as msg:
                 self.__log_error()
                 version = "(0, 0, 0)"
