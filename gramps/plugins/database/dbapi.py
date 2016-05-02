@@ -377,11 +377,21 @@ class DBAPI(DbGeneric):
         If sort_handles is True, the list is sorted by surnames.
         """
         if sort_handles:
-            self.dbapi.execute("""SELECT DISTINCT family.handle FROM family 
-                                    JOIN person 
-                                    ON family.father_handle = person.handle
-                                    ORDER BY person.primary_name__surname_list__0__surname, 
-                                             person.primary_name__first_name;""")
+            self.dbapi.execute("""SELECT f.handle FROM
+                                   (SELECT family.*
+                                     FROM family LEFT JOIN
+                                     person AS father
+                                     ON family.father_handle = father.handle LEFT JOIN
+                                     person AS mother
+                                     on family.mother_handle = mother.handle
+                                     order by (case when father.handle is null
+                                                    then mother.primary_name__surname_list__0__surname
+                                                    else father.primary_name__surname_list__0__surname
+                                               end),
+                                              (case when family.handle is null
+                                                    then mother.primary_name__first_name
+                                                    else father.primary_name__first_name
+                                               end)) AS f;""")
         else:
             self.dbapi.execute("SELECT handle FROM family;")
         rows = self.dbapi.fetchall()
@@ -627,7 +637,7 @@ class DBAPI(DbGeneric):
             emit = "family-add"
             self.dbapi.execute("""INSERT INTO family (handle, gramps_id, father_handle, mother_handle, blob_data)
                     VALUES(?, ?, ?, ?, ?);""",
-                               [family.handle, 
+                               [family.handle,
                                 family.gramps_id,
                                 family.father_handle,
                                 family.mother_handle,
@@ -1104,7 +1114,7 @@ class DBAPI(DbGeneric):
         # else, use Python sorts
         if order_by:
             secondary_fields = class_.get_secondary_fields()
-            if not self.check_order_by_fields(class_.__name__, order_by, secondary_fields):
+            if not self._check_order_by_fields(class_.__name__, order_by, secondary_fields):
                 for item in self.iter_items_order_by_python(order_by, class_):
                     yield item
                 return
@@ -1112,7 +1122,7 @@ class DBAPI(DbGeneric):
         if order_by is None:
             query = "SELECT blob_data FROM %s;" % class_.__name__.lower()
         else:
-            order_phrases = ["%s %s" % (self._hash_name(class_.__name__, class_.get_field_alias(field)), direction) 
+            order_phrases = ["%s %s" % (self._hash_name(class_.__name__, class_.get_field_alias(field)), direction)
                              for (field, direction) in order_by]
             query = "SELECT blob_data FROM %s ORDER BY %s;" % (class_.__name__.lower(), ", ".join(order_phrases))
         self.dbapi.execute(query)
@@ -1217,6 +1227,7 @@ class DBAPI(DbGeneric):
     def rebuild_secondary(self, update):
         gstats = self.get_gender_stats()
         self.genderStats = GenderStats(gstats)
+        ## Rebuild place order_by:
         self.dbapi.execute("""select blob_data from place;""")
         row = self.dbapi.fetchone()
         while row:
@@ -1224,6 +1235,51 @@ class DBAPI(DbGeneric):
             order_by = self._order_by_place_key(place)
             cur2 = self.dbapi.execute("""UPDATE place SET order_by = ? WHERE handle = ?;""",
                                       [order_by, place.handle])
+            row = self.dbapi.fetchone()
+        ## Rebuild person order_by:
+        self.dbapi.execute("""select blob_data from person;""")
+        row = self.dbapi.fetchone()
+        while row:
+            person = Person.create(pickle.loads(row[0]))
+            order_by = self._order_by_person_key(person)
+            cur2 = self.dbapi.execute("""UPDATE person SET order_by = ? WHERE handle = ?;""",
+                                      [order_by, person.handle])
+            row = self.dbapi.fetchone()
+        ## Rebuild citation order_by:
+        self.dbapi.execute("""select blob_data from citation;""")
+        row = self.dbapi.fetchone()
+        while row:
+            citation = Citation.create(pickle.loads(row[0]))
+            order_by = self._order_by_citation_key(citation)
+            cur2 = self.dbapi.execute("""UPDATE citation SET order_by = ? WHERE handle = ?;""",
+                                      [order_by, citation.handle])
+            row = self.dbapi.fetchone()
+        ## Rebuild source order_by:
+        self.dbapi.execute("""select blob_data from source;""")
+        row = self.dbapi.fetchone()
+        while row:
+            source = Source.create(pickle.loads(row[0]))
+            order_by = self._order_by_source_key(source)
+            cur2 = self.dbapi.execute("""UPDATE source SET order_by = ? WHERE handle = ?;""",
+                                      [order_by, source.handle])
+            row = self.dbapi.fetchone()
+        ## Rebuild tag order_by:
+        self.dbapi.execute("""select blob_data from tag;""")
+        row = self.dbapi.fetchone()
+        while row:
+            tag = Tag.create(pickle.loads(row[0]))
+            order_by = self._order_by_tag_key(tag.name)
+            cur2 = self.dbapi.execute("""UPDATE tag SET order_by = ? WHERE handle = ?;""",
+                                      [order_by, tag.handle])
+            row = self.dbapi.fetchone()
+        ## Rebuild media order_by:
+        self.dbapi.execute("""select blob_data from media;""")
+        row = self.dbapi.fetchone()
+        while row:
+            media = Media.create(pickle.loads(row[0]))
+            order_by = self._order_by_media_key(media)
+            cur2 = self.dbapi.execute("""UPDATE media SET order_by = ? WHERE handle = ?;""",
+                                      [order_by, media.handle])
             row = self.dbapi.fetchone()
 
     def has_handle_for_person(self, key):
@@ -1617,7 +1673,7 @@ class DBAPI(DbGeneric):
             # do a select on all; if it works, then it is ok; else, check them all
             table_name = table.lower()
             try:
-                fields = [self._hash_name(table, field) for (field, ptype) in 
+                fields = [self._hash_name(table, field) for (field, ptype) in
                           self.get_table_func(table,"class_func").get_secondary_fields()]
                 if fields:
                     self.dbapi.execute("select %s from %s limit 1;" % (", ".join(fields), table_name))
@@ -1759,7 +1815,7 @@ class DBAPI(DbGeneric):
         order_by - [(field, "ASC" | "DESC"), ...]
         """
         if order_by:
-            order_clause = ", ".join(["%s %s" % (self._hash_name(table, field), dir) 
+            order_clause = ", ".join(["%s %s" % (self._hash_name(table, field), dir)
                                      for (field, dir) in order_by])
             return "ORDER BY " + order_clause
         else:
@@ -1830,8 +1886,8 @@ class DBAPI(DbGeneric):
                  ["NOT",  where]
         order_by - [[fieldname, "ASC" | "DESC"], ...]
         """
-        secondary_fields = ([self._hash_name(table, field) for (field, ptype) in 
-                             self.get_table_func(table,"class_func").get_secondary_fields()] + 
+        secondary_fields = ([self._hash_name(table, field) for (field, ptype) in
+                             self.get_table_func(table,"class_func").get_secondary_fields()] +
                             ["handle"]) # handle is a sql field, but not listed in secondaries
         # If no fields, then we need objects:
         # Check to see if where matches SQL fields:
