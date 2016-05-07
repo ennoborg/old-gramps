@@ -341,6 +341,10 @@ class DBAPI(DbGeneric):
         """
         Executed after a batch operation.
         """
+        if txn.batch:
+            self.build_surname_list()
+            # FIXME: need a User GUI update callback here:
+            self.reindex_reference_map(lambda percent: percent)
         self.dbapi.commit()
         self.transaction = None
         msg = txn.get_description()
@@ -1766,10 +1770,9 @@ class DBAPI(DbGeneric):
         Create secondary indexes for just this table.
         """
         table_name = table.lower()
-        for fields in self.get_table_func(table,"class_func").get_index_fields():
-            for field in fields:
-                field = self._hash_name(table, field)
-                self.dbapi.try_execute("CREATE INDEX %s_%s ON %s(%s);" % (table, field, table_name, field))
+        for field in self.get_table_func(table,"class_func").get_index_fields():
+            field = self._hash_name(table, field)
+            self.dbapi.try_execute("CREATE INDEX %s_%s ON %s(%s);" % (table, field, table_name, field))
 
     def update_secondary_values_all(self):
         """
@@ -2012,3 +2015,4 @@ class DBAPI(DbGeneric):
         summary = super().get_summary()
         summary.update(self.dbapi.__class__.get_summary())
         return summary
+
