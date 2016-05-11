@@ -3,7 +3,7 @@ import re
 
 MySQLdb.paramstyle = 'qmark' ## Doesn't work
 
-class MySQL(object):
+class MySQL:
     @classmethod
     def get_summary(cls):
         """
@@ -33,16 +33,16 @@ class MySQL(object):
         query = query.replace("desc", "desc_")
         ## LIMIT offset, count
         ## count can be -1, for all
-        ## LIMIT -1 
+        ## LIMIT -1
         ## LIMIT offset, -1
-        query = query.replace("LIMIT -1", 
+        query = query.replace("LIMIT -1",
                               "LIMIT 18446744073709551615") ##
         match = re.match(".* LIMIT (.*), (.*) ", query)
         if match and match.groups():
             offset, count = match.groups()
             if count == "-1":
                 count = "18446744073709551615"
-            query = re.sub("(.*) LIMIT (.*), (.*) ", 
+            query = re.sub("(.*) LIMIT (.*), (.*) ",
                            "\\1 LIMIT %s, %s " % (offset, count),
                            query)
         return query

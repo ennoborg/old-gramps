@@ -41,7 +41,7 @@ from ..lib import (MediaRef, Attribute, Address, EventRef,
                    Family, ChildRef, Repository, LdsOrd, Surname, Citation,
                    SrcAttribute, Note, Tag)
 
-class ProxyCursor(object):
+class ProxyCursor:
     """
     A cursor for moving through proxied data.
     """
@@ -62,7 +62,7 @@ class ProxyCursor(object):
         for handle in self.get_handles():
             yield bytes(handle, "utf-8"), self.get_raw(handle)
 
-class ProxyMap(object):
+class ProxyMap:
     """
     A dictionary-like object for accessing "raw" proxied data. Of
     course, proxied data may have been changed by the proxy.
@@ -237,7 +237,7 @@ class ProxyDbBase(DbReadBase):
             return self.__tables[table]
         elif func in self.__tables[table].keys():
             return self.__tables[table][func]
-        else: 
+        else:
             return super().get_table_func(table, func)
 
     def is_open(self):

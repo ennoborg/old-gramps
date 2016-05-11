@@ -128,7 +128,7 @@ Syntax may be different for other shells and for Windows.
 #-------------------------------------------------------------------------
 # ArgParser
 #-------------------------------------------------------------------------
-class ArgParser(object):
+class ArgParser:
     """
     This class is responsible for parsing the command line arguments (if any)
     given to gramps, and determining if a GUI or a CLI session must be started.
@@ -388,8 +388,8 @@ class ArgParser(object):
         for ind in cleandbg:
             del options[ind]
 
-        if (len(options) > 0 and self.open is None and self.imports == [] 
-            and self.removes == [] 
+        if (len(options) > 0 and self.open is None and self.imports == []
+            and self.removes == []
             and not (self.list or self.list_more or self.list_table or
                      self.help)):
             # Extract and convert to unicode the arguments in the list.
