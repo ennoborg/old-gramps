@@ -108,6 +108,7 @@ class PersonTreeView(BasePersonView):
                 <menuitem action="Forward"/>
                 <separator/>
                 <menuitem action="HomePerson"/>
+                <menuitem action="SetActive"/>
                 <separator/>
               </placeholder>
             </menu>
@@ -118,7 +119,6 @@ class PersonTreeView(BasePersonView):
                 <menuitem action="Remove"/>
                 <menuitem action="Merge"/>
              </placeholder>
-              <menuitem action="SetActive"/>
               <menuitem action="FilterEdit"/>
             </menu>
           </menubar>

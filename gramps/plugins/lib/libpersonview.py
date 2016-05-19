@@ -205,6 +205,7 @@ class BasePersonView(ListView):
                 <menuitem action="Forward"/>
                 <separator/>
                 <menuitem action="HomePerson"/>
+                <menuitem action="SetActive"/>
                 <separator/>
               </placeholder>
             </menu>
@@ -215,7 +216,6 @@ class BasePersonView(ListView):
                 <menuitem action="Remove"/>
                 <menuitem action="Merge"/>
               </placeholder>
-              <menuitem action="SetActive"/>
               <menuitem action="FilterEdit"/>
             </menu>
           </menubar>

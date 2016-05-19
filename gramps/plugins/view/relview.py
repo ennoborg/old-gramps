@@ -346,6 +346,7 @@ class RelationshipView(NavigationView):
                 <menuitem action="Forward"/>
                 <separator/>
                 <menuitem action="HomePerson"/>
+                <menuitem action="SetActive"/>
                 <separator/>
               </placeholder>
             </menu>
