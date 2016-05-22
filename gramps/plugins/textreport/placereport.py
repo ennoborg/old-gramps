@@ -46,7 +46,7 @@ from gramps.gen.plug.docgen import (IndexMark, FontStyle, ParagraphStyle,
                                     FONT_SANS_SERIF, FONT_SERIF, 
                                     INDEX_TYPE_TOC, PARA_ALIGN_CENTER)
 from gramps.gen.sort import Sort
-from gramps.gen.utils.location import get_main_location
+from gramps.gen.utils.location import get_location_list
 from gramps.gen.display.place import displayer as place_displayer
 from gramps.gen.lib import PlaceType
 from gramps.gen.errors import ReportError
@@ -95,13 +95,15 @@ class PlaceReport(Report):
 
         self.sort = Sort(self.database)
 
+        self.place_handles = []
         if self.filter.get_name() != '':
             # Use the selected filter to provide a list of place handles
             plist = self.database.iter_place_handles()
             self.place_handles = self.filter.apply(self.database, plist)
-        else:
-            # Use the place handles selected without a filter
-            self.place_handles = self.__get_place_handles(places)
+
+        if places:
+            # Add places selected individually
+            self.place_handles += self.__get_place_handles(places)
 
         if not self.place_handles:
             raise ReportError(_('Place Report'),
@@ -153,17 +155,12 @@ class PlaceReport(Report):
         This procedure writes out the details of a single place
         """
         place = self.database.get_place_from_handle(handle)
-        location = get_main_location(self.database, place)
 
-        place_details = [
-            self._("Gramps ID: %s ") % place.get_gramps_id(),
-            self._("Street: %s ") % location.get(PlaceType.STREET, ''),
-            self._("Parish: %s ") % location.get(PlaceType.PARISH, ''),
-            self._("Locality: %s ") % location.get(PlaceType.LOCALITY, ''),
-            self._("City: %s ") % location.get(PlaceType.CITY, ''),
-            self._("County: %s ") % location.get(PlaceType.COUNTY, ''),
-            self._("State: %s") % location.get(PlaceType.STATE, ''),
-            self._("Country: %s ") % location.get(PlaceType.COUNTRY, '')]
+        place_details = [self._("Gramps ID: %s ") % place.get_gramps_id()]
+        for level in get_location_list(self.database, place):
+            place_details.append("%(type)s: %(name)s " %
+                                 {'type': str(level[1]), 'name': level[0]})
+
         self.doc.start_paragraph("PLC-PlaceTitle")
         place_title = place_displayer.display(self.database, place)
         self.doc.write_text(("%(nbr)s. %(place)s") % 
