@@ -57,6 +57,7 @@ from gramps.gen.plug.report import endnotes as Endnotes
 from gramps.gen.plug.report import stdoptions
 from gramps.gen.utils.file import media_path_full
 from gramps.gen.utils.lds import TEMPLES
+from gramps.gen.proxy import CacheProxyDb
 
 #------------------------------------------------------------------------
 #
@@ -123,6 +124,7 @@ class IndivCompleteReport(Report):
 
         stdoptions.run_private_data_option(self, menu)
         stdoptions.run_living_people_option(self, menu, self._locale)
+        self.database = CacheProxyDb(self.database)
         self._db = self.database
 
         self.use_pagebreak = menu.get_option_by_name('pageben').get_value()
@@ -555,7 +557,7 @@ class IndivCompleteReport(Report):
         self.doc.start_table("three","IDS-IndTable")
         self.doc.start_row()
         self.doc.start_cell("IDS-TableHead", 2)
-        self.write_paragraph(self._('Marriages/Children'),
+        self.write_paragraph(self._('Families'),
                              style='IDS-TableTitle')
         self.doc.end_cell()
         self.doc.end_row()
@@ -737,6 +739,8 @@ class IndivCompleteReport(Report):
 
         for count, person_handle in enumerate(ind_list):
             self.person = self._db.get_person_from_handle(person_handle)
+            if self.person is None:
+                continue
             self.family_notes_list = []
             self.write_person(count)
 
@@ -747,7 +751,7 @@ class IndivCompleteReport(Report):
 
         text = self._name_display.display(self.person)
         # feature request 2356: avoid genitive form
-        title = self._("Summary of %s") % text
+        title = self._("Complete Individual Report: %s") % text
         mark = IndexMark(title, INDEX_TYPE_TOC, 1)
         self.doc.start_paragraph("IDS-Title")
         self.doc.write_text(title, mark)

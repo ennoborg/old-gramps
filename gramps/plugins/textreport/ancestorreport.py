@@ -48,6 +48,7 @@ from gramps.gen.plug.report import utils as ReportUtils
 from gramps.gen.plug.report import MenuReportOptions
 from gramps.gen.plug.report import stdoptions
 from gramps.plugins.lib.libnarrate import Narrator
+from gramps.gen.proxy import CacheProxyDb
 
 #------------------------------------------------------------------------
 #
@@ -99,6 +100,7 @@ class AncestorReport(Report):
 
         stdoptions.run_private_data_option(self, menu)
         stdoptions.run_living_people_option(self, menu, rlocale)
+        self.database = CacheProxyDb(self.database)
 
         self.max_generations = menu.get_option_by_name('maxgen').get_value()
         self.pgbrk = menu.get_option_by_name('pagebbg').get_value()

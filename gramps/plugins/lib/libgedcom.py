@@ -92,7 +92,7 @@ import re
 import time
 import codecs
 from xml.parsers.expat import ParserCreate
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import string
 from io import StringIO
 from urllib.parse import urlparse
@@ -1896,7 +1896,7 @@ class GedcomParser(UpdateCallback):
         self.fams_map = stage_one.get_fams_map()
 
         self.place_parser = PlaceParser()
-        self.inline_srcs = {}
+        self.inline_srcs = OrderedDict()
         self.media_map = {}
         self.genby = ""
         self.genvers = ""
@@ -4344,6 +4344,8 @@ class GedcomParser(UpdateCallback):
             attr.set_type(AttributeType.NICKNAME)
             attr.set_value(line.data)
             state.person.add_attribute(attr)
+        elif name_len == 0:
+            return
         else:
             name = Name()
             surname = Surname()

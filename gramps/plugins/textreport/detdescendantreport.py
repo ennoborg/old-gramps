@@ -59,6 +59,7 @@ from gramps.gen.plug.report import MenuReportOptions
 from gramps.gen.plug.report import stdoptions
 from gramps.plugins.lib.libnarrate import Narrator
 from gramps.gen.display.place import displayer as place_displayer
+from gramps.gen.proxy import CacheProxyDb
 
 #------------------------------------------------------------------------
 #
@@ -136,6 +137,7 @@ class DetDescendantReport(Report):
 
         stdoptions.run_private_data_option(self, menu)
         stdoptions.run_living_people_option(self, menu, self._locale)
+        self.database = CacheProxyDb(self.database)
         self.db = self.database
 
         self.max_generations = get_value('gen')
@@ -198,7 +200,11 @@ class DetDescendantReport(Report):
     def apply_henry_filter(self,person_handle, index, pid, cur_gen=1):
         if (not person_handle) or (cur_gen > self.max_generations):
             return
-        self.dnumber[person_handle] = pid
+        if person_handle in self.dnumber:
+            if self.dnumber[person_handle] > pid:
+                self.dnumber[person_handle] = pid
+        else:
+            self.dnumber[person_handle] = pid
         self.map[index] = person_handle
 
         if len(self.gen_keys) < cur_gen:
