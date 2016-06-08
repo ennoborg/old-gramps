@@ -142,7 +142,7 @@ class FindLoop(ManagedWindow):
             self.current = person
             self.parent = None
             self.descendants(person_handle, set())
-            self.progress.set_header("%d/%d" % (count, len(people)))
+            self.progress.set_header("%s %d/%d" % (person.get_gramps_id(), count, len(people)))
             self.progress.step()
 
         # close the progress bar
