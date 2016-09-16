@@ -67,9 +67,9 @@ gtk-mac-bundler gtk-osx-build/projects/gramps/gramps.bundle
   </distutils>
 
   <distutils id="gramps" supports-non-srcdir-builds="no">
-    <branch module="gramps-project/gramps/archive/v4.2.3.tar.gz"
-	    repo="github-tarball" version="4.2.3"
-	    checkoutdir="gramps-gramps-4.2.3"/>
+    <branch module="gramps-project/gramps/archive/v4.2.4.tar.gz"
+	    repo="github-tarball" version="4.2.4"
+	    checkoutdir="gramps-gramps-4.2.4"/>
     <dependencies>
       <dep package="meta-python2-modules"/>
       <dep package="meta-python3-modules"/>
@@ -120,8 +120,8 @@ gtk-mac-bundler gtk-osx-build/projects/gramps/gramps.bundle
   </autotools>
 
   <autotools id="graphviz" autogen-sh="configure"
-	     autogenargs="--disable-sharp --disable-guile --disable-java --disable-lua --disable-ocaml --disable-perl --disable-php --disable-r --disable-ruby --disable-tcl --with-pangocairo --with-included-ltdl=yes">
-    <branch module="graphviz-2.28.0.tar.gz" version="2.28.0" repo="graphviz"/>
+	     autogenargs="--disable-sharp --disable-guile --disable-java --disable-lua --disable-ocaml --disable-perl --disable-php --disable-r --disable-ruby --disable-tcl --with-pangocairo">
+    <branch module="graphviz-2.38.0.tar.gz" version="2.38.0" repo="graphviz"/>
     <dependencies>
       <dep package="pango"/>
       <dep package="meta-gtk-osx-freetype"/>
@@ -191,7 +191,7 @@ gtk-mac-bundler gtk-osx-build/projects/gramps/gramps.bundle
    <dependencies>
      <dep package="python3"/>
      <dep package="berkeleydb"/>
-     <dep package="pycairo-python3"/>
+     <dep package="pycairo"/>
      <dep package="pygobject3"/>
      <dep package='pyicu'/>
      <dep package='pybsddb'/>

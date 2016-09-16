@@ -211,6 +211,7 @@ dropmarkers = """
 
   var tracelife = %s
   var map;
+  var myLatLng = new google.maps.LatLng(%s, %s);
 
   function initialize() {
     var mapOptions = {
@@ -218,7 +219,7 @@ dropmarkers = """
       zoomControl:  true, 
       zoom:         %d,
       mapTypeId:    google.maps.MapTypeId.ROADMAP,
-      center:       new google.maps.LatLng(0, 0)
+      center:       myLatLng,
     }
     map = new google.maps.Map(document.getElementById("map_canvas"), mapOptions);
   }
@@ -249,6 +250,7 @@ dropmarkers = """
 markers = """
   var tracelife = %s
   var map;
+  var myLatLng = new google.maps.LatLng(%s, %s);
 
   function initialize() {
     var mapOptions = {
@@ -256,7 +258,7 @@ markers = """
       panControl:      true,
       backgroundColor: '#000000',
       zoom:            %d,
-      center:          new google.maps.LatLng(0, 0),
+      center:          myLatLng,
       mapTypeId:       google.maps.MapTypeId.ROADMAP
     }
     map = new google.maps.Map(document.getElementById("map_canvas"), mapOptions);
@@ -1065,10 +1067,12 @@ class BasePage(object):
         if place_lat_long is None:
             return
         place_handle = place.get_handle()
+        event_date = event.get_date_object()
 
         # 0 = latitude, 1 = longitude, 2 - placetitle,
         # 3 = place handle, 4 = event date, 5 = event type
-        found = any(data[3] == place_handle for data in place_lat_long)
+        found = any(data[3] == place_handle and data[4] == event_date
+                        for data in place_lat_long)
         if not found:
             placetitle = _pd.display(self.dbase_, place)
             latitude  =  place.get_latitude()
@@ -1076,7 +1080,6 @@ class BasePage(object):
             if (latitude and longitude):
                 latitude, longitude = conv_lat_lon(latitude, longitude, "D.D8")
                 if latitude is not None:
-                    event_date = event.get_date_object()
                     etype = event.get_type()
 
                     # only allow Birth, Death, Census, Marriage, and Divorce events...
@@ -3011,13 +3014,19 @@ class SurnamePage(BasePage):
                         family_list = person.get_family_handle_list()
                         first_family = True
                         if family_list:
+                            fam_count = 0
                             for family_handle in family_list:
+                                fam_count += 1
                                 family = self.dbase_.get_family_from_handle(family_handle)
                                 partner_handle = ReportUtils.find_spouse(person, family)
                                 if partner_handle:
-                                    if not first_family:
-                                        tcell += ','
-                                    tcell += self.new_person_link(partner_handle, uplink=True)
+                                    link = self.new_person_link(partner_handle, uplink=True)
+                                    if fam_count < len(family_list):
+                                        if isinstance(link, Html):
+                                            link.inside += ","
+                                        else:
+                                            link += ','
+                                    tcell += link
                                     first_family = False
                         else:
                             tcell += "&nbsp;"
@@ -3440,8 +3449,13 @@ class PlacePages(BasePage):
                         [_("Longitude"),         "ColumnLongitude"] ]
                 )
 
+                # bug 9495 : incomplete display of place hierarchy labels
+                def sort_by_place_name(obj):
+                    name = self.report.obj_dict[Place][obj][1]
+                    return (name.lower())
+
                 handle_list = sorted(place_handles,
-                                     key=lambda x: SORT_KEY(ReportUtils.place_name(self.dbase_, x)))
+                                     key=lambda x: sort_by_place_name(x))
                 first = True
 
                 # begin table body
@@ -3453,11 +3467,10 @@ class PlacePages(BasePage):
                     place = self.dbase_.get_place_from_handle(place_handle_key)
                     if place: 
                         if place.get_change_time() > ldatec: ldatec = place.get_change_time()
-                        place_title = ReportUtils.place_name(self.dbase_,
-                                                             place_handle_key)
+                        place_title = self.report.obj_dict[Place][place_handle_key][1]
                         ml = get_main_location(self.dbase_, place)
 
-                        if place_title and not place_title.isspace():  
+                        if place_title and place_title != " ":
                             letter = get_index_letter(first_letter(place_title),
                                                       index_list)
                         else:
@@ -3527,7 +3540,7 @@ class PlacePages(BasePage):
 
         of, sio = self.report.create_file(place_handle, "plc")
         self.up = True
-        self.page_title = _pd.display(self.dbase_, place)
+        self.page_title = place_name
         placepage, head, body = self.write_header(_("Places"))
 
         self.placemappages = self.report.options['placemappages']
@@ -3544,7 +3557,7 @@ class PlacePages(BasePage):
                     placedetail += thumbnail
 
             # add section title
-            placedetail += Html("h3", html_escape(place.get_name().get_value()), inline =True)
+            placedetail += Html("h3", html_escape(place_name), inline =True)
 
             # begin summaryarea division and places table
             with Html("div", id ='summaryarea') as summaryarea:
@@ -5843,11 +5856,11 @@ class PersonPages(BasePage):
 
                             # are we creating Drop Markers?
                             elif self.googleopts == "Drop":
-                                jsc += dropmarkers  % (tracelife, zoomlevel)
+                                jsc += dropmarkers % (tracelife, midX_, midY_, zoomlevel)
 
                             # we are creating Markers only...
                             else:
-                                jsc += markers % (tracelife, zoomlevel)
+                                jsc += markers % (tracelife, midX_, midY_, zoomlevel)
 
                         # we are using OpenStreetMap...
                         else:
@@ -7541,7 +7554,10 @@ class NavWebReport(Report):
         place = self.database.get_place_from_handle(place_handle)
         if place is None:
             return
-        place_name = _pd.display_event(self.database, event)
+        if config.get('preferences.place-auto'):
+            place_name = _pd.display_event(self.database, event)
+        else:
+            place_name = place.get_title()
         place_fname = self.build_url_fname(place_handle, "plc",
                                                    False) + self.ext
         self.obj_dict[Place][place_handle] = (place_fname, place_name, place.gramps_id, event)
@@ -7984,7 +8000,7 @@ class NavWebReport(Report):
             of.flush()
             tarinfo = tarfile.TarInfo(self.cur_fname)
             tarinfo.size = len(string_io.getvalue())
-            tarinfo.mtime = date if date is not None else time.time()
+            tarinfo.mtime = date if date != 0 else time.time()
             if not win():
                 tarinfo.uid = os.getuid()
                 tarinfo.gid = os.getgid()
