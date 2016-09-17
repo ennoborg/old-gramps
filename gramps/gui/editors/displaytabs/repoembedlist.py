@@ -23,8 +23,6 @@
 # Python classes
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 from gi.repository import GObject, GLib
 
 #-------------------------------------------------------------------------
@@ -32,6 +30,8 @@ from gi.repository import GObject, GLib
 # Gramps classes
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 from gramps.gen.lib import RepoRef, Repository
 from ...dbguielement import DbGUIElement
 from ...selectors import SelectorFactory
@@ -171,8 +171,8 @@ class RepoEmbedList(EmbeddedList, DbGUIElement):
                       "being edited or another repository reference that is "
                       "associated with the same repository is being edited."
                       "\n\nTo edit this repository reference, you need to "
-                      "close the repository.")
-                    )
+                      "close the repository."),
+                    parent=self.uistate.window)
 
 
     def edit_callback(self, name):

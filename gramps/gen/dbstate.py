@@ -31,6 +31,7 @@ Provide the database state class
 import sys
 import os
 import logging
+import inspect
 
 #------------------------------------------------------------------------
 #
@@ -63,15 +64,34 @@ class DbState(Callback):
 
     def __init__(self):
         """
-        Initalize the state with an empty (and useless) DbBsddbRead. This is
-        just a place holder until a real DB is assigned.
+        Initalize the state with an empty (and useless) DummyDb. This is just a
+        place holder until a real DB is assigned.
         """
         Callback.__init__(self)
-        self.db = self.make_database("inmemorydb")
-        self.db.load(None)
-        self.db.db_is_open = False
-        self.open = False
+        self.db = self.make_database("dummydb")
+        self.open = False  #  Deprecated - use DbState.is_open()
         self.stack = []
+
+    def is_open(self):
+        """
+        Returns True if DbState.db refers to a database object instance, AND the
+        database is open.
+
+        This tests both for the existence of the database and its being open, so
+        that for the time being, the use of the dummy database on closure can
+        continue, but at some future time, this could be altered to just set the
+        database to none.
+
+        This replaces tests on DbState.open, DbState.db, DbState.db.is_open()
+        and DbState.db.db_is_open all of which are deprecated.
+        """
+        class_name = self.__class__.__name__
+        func_name = "is_open"
+        caller_frame = inspect.stack()[1]
+        _LOG.debug('calling %s.%s()... from file %s, line %s in %s',
+                  class_name, func_name, os.path.split(caller_frame[1])[1],
+                  caller_frame[2], caller_frame[3])
+        return (self.db is not None) and self.db.is_open()
 
     def change_database(self, database):
         """
@@ -80,7 +100,8 @@ class DbState(Callback):
         """
         if database:
             self.emit('no-database', ())
-            self.db.close()
+            if self.is_open():
+                self.db.close()
             self.change_database_noclose(database)
 
     def change_database_noclose(self, database):
@@ -108,13 +129,12 @@ class DbState(Callback):
 
     def no_database(self):
         """
-        Closes the database without a new database
+        Closes the database without a new database (except for the DummyDb)
         """
         self.emit('no-database', ())
-        self.db.close()
-        self.db = self.make_database("inmemorydb")
-        self.db.load(None)
-        self.db.db_is_open = False
+        if self.is_open():
+            self.db.close()
+        self.db = self.make_database("dummydb")
         self.open = False
         self.emit('database-changed', (self.db, ))
 
@@ -184,8 +204,15 @@ class DbState(Callback):
                     self.save_modules()
             mod = pmgr.load_plugin(pdata)
             database = getattr(mod, pdata.databaseclass)
-            _LOG.debug("make_database %s" % database)
-            return database()
+            db = database()
+            import inspect
+            caller_frame = inspect.stack()[1]
+            _LOG.debug("Database class instance created Class:%s instance:%s. "
+                       "Called from File %s, line %s, in %s"
+                       % ((db.__class__.__name__, hex(id(db)))
+                         + (os.path.split(caller_frame[1])[1],)
+                         + tuple(caller_frame[i] for i in range(2, 4))))
+            return db
 
     def open_database(self, dbname, force_unlock=False, callback=None):
         """
@@ -204,7 +231,7 @@ class DbState(Callback):
         """
         Find a Family Tree given its name, and return properties.
         """
-        dbdir = os.path.expanduser(config.get('behavior.database-path'))
+        dbdir = os.path.expanduser(config.get('database.path'))
         for dpath in os.listdir(dbdir):
             dirpath = os.path.join(dbdir, dpath)
             path_name = os.path.join(dirpath, "name.txt")

@@ -32,9 +32,10 @@ ACSII document generator.
 # Gramps modules
 #
 #------------------------------------------------------------------------
+from gramps.gen.const import DOCGEN_OPTIONS
+from gramps.gen.errors import ReportError
 from gramps.gen.plug.docgen import (BaseDoc, TextDoc,
                                     PARA_ALIGN_RIGHT, PARA_ALIGN_CENTER)
-from gramps.gen.errors import ReportError
 from gramps.gen.plug.menu import NumberOption
 from gramps.gen.plug.report import DocOptions
 from gramps.gen.const import GRAMPS_LOCALE as glocale
@@ -172,8 +173,7 @@ class AsciiDoc(BaseDoc, TextDoc):
         try:
             self.file = open(self.filename, "w", errors='backslashreplace')
         except Exception as msg:
-            errmsg = "%s\n%s" % (_("Could not create %s") % self.filename, msg)
-            raise ReportError(errmsg)
+            raise ReportError(_("Could not create %s") % self.filename, msg)
 
         self.in_cell = 0
         self.text = ""
@@ -457,7 +457,8 @@ class AsciiDocOptions(DocOptions):
         """
         Add options to the document menu for the AsciiDoc docgen.
         """
-        category_name = 'Document Options' # internal name: don't translate
+
+        category_name = DOCGEN_OPTIONS
 
         linechars = NumberOption(_('Characters per line'), 72, 20, 9999)
         linechars.set_help(_("The number of characters per line"))

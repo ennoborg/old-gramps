@@ -118,7 +118,7 @@ class CLIDbManager:
         self.dbstate = dbstate
         self.msg = None
 
-        if dbstate:
+        if dbstate and dbstate.is_open():
             self.active = dbstate.db.get_save_path()
         else:
             self.active = None
@@ -219,7 +219,7 @@ class CLIDbManager:
         Get the list of current names in the database dir
         """
         # make the default directory if it does not exist
-        dbdir = os.path.expanduser(config.get('behavior.database-path'))
+        dbdir = os.path.expanduser(config.get('database.path'))
         db_ok = make_dbdir(dbdir)
 
         self.current_names = []
@@ -247,7 +247,7 @@ class CLIDbManager:
 
                     (tval, last) = time_val(dirpath)
                     (enable, stock_id) = self.icon_values(
-                        dirpath, self.active, self.dbstate.db.is_open())
+                        dirpath, self.active, self.dbstate.is_open())
 
                     if stock_id == 'gramps-lock':
                         last = find_locker_name(dirpath)
@@ -375,7 +375,7 @@ class CLIDbManager:
                 self.__start_cursor(_("Importing data..."))
 
                 ## Use bsddb, for now, because we assumed that above.
-                dbid = "bsddb" ## config.get('behavior.database-backend')
+                dbid = "bsddb" ## config.get('database.backend')
                 dbase = self.dbstate.make_database(dbid)
                 dbase.load(new_path, user.callback)
 
@@ -410,7 +410,7 @@ class CLIDbManager:
         Deletes a database folder given a pattenr that matches
         its proper name.
         """
-        dbdir = os.path.expanduser(config.get('behavior.database-path'))
+        dbdir = os.path.expanduser(config.get('database.path'))
         match_list = []
         for dpath in os.listdir(dbdir):
             dirpath = os.path.join(dbdir, dpath)
@@ -427,7 +427,9 @@ class CLIDbManager:
         for (name, directory) in match_list:
             if user is None or user.prompt(
                     _('Remove family tree warning'),
-                    _('Are you sure you want to remove the family tree named\n"%s"?' % name),
+                    _('Are you sure you want to remove '
+                      'the family tree named\n"%s"?'
+                     ) % name,
                     _('yes'), _('no'), default_label=_('no')):
                 try:
                     for (top, dirs, files) in os.walk(directory):
@@ -509,7 +511,7 @@ def find_next_db_dir():
     """
     while True:
         base = "%x" % int(time.time())
-        dbdir = os.path.expanduser(config.get('behavior.database-path'))
+        dbdir = os.path.expanduser(config.get('database.path'))
         new_path = os.path.join(dbdir, base)
         if not os.path.isdir(new_path):
             break

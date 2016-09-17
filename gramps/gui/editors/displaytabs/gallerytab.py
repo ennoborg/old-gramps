@@ -61,13 +61,14 @@ from .buttontab import ButtonTab
 from gramps.gen.const import THUMBSCALE
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
+
 #-------------------------------------------------------------------------
 #
 #
 #
 #-------------------------------------------------------------------------
-def make_launcher(path):
-    return lambda x: open_file_with_default_application(path)
+def make_launcher(path, uistate):
+    return lambda x: open_file_with_default_application(path, uistate)
 
 #-------------------------------------------------------------------------
 #
@@ -139,12 +140,12 @@ class GalleryTab(ButtonTab, DbGUIElement):
             img = Gtk.Image()
             img.set_from_icon_name("gramps-viewmedia", Gtk.IconSize.MENU)
             item.set_image(img)
-            item.connect('activate', make_launcher(media_path))
+            item.connect('activate', make_launcher(media_path, self.uistate))
             item.show()
             self.menu.append(item)
             mfolder, mfile = os.path.split(media_path)
             item = Gtk.MenuItem(label=_('Open Containing _Folder'))
-            item.connect('activate', make_launcher(mfolder))
+            item.connect('activate', make_launcher(mfolder, self.uistate))
             item.show()
             self.menu.append(item)
             item = Gtk.SeparatorMenuItem()
@@ -260,7 +261,8 @@ class GalleryTab(ButtonTab, DbGUIElement):
                 #notify user of error
                 from ...dialog import RunDatabaseRepair
                 RunDatabaseRepair(
-                            _('Non existing media found in the Gallery'))
+                    _('Non existing media found in the Gallery'),
+                    parent=self.uistate.window)
             else :
                 pixbuf = get_thumbnail_image(
                                 media_path_full(self.dbstate.db,
@@ -335,7 +337,8 @@ class GalleryTab(ButtonTab, DbGUIElement):
             except WindowActiveError:
                 from ...dialog import WarningDialog
                 WarningDialog(_("Cannot share this reference"),
-                              self.__blocked_text())
+                              self.__blocked_text(),
+                              parent=self.uistate.window)
 
     def del_button_clicked(self, obj):
         ref = self.get_selected()
@@ -355,7 +358,8 @@ class GalleryTab(ButtonTab, DbGUIElement):
             except WindowActiveError:
                 from ...dialog import WarningDialog
                 WarningDialog(_("Cannot edit this reference"),
-                              self.__blocked_text())
+                              self.__blocked_text(),
+                              parent=self.uistate.window)
 
     def edit_callback(self, media_ref, media):
         """

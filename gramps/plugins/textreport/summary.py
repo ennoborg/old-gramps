@@ -2,7 +2,7 @@
 # Gramps - a GTK+/GNOME based genealogy program
 #
 # Copyright (C) 2000-2006  Donald N. Allingham
-# Copyright (C) 2008       Brian G. Matherly
+# Copyright (C) 2008,2012  Brian G. Matherly
 # Copyright (C) 2010       Jakim Friant
 # Copyright (C) 2013-2014  Paul Franklin
 #
@@ -41,7 +41,7 @@ from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 from gramps.gen.lib import Person
 from gramps.gen.plug.report import Report
-from gramps.gen.plug.report import utils as ReportUtils
+from gramps.gen.plug.report import utils
 from gramps.gen.plug.report import MenuReportOptions
 from gramps.gen.plug.report import stdoptions
 from gramps.gen.plug.docgen import (IndexMark, FontStyle, ParagraphStyle,
@@ -117,6 +117,7 @@ class SummaryReport(Report):
         num_people = 0
         for person in self.__db.iter_people():
             num_people += 1
+            primary_names = [person.get_primary_name()]
 
             # Count people with media.
             length = len(person.get_media_list())
@@ -124,7 +125,7 @@ class SummaryReport(Report):
                 with_media += 1
 
             # Count people with incomplete names.
-            for name in [person.get_primary_name()] + person.get_alternate_names():
+            for name in primary_names + person.get_alternate_names():
                 if name.get_first_name().strip() == "":
                     incomp_names += 1
                 else:
@@ -137,7 +138,7 @@ class SummaryReport(Report):
 
             # Count people without families.
             if (not person.get_main_parents_family_handle() and
-               not len(person.get_family_handle_list())):
+                    not len(person.get_family_handle_list())):
                 disconnected += 1
 
             # Count missing birthdays.
@@ -158,9 +159,9 @@ class SummaryReport(Report):
                 unknowns += 1
 
             # Count unique surnames
-            for name in [person.get_primary_name()] + person.get_alternate_names():
-                if not name.get_surname().strip() in namelist \
-                    and not name.get_surname().strip() == "":
+            for name in primary_names + person.get_alternate_names():
+                if (not name.get_surname().strip() in namelist
+                        and not name.get_surname().strip() == ""):
                     namelist.append(name.get_surname().strip())
 
         self.doc.start_paragraph("SR-Normal")
@@ -176,8 +177,8 @@ class SummaryReport(Report):
         self.doc.end_paragraph()
 
         self.doc.start_paragraph("SR-Normal")
-        self.doc.write_text(self._("Individuals with unknown gender: %d") %
-                            unknowns)
+        self.doc.write_text(self._("Individuals with unknown gender: %d"
+                                  ) % unknowns)
         self.doc.end_paragraph()
 
         self.doc.start_paragraph("SR-Normal")
@@ -185,13 +186,13 @@ class SummaryReport(Report):
         self.doc.end_paragraph()
 
         self.doc.start_paragraph("SR-Normal")
-        self.doc.write_text(self._("Individuals missing birth dates: %d") %
-                            missing_bday)
+        self.doc.write_text(self._("Individuals missing birth dates: %d"
+                                  ) % missing_bday)
         self.doc.end_paragraph()
 
         self.doc.start_paragraph("SR-Normal")
-        self.doc.write_text(self._("Disconnected individuals: %d") %
-                            disconnected)
+        self.doc.write_text(self._("Disconnected individuals: %d"
+                                  ) % disconnected)
         self.doc.end_paragraph()
 
         self.doc.start_paragraph("SR-Normal")
@@ -199,8 +200,8 @@ class SummaryReport(Report):
         self.doc.end_paragraph()
 
         self.doc.start_paragraph("SR-Normal")
-        self.doc.write_text(self._("Individuals with media objects: %d") %
-                            with_media)
+        self.doc.write_text(self._("Individuals with media objects: %d"
+                                  ) % with_media)
         self.doc.end_paragraph()
 
     def summarize_families(self):
@@ -212,8 +213,8 @@ class SummaryReport(Report):
         self.doc.end_paragraph()
 
         self.doc.start_paragraph("SR-Normal")
-        self.doc.write_text(self._("Number of families: %d") %
-                            self.__db.get_number_of_families())
+        self.doc.write_text(self._("Number of families: %d"
+                                  ) % self.__db.get_number_of_families())
         self.doc.end_paragraph()
 
     def summarize_media(self):
@@ -234,7 +235,7 @@ class SummaryReport(Report):
             media = self.__db.get_media_from_handle(media_id)
             try:
                 size_in_bytes += posixpath.getsize(
-                                 media_path_full(self.__db, media.get_path()))
+                    media_path_full(self.__db, media.get_path()))
                 length = len(str(size_in_bytes))
                 if size_in_bytes <= 999999:
                     mbytes = self._("less than 1")
@@ -244,13 +245,13 @@ class SummaryReport(Report):
                 notfound.append(media.get_path())
 
         self.doc.start_paragraph("SR-Normal")
-        self.doc.write_text(self._("Number of unique media objects: %d") %
-                            total_media)
+        self.doc.write_text(self._("Number of unique media objects: %d"
+                                  ) % total_media)
         self.doc.end_paragraph()
 
         self.doc.start_paragraph("SR-Normal")
-        self.doc.write_text(self._("Total size of media objects: %s MB") %
-                            mbytes)
+        self.doc.write_text(self._("Total size of media objects: %s MB"
+                                  ) % mbytes)
         self.doc.end_paragraph()
 
         if len(notfound) > 0:
@@ -274,6 +275,10 @@ class SummaryOptions(MenuReportOptions):
     """
     def __init__(self, name, dbase):
         MenuReportOptions.__init__(self, name, dbase)
+
+    def get_subject(self):
+        """ Return a string that describes the subject of the report. """
+        return _('Entire Database')
 
     def add_menu_options(self, menu):
         """
@@ -299,8 +304,8 @@ class SummaryOptions(MenuReportOptions):
         para = ParagraphStyle()
         para.set_header_level(1)
         para.set_bottom_border(1)
-        para.set_top_margin(ReportUtils.pt2cm(3))
-        para.set_bottom_margin(ReportUtils.pt2cm(3))
+        para.set_top_margin(utils.pt2cm(3))
+        para.set_bottom_margin(utils.pt2cm(3))
         para.set_font(font)
         para.set_alignment(PARA_ALIGN_CENTER)
         para.set_description(_("The style used for the title of the page."))
@@ -320,7 +325,7 @@ class SummaryOptions(MenuReportOptions):
         para = ParagraphStyle()
         para.set(first_indent=-0.75, lmargin=.75)
         para.set_font(font)
-        para.set_top_margin(ReportUtils.pt2cm(3))
-        para.set_bottom_margin(ReportUtils.pt2cm(3))
+        para.set_top_margin(utils.pt2cm(3))
+        para.set_bottom_margin(utils.pt2cm(3))
         para.set_description(_('The basic style used for the text display.'))
         default_style.add_paragraph_style("SR-Normal", para)

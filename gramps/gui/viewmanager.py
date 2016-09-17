@@ -65,7 +65,7 @@ _ = glocale.translation.sgettext
 from gramps.cli.grampscli import CLIManager
 from .user import User
 from .plug import tool
-from gramps.gen.plug import (START, END)
+from gramps.gen.plug import START
 from gramps.gen.plug import REPORT
 from gramps.gen.plug.report._constants import standalone_categories
 from .plug import (PluginWindows, ReportPluginDialog, ToolPluginDialog)
@@ -87,7 +87,6 @@ from gramps.gen.utils.file import media_path_full
 from .dbloader import DbLoader
 from .display import display_help, display_url
 from .configure import GrampsPreferences
-from gramps.gen.db.exceptions import DbException
 from .aboutdialog import GrampsAboutDialog
 from .navigator import Navigator
 from .views.tags import Tags
@@ -103,7 +102,7 @@ if is_quartz():
         from gi.repository import GtkosxApplication as QuartzApp
         _GTKOSXAPPLICATION = True
     except:
-        print ("Failed to import gtk_osxapplication")
+        print("Failed to import gtk_osxapplication")
         _GTKOSXAPPLICATION = False
 else:
     _GTKOSXAPPLICATION = False
@@ -116,6 +115,7 @@ UIDEFAULT = '''<ui>
     <menuitem action="Open"/>
     <menu action="OpenRecent">
     </menu>
+    <menuitem action="Close"/>
     <separator/>
     <menuitem action="Import"/>
     <menuitem action="Export"/>
@@ -263,7 +263,7 @@ class ViewManager(CLIManager):
 
     """
 
-    def __init__(self, dbstate, view_category_order, user = None):
+    def __init__(self, dbstate, view_category_order, user=None):
         """
         The viewmanager is initialised with a dbstate on which GRAMPS is
         working, and a fixed view_category_order, which is the order in which
@@ -319,9 +319,9 @@ class ViewManager(CLIManager):
         howoften = config.get("behavior.check-for-updates")
         update = False
         if howoften != 0: # update never if zero
-            y,m,d = list(map(int,
-                  config.get("behavior.last-check-for-updates").split("/")))
-            days = (datetime.date.today() - datetime.date(y, m, d)).days
+            year, mon, day = list(map(
+                int, config.get("behavior.last-check-for-updates").split("/")))
+            days = (datetime.date.today() - datetime.date(year, mon, day)).days
             if howoften == 1 and days >= 30: # once a month
                 update = True
             elif howoften == 2 and days >= 7: # once a week
@@ -346,7 +346,8 @@ class ViewManager(CLIManager):
         Show the error.
         In the GUI, the error is shown, and a return happens
         """
-        ErrorDialog(title, errormessage, parent=self.uistate.window)
+        ErrorDialog(title, errormessage,
+                    parent=self.uistate.window)
         return 1
 
     def __build_main_window(self):
@@ -426,6 +427,7 @@ class ViewManager(CLIManager):
         if self.fullscreen:
             self.window.fullscreen()
 
+        self.window.set_title("%s - Gramps" % _('No Family Tree'))
         self.window.show()
 
     def __setup_navigator(self):
@@ -498,6 +500,8 @@ class ViewManager(CLIManager):
             ]
 
         self._readonly_action_list = [
+            ('Close', None, _('_Close'), "<control>w",
+             _("Close the current database"), self.close_database),
             ('Export', 'gramps-export', _('_Export...'), "<PRIMARY>e", None,
              self.export_data),
             ('Backup', None, _("Make Backup..."), None,
@@ -519,16 +523,26 @@ class ViewManager(CLIManager):
             ('F8', None, 'F9', "F8", None, self.__keypress),
             ('F9', None, 'F9', "F9", None, self.__keypress),
             ('F11', None, 'F11', "F11", None, self.__keypress),
-            ('<PRIMARY>1', None, '<PRIMARY>1', "<PRIMARY>1", None, self.__gocat),
-            ('<PRIMARY>2', None, '<PRIMARY>2', "<PRIMARY>2", None, self.__gocat),
-            ('<PRIMARY>3', None, '<PRIMARY>3', "<PRIMARY>3", None, self.__gocat),
-            ('<PRIMARY>4', None, '<PRIMARY>4', "<PRIMARY>4", None, self.__gocat),
-            ('<PRIMARY>5', None, '<PRIMARY>5', "<PRIMARY>5", None, self.__gocat),
-            ('<PRIMARY>6', None, '<PRIMARY>6', "<PRIMARY>6", None, self.__gocat),
-            ('<PRIMARY>7', None, '<PRIMARY>7', "<PRIMARY>7", None, self.__gocat),
-            ('<PRIMARY>8', None, '<PRIMARY>8', "<PRIMARY>8", None, self.__gocat),
-            ('<PRIMARY>9', None, '<PRIMARY>9', "<PRIMARY>9", None, self.__gocat),
-            ('<PRIMARY>0', None, '<PRIMARY>0', "<PRIMARY>0", None, self.__gocat),
+            ('<PRIMARY>1', None, '<PRIMARY>1', "<PRIMARY>1", None,
+             self.__gocat),
+            ('<PRIMARY>2', None, '<PRIMARY>2', "<PRIMARY>2", None,
+             self.__gocat),
+            ('<PRIMARY>3', None, '<PRIMARY>3', "<PRIMARY>3", None,
+             self.__gocat),
+            ('<PRIMARY>4', None, '<PRIMARY>4', "<PRIMARY>4", None,
+             self.__gocat),
+            ('<PRIMARY>5', None, '<PRIMARY>5', "<PRIMARY>5", None,
+             self.__gocat),
+            ('<PRIMARY>6', None, '<PRIMARY>6', "<PRIMARY>6", None,
+             self.__gocat),
+            ('<PRIMARY>7', None, '<PRIMARY>7', "<PRIMARY>7", None,
+             self.__gocat),
+            ('<PRIMARY>8', None, '<PRIMARY>8', "<PRIMARY>8", None,
+             self.__gocat),
+            ('<PRIMARY>9', None, '<PRIMARY>9', "<PRIMARY>9", None,
+             self.__gocat),
+            ('<PRIMARY>0', None, '<PRIMARY>0', "<PRIMARY>0", None,
+             self.__gocat),
             # NOTE: CTRL+ALT+NUMBER is set in src/plugins/sidebar/cat...py
             ('<PRIMARY>BackSpace', None, '<PRIMARY>BackSpace',
              "<PRIMARY>BackSpace", None, self.__keypress),
@@ -561,9 +575,9 @@ class ViewManager(CLIManager):
 
         self._file_toggle_action_list = [
             ('Navigator', None, _('_Navigator'), "<PRIMARY>m", None,
-             self.navigator_toggle, self.show_navigator ),
+             self.navigator_toggle, self.show_navigator),
             ('Toolbar', None, _('_Toolbar'), None, None, self.toolbar_toggle,
-             self.show_toolbar ),
+             self.show_toolbar),
             ('Fullscreen', None, _('F_ull Screen'), "F11", None,
              self.fullscreen_toggle, self.fullscreen),
             ]
@@ -621,8 +635,8 @@ class ViewManager(CLIManager):
 
     def __next_view(self, action):
         """
-        Callback that is called when the next category action is selected.
-        It selects the next category as the active category. If we reach the end,
+        Callback that is called when the next category action is selected.  It
+        selects the next category as the active category. If we reach the end,
         we wrap around to the first.
         """
         curpage = self.notebook.get_current_page()
@@ -640,8 +654,8 @@ class ViewManager(CLIManager):
     def __prev_view(self, action):
         """
         Callback that is called when the previous category action is selected.
-        It selects the previous category as the active category. If we reach the
-        beginning of the list, we wrap around to the last.
+        It selects the previous category as the active category. If we reach
+        the beginning of the list, we wrap around to the last.
         """
         curpage = self.notebook.get_current_page()
         #find cat and view of the current page
@@ -659,7 +673,7 @@ class ViewManager(CLIManager):
         """
         Initialize the interface.
         """
-        self.views = get_available_views()
+        self.views = self.get_available_views()
         defaults = views_to_show(self.views,
                                  config.get('preferences.use-last-view'))
         self.current_views = defaults[2]
@@ -668,19 +682,25 @@ class ViewManager(CLIManager):
 
         self.goto_page(defaults[0], defaults[1])
 
+        self.fileactions.set_sensitive(False)
+        self.__build_tools_menu(self._pmgr.get_reg_tools())
+        self.__build_report_menu(self._pmgr.get_reg_reports())
+        self._pmgr.connect('plugins-reloaded',
+                           self.__rebuild_report_and_tool_menus)
+        self.fileactions.set_sensitive(True)
+        self.uistate.widget.set_sensitive(True)
         if not self.file_loaded:
+            self.actiongroup.set_sensitive(False)
+            self.readonlygroup.set_sensitive(False)
+            self.undoactions.set_sensitive(False)
+            self.redoactions.set_sensitive(False)
+            self.undohistoryactions.set_sensitive(False)
             self.actiongroup.set_visible(False)
             self.readonlygroup.set_visible(False)
             self.undoactions.set_visible(False)
             self.redoactions.set_visible(False)
             self.undohistoryactions.set_visible(False)
-        self.fileactions.set_sensitive(False)
-        self.__build_tools_menu(self._pmgr.get_reg_tools())
-        self.__build_report_menu(self._pmgr.get_reg_reports())
-        self._pmgr.connect('plugins-reloaded',
-                             self.__rebuild_report_and_tool_menus)
-        self.fileactions.set_sensitive(True)
-        self.uistate.widget.set_sensitive(True)
+        self.uimanager.ensure_update()
         config.connect("interface.statusbar", self.__statusbar_key_update)
 
     def __statusbar_key_update(self, client, cnxn_id, entry, data):
@@ -695,23 +715,8 @@ class ViewManager(CLIManager):
         ArgHandler can work without it always shown
         """
         self.window.show()
-        if not self.dbstate.db.is_open() and show_manager:
+        if not self.dbstate.is_open() and show_manager:
             self.__open_activate(None)
-
-    def do_load_plugins(self):
-        """
-        Loads the plugins at initialization time. The plugin status window is
-        opened on an error if the user has requested.
-        """
-        # load plugins
-        self.uistate.status_text(_('Loading plugins...'))
-        error = CLIManager.do_load_plugins(self)
-
-        #  get to see if we need to open the plugin status window
-        if error and config.get('behavior.pop-plugin-status'):
-            self.__plugin_status()
-
-        self.uistate.push_message(self.dbstate, _('Ready'))
 
     def do_reg_plugins(self, dbstate, uistate):
         """
@@ -728,6 +733,13 @@ class ViewManager(CLIManager):
 
         self.uistate.push_message(self.dbstate, _('Ready'))
 
+    def close_database(self, action=None, make_backup=True):
+        """
+        Close the database
+        """
+        self.dbstate.no_database()
+        self.post_close_db()
+
     def quit(self, *obj):
         """
         Closes out the program, backing up data
@@ -736,7 +748,8 @@ class ViewManager(CLIManager):
         self.uistate.set_sensitive(False)
 
         # backup data, and close the database
-        self.dbstate.db.close(user=self.user)
+        if self.dbstate.is_open():
+            self.dbstate.db.close(user=self.user)
 
         # have each page save anything, if they need to:
         self.__delete_pages()
@@ -813,12 +826,16 @@ class ViewManager(CLIManager):
         self.uimanager.ensure_update()
 
     def __attach_menubar(self, vbox):
+        """
+        Attach the menubar
+        """
         vbox.pack_start(self.menubar, False, True, 0)
         if _GTKOSXAPPLICATION:
             self.menubar.hide()
             quit_item = self.uimanager.get_widget("/MenuBar/FileMenu/Quit")
             about_item = self.uimanager.get_widget("/MenuBar/HelpMenu/About")
-            prefs_item = self.uimanager.get_widget("/MenuBar/EditMenu/Preferences")
+            prefs_item = self.uimanager.get_widget(
+                "/MenuBar/EditMenu/Preferences")
             self.macapp.set_menu_bar(self.menubar)
             self.macapp.insert_app_menu_item(about_item, 0)
             self.macapp.insert_app_menu_item(prefs_item, 1)
@@ -924,9 +941,10 @@ class ViewManager(CLIManager):
         return None
 
     def __create_dummy_page(self, pdata, error):
+        """ Create a dummy page """
         from .views.pageview import DummyPage
         return DummyPage(pdata.name, pdata, self.dbstate, self.uistate,
-                    _("View failed to load. Check error output."), error)
+                         _("View failed to load. Check error output."), error)
 
     def __create_page(self, pdata, page_def):
         """
@@ -936,7 +954,7 @@ class ViewManager(CLIManager):
             page = page_def(pdata, self.dbstate, self.uistate)
         except:
             import traceback
-            LOG.warn("View '%s' failed to load." % pdata.id)
+            LOG.warning("View '%s' failed to load.", pdata.id)
             traceback.print_exc()
             page = self.__create_dummy_page(pdata, traceback.format_exc())
 
@@ -962,6 +980,18 @@ class ViewManager(CLIManager):
         hbox.add(Gtk.Label(label=pdata.name))
         hbox.show_all()
         page_num = self.notebook.append_page(page.get_display(), hbox)
+        if not self.file_loaded:
+            self.actiongroup.set_sensitive(False)
+            self.readonlygroup.set_sensitive(False)
+            self.undoactions.set_sensitive(False)
+            self.redoactions.set_sensitive(False)
+            self.undohistoryactions.set_sensitive(False)
+            self.actiongroup.set_visible(False)
+            self.readonlygroup.set_visible(False)
+            self.undoactions.set_visible(False)
+            self.redoactions.set_visible(False)
+            self.undohistoryactions.set_visible(False)
+        self.uimanager.ensure_update()
         return page
 
     def view_changed(self, notebook, page, page_num):
@@ -997,7 +1027,7 @@ class ViewManager(CLIManager):
         """
         Perform necessary actions when a page is changed.
         """
-        if not self.dbstate.open:
+        if not self.dbstate.is_open():
             return
 
         self.__disconnect_previous_page()
@@ -1029,12 +1059,13 @@ class ViewManager(CLIManager):
         """
         list(map(self.uimanager.remove_ui, self.merge_ids))
 
-        if self.active_page:
+        if self.active_page is not None:
             self.active_page.set_inactive()
             groups = self.active_page.get_actions()
             for grp in groups:
                 if grp in self.uimanager.get_action_groups():
                     self.uimanager.remove_action_group(grp)
+            self.active_page = None
 
     def __connect_active_page(self, page_num):
         """
@@ -1061,7 +1092,7 @@ class ViewManager(CLIManager):
         """
         Imports a file
         """
-        if self.dbstate.db.is_open():
+        if self.dbstate.is_open():
             self.db_loader.import_file()
             infotxt = self.db_loader.import_info_text()
             if infotxt:
@@ -1074,10 +1105,10 @@ class ViewManager(CLIManager):
         Called when the Open button is clicked, opens the DbManager
         """
         from .dbman import DbManager
-        dialog = DbManager(self.uistate, self.dbstate, self.window)
+        dialog = DbManager(self.uistate, self.dbstate, self, self.window)
         value = dialog.run()
         if value:
-            if self.dbstate.db.is_open():
+            if self.dbstate.is_open():
                 self.dbstate.db.close(user=self.user)
             (filename, title) = value
             self.db_loader.read_file(filename)
@@ -1090,12 +1121,13 @@ class ViewManager(CLIManager):
                     delim = old_title.find(' - ')
                     tit1 = old_title[:delim]
                     tit2 = old_title[delim:]
+                    new_title = dialog.after_change
                     if '<=' in tit2:
-                        delim2 = tit2.find('<=') + 3
-                        tit3 = tit2[delim2:-1]
-                        new_title = dialog.after_change + tit2.replace(']', '') + ' => ' + tit1 + ']'
+                        ## delim2 = tit2.find('<=') + 3
+                        ## tit3 = tit2[delim2:-1]
+                        new_title += tit2.replace(']', '') + ' => ' + tit1 + ']'
                     else:
-                        new_title = dialog.after_change + tit2 + ' <= [' + tit1 + ']'
+                        new_title += tit2 + ' <= [' + tit1 + ']'
                     self.uistate.window.set_title(new_title)
 
     def __post_load(self):
@@ -1131,7 +1163,7 @@ class ViewManager(CLIManager):
             name = title
 
         if self.dbstate.db.readonly:
-            msg =  "%s (%s) - Gramps" % (name, _('Read Only'))
+            msg = "%s (%s) - Gramps" % (name, _('Read Only'))
             self.uistate.window.set_title(msg)
             self.actiongroup.set_sensitive(False)
         else:
@@ -1145,11 +1177,36 @@ class ViewManager(CLIManager):
         self.undoactions.set_visible(True)
         self.redoactions.set_visible(True)
         self.undohistoryactions.set_visible(True)
+        self.actiongroup.set_sensitive(True)
+        self.readonlygroup.set_sensitive(True)
+        self.undoactions.set_sensitive(True)
+        self.redoactions.set_sensitive(True)
+        self.undohistoryactions.set_sensitive(True)
 
         self.recent_manager.build()
 
         # Call common __post_load method for GUI update after a change
         self.__post_load()
+
+    def post_close_db(self):
+        """
+        Called after a database is closed to do GUI stuff.
+        """
+        self.undo_history_close()
+        self.uistate.window.set_title("%s - Gramps" % _('No Family Tree'))
+        self.actiongroup.set_sensitive(False)
+        self.readonlygroup.set_sensitive(False)
+        self.undohistoryactions.set_sensitive(False)
+        self.uistate.clear_filter_results()
+        self.__disconnect_previous_page()
+        self.actiongroup.set_visible(False)
+        self.readonlygroup.set_visible(False)
+        self.undoactions.set_visible(False)
+        self.redoactions.set_visible(False)
+        self.undohistoryactions.set_visible(False)
+        self.uimanager.ensure_update()
+        config.set('paths.recent-file', '')
+        config.save()
 
     def __change_undo_label(self, label):
         """
@@ -1235,7 +1292,8 @@ class ViewManager(CLIManager):
         file_entry = Gtk.Entry()
         button = Gtk.Button()
         button.connect("clicked",
-                       lambda widget: self.select_backup_path(widget, path_entry))
+                       lambda widget:
+                       self.select_backup_path(widget, path_entry))
         image = Gtk.Image()
         image.set_from_icon_name('document-open', Gtk.IconSize.BUTTON)
         image.show()
@@ -1249,30 +1307,30 @@ class ViewManager(CLIManager):
         label.set_halign(Gtk.Align.START)
         hbox.pack_start(label, False, True, 0)
         struct_time = time.localtime()
-        file_entry.set_text(config.get('paths.quick-backup-filename') %
-                            {"filename": self.dbstate.db.get_dbname(),
-                             "year": struct_time.tm_year,
-                             "month": struct_time.tm_mon,
-                             "day": struct_time.tm_mday,
-                             "hour": struct_time.tm_hour,
-                             "minutes": struct_time.tm_min,
-                             "seconds": struct_time.tm_sec,
-                             "extension": "gpkg",
-                             })
+        file_entry.set_text(
+            config.get('paths.quick-backup-filename'
+                      ) % {"filename": self.dbstate.db.get_dbname(),
+                           "year": struct_time.tm_year,
+                           "month": struct_time.tm_mon,
+                           "day": struct_time.tm_mday,
+                           "hour": struct_time.tm_hour,
+                           "minutes": struct_time.tm_min,
+                           "seconds": struct_time.tm_sec,
+                           "extension": "gpkg"})
         hbox.pack_end(file_entry, True, True, 0)
         vbox.pack_start(hbox, False, True, 0)
         hbox = Gtk.Box()
-        bytes = 0
+        fbytes = 0
         mbytes = "0"
         for media in self.dbstate.db.iter_media():
             fullname = media_path_full(self.dbstate.db, media.get_path())
             try:
-                bytes += posixpath.getsize(fullname)
-                length = len(str(bytes))
-                if bytes <= 999999:
+                fbytes += posixpath.getsize(fullname)
+                length = len(str(fbytes))
+                if fbytes <= 999999:
                     mbytes = "< 1"
                 else:
-                    mbytes = str(bytes)[:(length-6)]
+                    mbytes = str(fbytes)[:(length-6)]
             except OSError:
                 pass
         label = Gtk.Label(label=_("Media:"))
@@ -1283,26 +1341,28 @@ class ViewManager(CLIManager):
         include = Gtk.RadioButton.new_with_mnemonic_from_widget(
             None, "%s (%s %s)" % (_("Include"),
                                   mbytes, _("Megabyte|MB")))
-        exclude = Gtk.RadioButton.new_with_mnemonic_from_widget(include, _("Exclude"))
-        include.connect("toggled", lambda widget: self.media_toggle(widget, file_entry))
+        exclude = Gtk.RadioButton.new_with_mnemonic_from_widget(include,
+                                                                _("Exclude"))
+        include.connect("toggled", lambda widget: self.media_toggle(widget,
+                                                                    file_entry))
         hbox.pack_start(include, False, True, 0)
         hbox.pack_end(exclude, False, True, 0)
         vbox.pack_start(hbox, False, True, 0)
         window.show_all()
-        d = window.run()
+        dbackup = window.run()
         window.hide()
-        if d == Gtk.ResponseType.APPLY:
+        if dbackup == Gtk.ResponseType.APPLY:
             # if file exists, ask if overwrite; else abort
             basefile = file_entry.get_text()
             basefile = basefile.replace("/", r"-")
             filename = os.path.join(path_entry.get_text(), basefile)
             if os.path.exists(filename):
                 question = QuestionDialog2(
-                        _("Backup file already exists! Overwrite?"),
-                        _("The file '%s' exists.") % filename,
-                        _("Proceed and overwrite"),
-                        _("Cancel the backup"),
-                        parent=self.window)
+                    _("Backup file already exists! Overwrite?"),
+                    _("The file '%s' exists.") % filename,
+                    _("Proceed and overwrite"),
+                    _("Cancel the backup"),
+                    parent=self.window)
                 yes_no = question.run()
                 if not yes_no:
                     return
@@ -1321,7 +1381,8 @@ class ViewManager(CLIManager):
                 writer.write(filename)
             self.uistate.set_busy_cursor(False)
             self.uistate.progress.hide()
-            self.uistate.push_message(self.dbstate, _("Backup saved to '%s'") % filename)
+            self.uistate.push_message(self.dbstate,
+                                      _("Backup saved to '%s'") % filename)
             config.set('paths.quick-backup-directory', path_entry.get_text())
         else:
             self.uistate.push_message(self.dbstate, _("Backup aborted"))
@@ -1332,7 +1393,7 @@ class ViewManager(CLIManager):
         Choose a backup folder. Make sure there is one highlighted in
         right pane, otherwise FileChooserDialog will hang.
         """
-        f = Gtk.FileChooserDialog(
+        fdialog = Gtk.FileChooserDialog(
             title=_("Select backup directory"),
             parent=self.window,
             action=Gtk.FileChooserAction.SELECT_FOLDER,
@@ -1343,14 +1404,14 @@ class ViewManager(CLIManager):
         mpath = path_entry.get_text()
         if not mpath:
             mpath = HOME_DIR
-        f.set_current_folder(os.path.dirname(mpath))
-        f.set_filename(os.path.join(mpath, "."))
-        status = f.run()
+        fdialog.set_current_folder(os.path.dirname(mpath))
+        fdialog.set_filename(os.path.join(mpath, "."))
+        status = fdialog.run()
         if status == Gtk.ResponseType.OK:
-            filename = f.get_filename()
+            filename = fdialog.get_filename()
             if filename:
                 path_entry.set_text(filename)
-        f.destroy()
+        fdialog.destroy()
         return True
 
     def media_toggle(self, widget, file_entry):
@@ -1429,7 +1490,7 @@ class ViewManager(CLIManager):
         """
         Calls the ExportAssistant to export data
         """
-        if self.dbstate.db.db_is_open:
+        if self.dbstate.is_open():
             from .plug.export import ExportAssistant
             try:
                 ExportAssistant(self.dbstate, self.uistate)
@@ -1468,11 +1529,11 @@ class ViewManager(CLIManager):
             self.uistate.uimanager.remove_action_group(self.reportactions)
             self.uistate.uimanager.remove_ui(self.report_menu_ui_id)
         self.reportactions = Gtk.ActionGroup(name='ReportWindow')
-        (uidef, actions) = self.build_plugin_menu(
+        (udef, actions) = self.build_plugin_menu(
             'ReportsMenu', report_menu_list, standalone_categories,
             make_plugin_callback)
         self.reportactions.add_actions(actions)
-        self.report_menu_ui_id = self.uistate.uimanager.add_ui_from_string(uidef)
+        self.report_menu_ui_id = self.uistate.uimanager.add_ui_from_string(udef)
         self.uimanager.insert_action_group(self.reportactions, 1)
         self.uistate.uimanager.ensure_update()
 
@@ -1497,8 +1558,7 @@ class ViewManager(CLIManager):
             hash_data[category].append(pdata)
 
         # Sort categories, skipping the unsupported
-        catlist = sorted(item for item in hash_data
-                   if item != _UNSUPPORTED)
+        catlist = sorted(item for item in hash_data if item != _UNSUPPORTED)
 
         for key in catlist:
             new_key = key[0].replace(' ', '-')
@@ -1538,6 +1598,60 @@ class ViewManager(CLIManager):
         about = GrampsAboutDialog(self.uistate.window)
         about.run()
         about.destroy()
+
+    def get_available_views(self):
+        """
+        Query the views and determine what views to show and in which order
+
+        :Returns: a list of lists containing tuples (view_id, viewclass)
+        """
+        pmgr = GuiPluginManager.get_instance()
+        view_list = pmgr.get_reg_views()
+        viewstoshow = defaultdict(list)
+        for pdata in view_list:
+            mod = pmgr.load_plugin(pdata)
+            if not mod or not hasattr(mod, pdata.viewclass):
+                #import of plugin failed
+                try:
+                    lasterror = pmgr.get_fail_list()[-1][1][1]
+                except:
+                    lasterror = '*** No error found, '
+                    lasterror += 'probably error in gpr.py file ***'
+                ErrorDialog(
+                    _('Failed Loading View'),
+                    _('The view %(name)s did not load and reported an error.'
+                      '\n\n%(error_msg)s\n\n'
+                      'If you are unable to fix the fault yourself then you '
+                      'can submit a bug at %(gramps_bugtracker_url)s '
+                      'or contact the view author (%(firstauthoremail)s).\n\n'
+                      'If you do not want Gramps to try and load this view '
+                      'again, you can hide it by using the Plugin Manager '
+                      'on the Help menu.'
+                     ) % {'name': pdata.name,
+                          'gramps_bugtracker_url': URL_BUGHOME,
+                          'firstauthoremail': pdata.authors_email[0]
+                                              if pdata.authors_email else '...',
+                          'error_msg': lasterror},
+                    parent=self.uistate.window)
+                continue
+            viewclass = getattr(mod, pdata.viewclass)
+
+            # pdata.category is (string, trans-string):
+            if pdata.order == START:
+                viewstoshow[pdata.category[0]].insert(0, (pdata, viewclass))
+            else:
+                viewstoshow[pdata.category[0]].append((pdata, viewclass))
+
+        # First, get those in order defined, if exists:
+        resultorder = [viewstoshow[cat]
+                       for cat in config.get("interface.view-categories")
+                       if cat in viewstoshow]
+
+        # Next, get the rest in some order:
+        resultorder.extend(viewstoshow[cat]
+                           for cat in sorted(viewstoshow.keys())
+                           if viewstoshow[cat] not in resultorder)
+        return resultorder
 
 def key_bindings(obj):
     """
@@ -1605,12 +1719,12 @@ def run_plugin(pdata, dbstate, uistate):
               'the plugin author (%(firstauthoremail)s).\n\n'
               'If you do not want Gramps to try and load this plugin again, '
               'you can hide it by using the Plugin Manager on the '
-              'Help menu.') % {
-                'name': pdata.name,
-                'gramps_bugtracker_url' : URL_BUGHOME,
-                'firstauthoremail': pdata.authors_email[0] if
-                        pdata.authors_email else '...',
-                  'error_msg': error_msg},
+              'Help menu.') % {'name' : pdata.name,
+                               'gramps_bugtracker_url' : URL_BUGHOME,
+                               'firstauthoremail' : pdata.authors_email[0]
+                                                    if pdata.authors_email
+                                                    else '...',
+                               'error_msg' : error_msg},
             parent=uistate.window)
         return
 
@@ -1619,75 +1733,21 @@ def run_plugin(pdata, dbstate, uistate):
                getattr(mod, pdata.reportclass),
                getattr(mod, pdata.optionclass),
                pdata.name, pdata.id,
-               pdata.category, pdata.require_active,
-               )
+               pdata.category, pdata.require_active)
     else:
-        tool.gui_tool(dbstate = dbstate, user = User(uistate = uistate),
-                      tool_class = getattr(mod, pdata.toolclass),
-                      options_class = getattr(mod, pdata.optionclass),
-                      translated_name = pdata.name,
-                      name = pdata.id,
-                      category = pdata.category,
-                      callback = dbstate.db.request_rebuild)
+        tool.gui_tool(dbstate=dbstate, user=User(uistate=uistate),
+                      tool_class=getattr(mod, pdata.toolclass),
+                      options_class=getattr(mod, pdata.optionclass),
+                      translated_name=pdata.name,
+                      name=pdata.id,
+                      category=pdata.category,
+                      callback=dbstate.db.request_rebuild)
 
 def make_plugin_callback(pdata, dbstate, uistate):
     """
     Makes a callback for a report/tool menu item
     """
     return lambda x: run_plugin(pdata, dbstate, uistate)
-
-def get_available_views():
-    """
-    Query the views and determine what views to show and in which order
-
-    :Returns: a list of lists containing tuples (view_id, viewclass)
-    """
-    pmgr = GuiPluginManager.get_instance()
-    view_list = pmgr.get_reg_views()
-    viewstoshow = defaultdict(list)
-    for pdata in view_list:
-        mod = pmgr.load_plugin(pdata)
-        if not mod or not hasattr(mod, pdata.viewclass):
-            #import of plugin failed
-            try:
-                lasterror = pmgr.get_fail_list()[-1][1][1]
-            except:
-                lasterror = '*** No error found, probably error in gpr.py file ***'
-            ErrorDialog(
-                _('Failed Loading View'),
-                _('The view %(name)s did not load and reported an error.\n\n'
-                  '%(error_msg)s\n\n'
-                  'If you are unable to fix the fault yourself then you can '
-                  'submit a bug at %(gramps_bugtracker_url)s or contact '
-                  'the view author (%(firstauthoremail)s).\n\n'
-                  'If you do not want Gramps to try and load this view again, '
-                  'you can hide it by using the Plugin Manager on the '
-                  'Help menu.') % {
-                    'name': pdata.name,
-                    'gramps_bugtracker_url' : URL_BUGHOME,
-                    'firstauthoremail': pdata.authors_email[0] if
-                            pdata.authors_email else '...',
-                    'error_msg': lasterror},
-                parent=None)
-            continue
-        viewclass = getattr(mod, pdata.viewclass)
-
-        # pdata.category is (string, trans-string):
-        if pdata.order == START:
-            viewstoshow[pdata.category[0]].insert(0, (pdata, viewclass) )
-        else:
-            viewstoshow[pdata.category[0]].append( (pdata, viewclass) )
-
-    # First, get those in order defined, if exists:
-    resultorder = [viewstoshow[cat]
-                    for cat in config.get("interface.view-categories")
-                        if cat in viewstoshow]
-
-    # Next, get the rest in some order:
-    resultorder.extend(viewstoshow[cat]
-        for cat in sorted(viewstoshow.keys())
-            if viewstoshow[cat] not in resultorder)
-    return resultorder
 
 def views_to_show(views, use_last=True):
     """

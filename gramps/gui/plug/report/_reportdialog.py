@@ -21,14 +21,14 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
+""" The ReportDialog base class """
+
 #-------------------------------------------------------------------------
 #
 # Python modules
 #
 #-------------------------------------------------------------------------
 import os
-import threading
-import time
 
 import logging
 LOG = logging.getLogger(".")
@@ -45,22 +45,24 @@ from gi.repository import Gtk
 # Gramps modules
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale,  URL_MANUAL_PAGE
-_ = glocale.translation.gettext
 from gramps.gen.config import config
-from gramps.gen.errors import DatabaseError, FilterError, ReportError, WindowActiveError
+from gramps.gen.const import URL_MANUAL_PAGE, DOCGEN_OPTIONS
+from gramps.gen.errors import (DatabaseError, FilterError, ReportError,
+                               WindowActiveError)
 from ...utils import open_file_with_default_application
 from .. import add_gui_options, make_gui_option
 from ...user import User
 from ...dialog import ErrorDialog, OptionDialog
 from gramps.gen.plug.report import (CATEGORY_TEXT, CATEGORY_DRAW, CATEGORY_BOOK,
-                             CATEGORY_CODE, CATEGORY_WEB, CATEGORY_GRAPHVIZ,
-                             standalone_categories)
+                                    CATEGORY_CODE, CATEGORY_WEB,
+                                    CATEGORY_GRAPHVIZ, standalone_categories)
 from gramps.gen.plug.docgen import StyleSheet, StyleSheetList
 from ...managedwindow import ManagedWindow
 from ._stylecombobox import StyleComboBox
 from ._styleeditor import StyleListDisplay
 from ._fileentry import FileEntry
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 #-------------------------------------------------------------------------
 #
 # Private Constants
@@ -192,7 +194,8 @@ class ReportDialog(ManagedWindow):
         self.notebook.set_border_width(6)
         try:
             #assume a vbox or hbox
-            self.window.vbox.pack_start(self.notebook, expand=True, fill=True, padding=0)
+            self.window.vbox.pack_start(self.notebook,
+                                        expand=True, fill=True, padding=0)
         except:
             #general container instead:
             self.window.vbox.add(self.notebook)
@@ -203,7 +206,8 @@ class ReportDialog(ManagedWindow):
 
         try:
             #assume a vbox or hbox
-            self.window.vbox.pack_start(self.grid, expand=True, fill=True, padding=0)
+            self.window.vbox.pack_start(self.grid,
+                                        expand=True, fill=True, padding=0)
         except:
             #general container instead:
             self.window.vbox.add(self.grid)
@@ -333,8 +337,7 @@ class ReportDialog(ManagedWindow):
         # includes the default style set and any style sets saved from
         # previous invocations of gramps.
         self.style_sheet_list = StyleSheetList(
-                            self.options.handler.get_stylesheet_savefile(),
-                            self.default_style)
+            self.options.handler.get_stylesheet_savefile(), self.default_style)
 
         # Now build the actual menu.
         style = self.options.handler.get_default_stylesheet_name()
@@ -444,7 +447,8 @@ class ReportDialog(ManagedWindow):
         hid = self.style_name
         if hid[-4:] == ".xml":
             hid = hid[0:-4]
-        self.target_fileentry = FileEntry(hid, _("Save As"), parent=self.window)
+        self.target_fileentry = FileEntry(hid, _("Save As"),
+                                          parent=self.window)
         spath = self.get_default_directory()
         self.target_fileentry.set_filename(spath)
         # need any labels at top:
@@ -504,14 +508,14 @@ class ReportDialog(ManagedWindow):
 
             # selected path is an existing file and we need a file
             if os.path.isfile(self.target_path):
-                a = OptionDialog(_('File already exists'),
-                                 _('You can choose to either overwrite the '
-                                   'file, or change the selected filename.'),
-                                 _('_Overwrite'), None,
-                                 _('_Change filename'), None,
-                                 parent=self.window)
+                aaa = OptionDialog(_('File already exists'),
+                                   _('You can choose to either overwrite the '
+                                     'file, or change the selected filename.'),
+                                   _('_Overwrite'), None,
+                                   _('_Change filename'), None,
+                                   parent=self.window)
 
-                if a.get_response() == Gtk.ResponseType.YES:
+                if aaa.get_response() == Gtk.ResponseType.YES:
                     return None
 
         # selected path does not exist yet
@@ -603,8 +607,8 @@ class ReportDialog(ManagedWindow):
 
         self.init_doc_options(self.doc_option_class)
         menu = self.doc_options.menu
-        for name in menu.get_option_names('Document Options'):
-            option = menu.get_option('Document Options', name)
+        for name in menu.get_option_names(DOCGEN_OPTIONS):
+            option = menu.get_option(DOCGEN_OPTIONS, name)
             # override option default with xml-saved value:
             if name in self.doc_options.options_dict:
                 option.set_value(self.doc_options.options_dict[name])
@@ -621,8 +625,7 @@ class ReportDialog(ManagedWindow):
 
     def init_doc_options(self, option_class):
         try:
-            if (issubclass(option_class, object) or     # New-style class
-                isinstance(option_class, ClassType)):   # Old-style class
+            if issubclass(option_class, object):
                 self.doc_options = option_class(self.raw_name, self.db)
         except TypeError:
             self.doc_options = option_class
@@ -692,31 +695,33 @@ def report(dbstate, uistate, person, report_class, options_class,
             dialog.close()
             try:
                 user = User(uistate=uistate)
-                MyReport = report_class(dialog.db, dialog.options, user)
-                MyReport.doc.init()
-                MyReport.begin_report()
-                MyReport.write_report()
-                MyReport.end_report()
+                my_report = report_class(dialog.db, dialog.options, user)
+                my_report.doc.init()
+                my_report.begin_report()
+                my_report.write_report()
+                my_report.end_report()
 
                 # Web reports do not have a target frame
                 # The GtkPrint generator can not be "opened"
-                if hasattr(dialog, "open_with_app")                        and \
-                   dialog.open_with_app.get_property('sensitive') == True  and \
-                   dialog.open_with_app.get_active():
+                if (hasattr(dialog, "open_with_app") and
+                        dialog.open_with_app.get_property('sensitive') == True
+                        and dialog.open_with_app.get_active()):
                     out_file = dialog.options.get_output()
-                    open_file_with_default_application(out_file)
+                    open_file_with_default_application(out_file, uistate)
 
             except FilterError as msg:
-                (m1, m2) = msg.messages()
-                ErrorDialog(m1, m2, parent=uistate.window)
+                (msg1, msg2) = msg.messages()
+                ErrorDialog(msg1, msg2, parent=uistate.window)
             except IOError as msg:
-                ErrorDialog(_("Report could not be created"), str(msg),
+                ErrorDialog(_("Report could not be created"),
+                            str(msg),
                             parent=uistate.window)
             except ReportError as msg:
-                (m1, m2) = msg.messages()
-                ErrorDialog(m1, m2, parent=uistate.window)
+                (msg1, msg2) = msg.messages()
+                ErrorDialog(msg1, msg2, parent=uistate.window)
             except DatabaseError as msg:
-                ErrorDialog(_("Report could not be created"), str(msg),
+                ErrorDialog(_("Report could not be created"),
+                            str(msg),
                             parent=uistate.window)
 #           The following except statement will catch all "NoneType" exceptions.
 #           This is useful for released code where the exception is most likely
@@ -726,7 +731,8 @@ def report(dbstate, uistate, person, report_class, options_class,
 #                if str(msg).startswith("'NoneType' object has no attribute"):
 #                    # "'NoneType' object has no attribute ..." usually means
 #                    # database corruption
-#                    RunDatabaseRepair(str(msg))
+#                    RunDatabaseRepair(str(msg),
+#                                      parent=self.window)
 #                else:
 #                    raise
                 raise
@@ -740,6 +746,7 @@ def report(dbstate, uistate, person, report_class, options_class,
             #just stop, in ManagedWindow, delete-event is already coupled to
             #correct action.
             break
+
     #do needed cleanup
     dialog.db = None
     dialog.options = None

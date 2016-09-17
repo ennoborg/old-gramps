@@ -293,7 +293,7 @@ class Gramplet:
         if ((not self.active) and
             not self.gui.force_update):
             self.dirty = True
-            if self.dbstate.open:
+            if self.dbstate.is_open():
                 #print "  %s is not active" % self.gui.gname
                 self.update_has_data()
             else:
@@ -335,7 +335,7 @@ class Gramplet:
             return False
         except Exception as e:
             import traceback
-            LOG.warn("Gramplet gave an error: %s" % self.gui.title)
+            LOG.warning("Gramplet gave an error: %s" % self.gui.title)
             traceback.print_exc()
             print("Continuing after gramplet error...")
             self._idle_id = 0

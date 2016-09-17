@@ -23,6 +23,7 @@
 import os
 from gi.repository import Gtk
 from gi.repository import GObject
+
 from gramps.gen.constfunc import get_curr_dir
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext

@@ -19,6 +19,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
+""" This contains the main class corresponding to a running gramps process """
+
 #-------------------------------------------------------------------------
 #
 # Python modules
@@ -36,7 +38,7 @@ LOG = logging.getLogger(".grampsgui")
 #-------------------------------------------------------------------------
 from gramps.gen.config import config
 from gramps.gen.const import DATA_DIR, IMAGE_DIR, GTK_GETTEXT_DOMAIN
-from gramps.gen.constfunc import has_display, win, lin
+from gramps.gen.constfunc import has_display, lin
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 
@@ -53,30 +55,30 @@ MIN_GTK_VERSION = (3, 10)
 try:
     #import gnome introspection, part of pygobject
     import gi
-    giversion = gi.require_version
+    GIVERSION = gi.require_version
 except:
     print(_("Your version of gi (gnome-introspection) seems to be too old. "
             "You need a version which has the function 'require_version' "
             "to start Gramps"))
-    sys.exit(0)
+    sys.exit(1)
 
 if not PYGOBJ_ERR:
     try:
         from gi.repository import GObject, GLib
-        if not GObject.pygobject_version >= MIN_PYGOBJECT_VERSION :
+        if not GObject.pygobject_version >= MIN_PYGOBJECT_VERSION:
             PYGOBJ_ERR = True
     except:
         PYGOBJ_ERR = True
 
 if PYGOBJ_ERR:
-    print((_("Your pygobject version does not meet the requirements.\n"
-             "At least pygobject %(major)d.%(feature)d.%(minor)d "
-             "is needed to start Gramps with a GUI.\n\n"
-             "Gramps will terminate now.") %
-            {'major':MIN_PYGOBJECT_VERSION[0],
-            'feature':MIN_PYGOBJECT_VERSION[1],
-            'minor':MIN_PYGOBJECT_VERSION[2]}))
-    sys.exit(0)
+    print(_("Your pygobject version does not meet the requirements.\n"
+            "At least pygobject %(major)d.%(feature)d.%(minor)d "
+            "is needed to start Gramps with a GUI.\n\n"
+            "Gramps will terminate now."
+           ) % {'major'   : MIN_PYGOBJECT_VERSION[0],
+                'feature' : MIN_PYGOBJECT_VERSION[1],
+                'minor'   : MIN_PYGOBJECT_VERSION[2]})
+    sys.exit(1)
 
 try:
     gi.require_version('Pango', '1.0')
@@ -93,26 +95,26 @@ except (ImportError, ValueError):
              "Then install introspection data for Gdk, Gtk, Pango and "
              "PangoCairo\n\n"
              "Gramps will terminate now.")))
-    sys.exit(0)
+    sys.exit(1)
 
-gtk_major = Gtk.get_major_version()
-gtk_minor = Gtk.get_minor_version()
-if (gtk_major, gtk_minor) < MIN_GTK_VERSION:
+GTK_MAJOR = Gtk.get_major_version()
+GTK_MINOR = Gtk.get_minor_version()
+if (GTK_MAJOR, GTK_MINOR) < MIN_GTK_VERSION:
     print(_("Your Gtk version does not meet the requirements.\n"
             "At least %(major)d.%(minor)d "
             "is needed to start Gramps with a GUI.\n\n"
-            "Gramps will terminate now.") %
-                { 'major' : MIN_GTK_VERSION[0],
-                  'minor' : MIN_GTK_VERSION[1] } )
-    sys.exit(0)
+            "Gramps will terminate now."
+           ) % {'major' : MIN_GTK_VERSION[0],
+                'minor' : MIN_GTK_VERSION[1]})
+    sys.exit(1)
 
 try:
     import cairo
 except ImportError:
-    print((_("\ncairo python support not installed. Install cairo for your "
-             "version of python\n\n"
+    print((_("\ncairo python support not installed. "
+             "Install cairo for your version of python\n\n"
              "Gramps will terminate now.")))
-    sys.exit(0)
+    sys.exit(1)
 
 #-------------------------------------------------------------------------
 #
@@ -120,16 +122,30 @@ except ImportError:
 #
 #-------------------------------------------------------------------------
 
-def _display_welcome_message():
+def _display_welcome_message(parent=None):
     """
     Display a welcome message to the user.
+    (This docstring seems very legacy/historical, not accurate.)
     """
-    if not config.get('behavior.betawarn'):
+    _display_generic_message("master", 'behavior.betawarn', parent=parent)
+
+def _display_generic_message(warning_type, config_key, parent=None):
+    """
+    Display a generic warning message to the user, with the
+    warning_type in it -- if the config_key key is not set
+
+    :param warning_type: the general name of the warning, e.g. "master"
+    :type warning_type: str
+    :param config_key: name of gramps.ini config key, e.g. "behavior.betawarn"
+    :type config_key: str
+    """
+    if not config.get(config_key):
         from .dialog import WarningDialog
         WarningDialog(
             _('Danger: This is unstable code!'),
-            _("This Gramps ('master') is a development release. "
-              "This version is not meant for normal usage. Use "
+            _("This Gramps ('%s') is a development release.\n"
+             ) % warning_type +
+            _("This version is not meant for normal usage. Use "
               "at your own risk.\n"
               "\n"
               "This version may:\n"
@@ -143,12 +159,38 @@ def _display_welcome_message():
               "%(bold_start)sBACKUP%(bold_end)s "
               "your existing databases before opening "
               "them with this version, and make sure to export your "
-              "data to XML every now and then.")
-                  % { 'bold_start' : '<b>',
-                      'bold_end'   : '</b>' } )
+              "data to XML every now and then."
+             ) % {'bold_start' : '<b>',
+                  'bold_end'   : '</b>'},
+            parent=parent)
         config.set('behavior.autoload', False)
-        config.set('behavior.betawarn', True)
-        config.set('behavior.betawarn', config.get('behavior.betawarn'))
+        config.set(config_key, True)
+
+def _display_gtk_gettext_message(parent=None):
+    """
+    Display a GTK-translations-missing message to the user.
+
+    Note: the warning dialog below will likely have wrong stock icons!
+    """
+    LOG.warning("GTK translations missing, GUI will be broken, "
+                "especially for RTL languages!")
+    from .dialog import WarningDialog
+    WarningDialog(_("Gramps detected "
+                    "an incomplete GTK installation"),
+                  _("GTK translations for the current language (%(language)s) "
+                    "are missing.\n"
+                    "%(bold_start)sGramps%(bold_end)s will "
+                    "proceed nevertheless.\n"
+                    "The GUI will likely be broken "
+                    "as a result, especially for RTL languages!\n\n"
+                    "See the Gramps README documentation for installation "
+                    "prerequisites,\n"
+                    "typically located in "
+                    "/usr/share/doc/gramps.\n"
+                   ) % {'language'   : glocale.lang,
+                        'bold_start' : '<b>',
+                        'bold_end'   : '</b>'},
+                  parent=parent)
 
 #-------------------------------------------------------------------------
 #
@@ -169,65 +211,59 @@ class Gramps:
         from .viewmanager import ViewManager
         from gramps.cli.arghandler import ArgHandler
         from .tipofday import TipOfDay
-        from .dialog import WarningDialog
         import gettext
-
-        _display_welcome_message()
 
         # Append image directory to the theme search path
         theme = Gtk.IconTheme.get_default()
         theme.append_search_path(IMAGE_DIR)
 
-        if lin() and glocale.lang != 'C' and not gettext.find(GTK_GETTEXT_DOMAIN):
-            LOG.warn("GTK translations missing, GUI will be broken, especially for RTL languages!")
-            # Note: the warning dialog below will likely have wrong stock icons!
-            # Translators: the current language will be the one you translate into.
-            WarningDialog(
-               _("Gramps detected an incomplete GTK installation"),
-               _("GTK translations for the current language (%(language)s) "
-                 "are missing.\n%(bold_start)sGramps%(bold_end)s will "
-                 "proceed nevertheless.\nThe GUI will likely be broken "
-                 "as a result, especially for RTL languages!\n\n"
-                 "See the Gramps README documentation for installation "
-                 "prerequisites,\ntypically located in "
-                 "/usr/share/doc/gramps.\n") % {
-                     'language'   : glocale.lang ,
-                     'bold_start' : '<b>' ,
-                     'bold_end'   : '</b>' } )
-
         dbstate = DbState()
-        self.vm = ViewManager(dbstate,
-                config.get("interface.view-categories"))
-        self.vm.init_interface()
+        self._vm = ViewManager(dbstate,
+                               config.get("interface.view-categories"))
+
+        if (lin()
+                and glocale.lang != 'C'
+                and not gettext.find(GTK_GETTEXT_DOMAIN)):
+            _display_gtk_gettext_message(parent=self._vm.window)
+
+        _display_welcome_message(parent=self._vm.window)
+
+        self._vm.init_interface()
 
         #act based on the given arguments
-        ah = ArgHandler(dbstate, argparser, self.vm, self.argerrorfunc,
-                        gui=True)
-        ah.handle_args_gui()
-        if ah.open or ah.imp_db_path:
+        arg_h = ArgHandler(dbstate, argparser, self._vm, self.argerrorfunc,
+                           gui=True)
+        arg_h.handle_args_gui()
+        if arg_h.open or arg_h.imp_db_path:
             # if we opened or imported something, only show the interface
-            self.vm.post_init_interface(show_manager=False)
-        elif config.get('paths.recent-file') and config.get('behavior.autoload'):
+            self._vm.post_init_interface(show_manager=False)
+        elif (config.get('paths.recent-file')
+              and config.get('behavior.autoload')):
             # if we need to autoload last seen file, do so
             filename = config.get('paths.recent-file')
-            if os.path.isdir(filename) and \
-                    os.path.isfile(os.path.join(filename, "name.txt")) and \
-                    ah.check_db(filename):
-                self.vm.post_init_interface(show_manager=False)
-                self.vm.open_activate(filename)
+            if (os.path.isdir(filename)
+                    and os.path.isfile(os.path.join(filename, "name.txt"))
+                    and arg_h.check_db(filename)):
+                self._vm.post_init_interface(show_manager=False)
+                self._vm.open_activate(filename)
             else:
-                self.vm.post_init_interface()
+                self._vm.post_init_interface()
         else:
             # open without fam tree loaded
-            self.vm.post_init_interface()
+            self._vm.post_init_interface()
 
         if config.get('behavior.use-tips'):
-            TipOfDay(self.vm.uistate)
+            TipOfDay(self._vm.uistate)
 
     def argerrorfunc(self, string):
-        from .dialog import ErrorDialog
         """ Show basic errors in argument handling in GUI fashion"""
-        ErrorDialog(_("Error parsing arguments"), string)
+        from .dialog import ErrorDialog
+        parent = None
+        if hasattr(self, '_vm'):
+            if hasattr(self._vm, 'window'):
+                parent = self._vm.window
+        ErrorDialog(_("Error parsing arguments"), string,
+                    parent=parent)
 
 #-------------------------------------------------------------------------
 #
@@ -245,43 +281,46 @@ def __startgramps(errors, argparser):
         #handle first existing errors in GUI fashion
         if errors:
             for error in errors:
-                ErrorDialog(error[0], error[1])
+                ErrorDialog(error[0], error[1]) # TODO no-parent
             Gtk.main_quit()
             sys.exit(1)
 
         if argparser.errors:
             for error in argparser.errors:
-                ErrorDialog(error[0], error[1])
+                ErrorDialog(error[0], error[1]) # TODO no-parent
             Gtk.main_quit()
             sys.exit(1)
 
         # add gui logger
         from .logger import RotateHandler, GtkHandler
-        form = logging.Formatter(fmt="%(relativeCreated)d: %(levelname)s: "
-                                    "%(filename)s: line %(lineno)d: %(message)s")
+        form = logging.Formatter(
+            fmt="%(relativeCreated)d: %(levelname)s: "
+                "%(filename)s: line %(lineno)d: %(message)s")
         # Create the log handlers
-        rh = RotateHandler(capacity=20)
-        rh.setFormatter(form)
+        rot_h = RotateHandler(capacity=20)
+        rot_h.setFormatter(form)
         # Only error and critical log records should
         # trigger the GUI handler.
-        gtkh = GtkHandler(rotate_handler=rh)
+        gtkh = GtkHandler(rotate_handler=rot_h)
         gtkh.setFormatter(form)
         gtkh.setLevel(logging.ERROR)
-        l = logging.getLogger()
-        l.addHandler(rh)
-        l.addHandler(gtkh)
+        logger = logging.getLogger()
+        logger.addHandler(rot_h)
+        logger.addHandler(gtkh)
 
     except:
         #make sure there is a clean exit if there is an error in above steps
         quit_now = True
         exit_code = 1
-        LOG.error(_(
-    "\nGramps failed to start. Please report a bug about this.\n"
-    "This could be because of an error in a (third party) View on startup.\n"
-    "To use another view, don't load a Family Tree, change view, and then load"
-    " your Family Tree.\n"
-    "You can also change manually the startup view in the gramps.ini file \n"
-    "by changing the last-view parameter.\n"
+        LOG.error(_("\nGramps failed to start. "
+                    "Please report a bug about this.\n"
+                    "This could be because of an error "
+                    "in a (third party) View on startup.\n"
+                    "To use another view, don't load a Family Tree, "
+                    "change view, and then load your Family Tree.\n"
+                    "You can also change manually "
+                    "the startup view in the gramps.ini file \n"
+                    "by changing the last-view parameter.\n"
                    ), exc_info=True)
 
     # start Gramps, errors stop the gtk loop
@@ -294,32 +333,34 @@ def __startgramps(errors, argparser):
             print("Gramps terminated because of no DISPLAY")
             sys.exit(exit_code)
 
-    except SystemExit as e:
+    except SystemExit as err:
         quit_now = True
-        if e.code:
-            exit_code = e.code
-            LOG.error("Gramps terminated with exit code: %d." \
-                      % e.code, exc_info=True)
-    except OSError as e:
+        if err.code:
+            exit_code = err.code
+            LOG.error("Gramps terminated with exit code: %d.", err.code,
+                      exc_info=True)
+    except OSError as err:
         quit_now = True
-        exit_code = e.errno or 1
+        exit_code = err.errno or 1
         try:
-            fn = e.filename
+            fname = err.filename
         except AttributeError:
-            fn = ""
+            fname = ""
         LOG.error("Gramps terminated because of OS Error\n" +
-            "Error details: %s %s" % (repr(e), fn), exc_info=True)
+                  "Error details: %s %s", repr(err), fname, exc_info=True)
 
     except:
         quit_now = True
         exit_code = 1
-        LOG.error(_(
-    "\nGramps failed to start. Please report a bug about this.\n"
-    "This could be because of an error in a (third party) View on startup.\n"
-    "To use another view, don't load a Family Tree, change view, and then load"
-    " your Family Tree.\n"
-    "You can also change manually the startup view in the gramps.ini file \n"
-    "by changing the last-view parameter.\n"
+        LOG.error(_("\nGramps failed to start. "
+                    "Please report a bug about this.\n"
+                    "This could be because of an error "
+                    "in a (third party) View on startup.\n"
+                    "To use another view, don't load a Family Tree, "
+                    "change view, and then load your Family Tree.\n"
+                    "You can also change manually "
+                    "the startup view in the gramps.ini file \n"
+                    "by changing the last-view parameter.\n"
                    ), exc_info=True)
 
     if quit_now:
@@ -331,7 +372,8 @@ def __startgramps(errors, argparser):
     return False
 
 def startgtkloop(errors, argparser):
-    """ We start the gtk loop and run the function to start up Gramps
+    """
+    We start the gtk loop and run the function to start up Gramps
     """
     GLib.timeout_add(100, __startgramps, errors, argparser, priority=100)
     if os.path.exists(os.path.join(DATA_DIR, "gramps.accel")):

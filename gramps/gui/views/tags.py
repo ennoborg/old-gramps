@@ -104,6 +104,7 @@ class Tags(DbGUIElement):
             }
         DbGUIElement.__init__(self, dbstate.db)
 
+        self.dbstate = dbstate
         self.db = dbstate.db
         self.uistate = uistate
 
@@ -113,6 +114,7 @@ class Tags(DbGUIElement):
         self.__tag_list = []
 
         dbstate.connect('database-changed', self._db_changed)
+        dbstate.connect('no-database', self.tag_disable)
 
         self._build_tag_menu()
 
@@ -128,10 +130,11 @@ class Tags(DbGUIElement):
         """
         Remove the UI and action groups for the tag menu.
         """
-        self.uistate.uimanager.remove_ui(self.tag_id)
-        self.uistate.uimanager.remove_action_group(self.tag_action)
-        self.uistate.uimanager.ensure_update()
-        self.tag_id = None
+        if self.tag_id is not None:
+            self.uistate.uimanager.remove_ui(self.tag_id)
+            self.uistate.uimanager.remove_action_group(self.tag_action)
+            self.uistate.uimanager.ensure_update()
+            self.tag_id = None
 
     def _db_changed(self, db):
         """
@@ -181,9 +184,10 @@ class Tags(DbGUIElement):
         Called when the tag list needs to be rebuilt.
         """
         self.__tag_list = []
-        for handle in self.db.get_tag_handles(sort_handles=True):
-            tag = self.db.get_tag_from_handle(handle)
-            self.__tag_list.append((tag.get_name(), tag.get_handle()))
+        if self.dbstate.is_open():
+            for handle in self.db.get_tag_handles(sort_handles=True):
+                tag = self.db.get_tag_from_handle(handle)
+                self.__tag_list.append((tag.get_name(), tag.get_handle()))
         self.update_tag_menu()
 
     def update_tag_menu(self):
@@ -203,7 +207,7 @@ class Tags(DbGUIElement):
         """
         actions = []
 
-        if self.db is None:
+        if not self.dbstate.is_open():
             self.tag_ui = ''
             self.tag_action = ActionGroup(name='Tag')
             return
@@ -241,7 +245,8 @@ class Tags(DbGUIElement):
         """
         Display the Organize Tags dialog.
         """
-        organize_dialog = OrganizeTagsDialog(self.db, self.uistate.window)
+        organize_dialog = OrganizeTagsDialog(self.db,
+                                             self.uistate.window)
         organize_dialog.run()
 
     def cb_new_tag(self, action):
@@ -483,10 +488,11 @@ class OrganizeTagsDialog:
 
         yes_no = QuestionDialog2(
             _("Remove tag '%s'?") % tag_name,
-            _("The tag definition will be removed.  "
-              "The tag will be also removed from all objects in the database."),
+            _("The tag definition will be removed.  The tag will be also "
+              "removed from all objects in the database."),
             _("Yes"),
-            _("No"))
+            _("No"),
+            parent=self.parent_window)
         prompt = yes_no.run()
         if prompt:
 
@@ -577,9 +583,9 @@ class EditTag:
         self.tag.set_color(hexval)
 
         if not self.tag.get_name():
-            ErrorDialog(
-                _("Cannot save tag"),
-                _("The tag name cannot be empty"))
+            ErrorDialog(_("Cannot save tag"),
+                        _("The tag name cannot be empty"),
+                        parent=self.parent_window)
             return
 
         if not self.tag.get_handle():

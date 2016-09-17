@@ -51,7 +51,7 @@ from gramps.gen.db import DbTxn
 
 class PopulateSources(tool.Tool, ManagedWindow):
     """
-    Gramplet that populates the database with sources and citations.
+    Tool that populates the database with sources and citations.
     """
 
     def __init__(self, dbstate, user, options_class, name, callback=None):
@@ -68,7 +68,8 @@ class PopulateSources(tool.Tool, ManagedWindow):
         if response == Gtk.ResponseType.ACCEPT:
             self.on_ok_clicked()
             OkDialog('Data generated',
-                     "The requested sources and citations were generated")
+                     "The requested sources and citations were generated",
+                     parent=uistate.window)
 
         self.close()
 
@@ -134,7 +135,7 @@ class PopulateSources(tool.Tool, ManagedWindow):
         num_citations = int(num_citations_text)
 
         self.progress = ProgressMeter(
-            'Generating data', '')
+            'Generating data', '', parent=self.uistate.window)
         self.progress.set_pass('Generating data',
                                num_sources*num_citations)
         LOG.debug("sources %04d citations %04d" % (num_sources,

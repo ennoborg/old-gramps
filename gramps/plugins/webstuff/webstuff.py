@@ -23,7 +23,7 @@
 #    python modules
 #------------------------------------------------
 import os
-from gramps.gen.const import VERSION_DIR, IMAGE_DIR, DATA_DIR
+from gramps.gen.const import VERSION_DIR, IMAGE_DIR, DATA_DIR, USER_CSS
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.sgettext
 
@@ -48,6 +48,7 @@ def load_on_reg(dbstate, uistate, plugin):
     from functools import partial
     path_css = partial(os.path.join, DATA_DIR, "css")
     path_img = partial(os.path.join, IMAGE_DIR, "webstuff")
+    path_img_48x48 = partial(os.path.join, IMAGE_DIR, "hicolor/48x48/actions")
     CSS_FILES = [
 
         # id, user selectable?, translated_name, option name, fullpath,
@@ -171,7 +172,17 @@ def load_on_reg(dbstate, uistate, plugin):
         # copyright image
         ['Copyright', 0, 'Copyright',
          path_img("somerights20.gif"), None, [], [] ],
+
+        # marker icon for openstreetmap
+        ['marker', 0, 'marker',
+         path_img_48x48("gramps-geo-mainmap.png"), None, [], [] ],
         ]
+    # If we add css user files, we must restart gramps to use them.
+    list_files = os.listdir(USER_CSS)
+    for cssfile in list_files:
+        CSS_FILES.append([cssfile, 1, cssfile.replace('.css', ''),
+                          os.path.join(USER_CSS,cssfile),
+                          None, [], [] ])
     return CSS_FILES
 
 def process_list(data):

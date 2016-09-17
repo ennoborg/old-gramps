@@ -268,7 +268,8 @@ class GeoPlaces(GeoGraphyView):
                 places_handle = dbstate.db.get_place_handles()
             except:
                 return
-            progress = ProgressMeter(self.window_name, can_cancel=False,
+            progress = ProgressMeter(self.window_name,
+                                     can_cancel=False,
                                      parent=self.uistate.window)
             length = len(places_handle)
             progress.set_pass(_('Selecting all places'), length)
@@ -279,7 +280,8 @@ class GeoPlaces(GeoGraphyView):
             progress.close()
         elif self.generic_filter:
             place_list = self.generic_filter.apply(dbstate.db)
-            progress = ProgressMeter(self.window_name, can_cancel=False,
+            progress = ProgressMeter(self.window_name,
+                                     can_cancel=False,
                                      parent=self.uistate.window)
             length = len(place_list)
             progress.set_pass(_('Selecting all places'), length)
@@ -288,9 +290,13 @@ class GeoPlaces(GeoGraphyView):
                 self._create_one_place(place)
                 progress.step()
             progress.close()
-        elif place_x:
+        elif place_x != None:
             place = dbstate.db.get_place_from_handle(place_x)
             self._create_one_place(place)
+            self.message_layer.add_message(
+                 _("Right click on the map and select 'show all places'"
+                   " to show all known places with coordinates. "
+                   "You can use filtering."))
             if place.get_latitude() != "" and place.get_longitude() != "":
                 latitude, longitude = conv_lat_lon(place.get_latitude(),
                                                    place.get_longitude(),
@@ -298,6 +304,12 @@ class GeoPlaces(GeoGraphyView):
                 self.osm.set_center_and_zoom(float(latitude), float(longitude),
                                              int(config.get(
                                                  "geography.zoom_when_center")))
+        else:
+            self.message_layer.add_message(
+                 _("Right click on the map and select 'show all places'"
+                   " to show all known places with coordinates. "
+                   " You can use the history to navigate on the map. "
+                   "You can use filtering."))
         _LOG.debug(" stop createmap.")
         _LOG.debug("%s", time.strftime("begin sort : "
                    "%a %d %b %Y %H:%M:%S", time.gmtime()))
@@ -313,8 +325,8 @@ class GeoPlaces(GeoGraphyView):
         if self.nbplaces >= self._config.get("geography.max_places"):
             self.message_layer.set_font_attributes(None, None, "red")
             self.message_layer.add_message(
-                 _("The maximum number of places is reached (%d)." %
-                   self._config.get("geography.max_places")))
+                 _("The maximum number of places is reached (%d).") %
+                   self._config.get("geography.max_places"))
             self.message_layer.add_message(
                  _("Some information are missing."))
             self.message_layer.add_message(

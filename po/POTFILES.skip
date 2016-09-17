@@ -20,7 +20,6 @@ gramps/gen/__init__.py
 gramps/gen/sort.py
 gramps/gen/soundex.py
 gramps/gen/updatecallback.py
-gramps/gen/user.py
 gramps/gen/ggettext.py
 #
 # gen.datehandler package
@@ -87,6 +86,7 @@ gramps/gen/filters/rules/test/media_rules_test.py
 gramps/gen/filters/rules/test/note_rules_test.py
 gramps/gen/filters/rules/test/person_rules_test.py
 gramps/gen/filters/rules/test/place_rules_test.py
+gramps/gen/filters/rules/test/repository_rules_test.py
 #
 # gen.filters.rules.person package
 #

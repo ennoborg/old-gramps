@@ -148,12 +148,13 @@ class VCardWriter:
 
     def export_data(self):
         """Open the file and loop over everyone too write their VCards."""
-        with OpenFileOrStdout(self.filename) as self.filehandle:
+        with OpenFileOrStdout(self.filename, encoding='utf-8',
+                              errors='strict', newline='') as self.filehandle:
             if self.filehandle:
                 self.count = 0
                 self.oldval = 0
                 self.total = self.db.get_number_of_people()
-                for key in self.db.iter_person_handles():
+                for key in sorted(list(self.db.iter_person_handles())):
                     self.write_person(key)
                     self.update()
         return True

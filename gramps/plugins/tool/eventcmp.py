@@ -52,7 +52,7 @@ from gramps.gen.errors import WindowActiveError
 from gramps.gen.datehandler import get_date
 from gramps.gui.dialog import WarningDialog
 from gramps.gui.plug import tool
-from gramps.gen.plug.report import utils as ReportUtils
+from gramps.gen.plug.report import utils
 from gramps.gui.display import display_help
 from gramps.gui.managedwindow import ManagedWindow
 from gramps.gen.const import GRAMPS_LOCALE as glocale
@@ -176,9 +176,8 @@ class EventComparison(tool.Tool,ManagedWindow):
     def on_apply_clicked(self, obj):
         cfilter = self.filter_model[self.filters.get_active()][1]
 
-        progress_bar = ProgressMeter(_('Comparing events'),
-                                        '',
-                                        parent=self.window)
+        progress_bar = ProgressMeter(_('Comparing events'), '',
+                                     parent=self.window)
         progress_bar.set_pass(_('Selecting people'),1)
 
         plist = cfilter.apply(self.db,
@@ -191,7 +190,8 @@ class EventComparison(tool.Tool,ManagedWindow):
         self.options.handler.save_options()
 
         if len(plist) == 0:
-            WarningDialog(_("No matches were found"), parent=self.window)
+            WarningDialog(_("No matches were found"),
+                          parent=self.window)
         else:
             DisplayChart(self.dbstate,self.uistate,plist,self.track)
 
@@ -306,8 +306,8 @@ class DisplayChart(ManagedWindow):
         self.progress_bar.close()
 
     def build_row_data(self):
-        self.progress_bar = ProgressMeter(_('Comparing Events'),'',
-                                            parent=self.window)
+        self.progress_bar = ProgressMeter(
+            _('Comparing Events'), '', parent=self.window)
         self.progress_bar.set_pass(_('Building data'),len(self.my_list))
         for individual_id in self.my_list:
             individual = self.db.get_person_from_handle(individual_id)
@@ -448,7 +448,7 @@ class EventComparisonOptions(tool.ToolOptions):
         self.options_dict = {
             'filter'   : 0,
         }
-        filters = ReportUtils.get_person_filters(None)
+        filters = utils.get_person_filters(None)
         self.options_help = {
             'filter'   : ("=num","Filter number.",
                           [ filt.get_name() for filt in filters ],

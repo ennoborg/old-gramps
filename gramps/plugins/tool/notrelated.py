@@ -41,7 +41,7 @@ _ = glocale.translation.sgettext
 ngettext = glocale.translation.ngettext # else "nearby" comments are ignored
 from gramps.gen.const import URL_MANUAL_PAGE
 from gramps.gui.plug import tool
-from gramps.gen.plug.report import utils as ReportUtils
+from gramps.gen.plug.report import utils
 from gramps.gui.editors import EditPerson, EditFamily
 from gramps.gui.managedwindow import ManagedWindow
 from gramps.gui.utils import ProgressMeter
@@ -107,7 +107,7 @@ class NotRelated(tool.ActivePersonTool, ManagedWindow) :
         self.tagapply.connect('clicked', self.applyTagClicked)
 
         # start the progress indicator
-        self.progress = ProgressMeter(self.title,_('Starting'),
+        self.progress = ProgressMeter(self.title, _('Starting'),
                                       parent=self.window)
 
         # setup the columns
@@ -252,7 +252,7 @@ class NotRelated(tool.ActivePersonTool, ManagedWindow) :
 
             # if more than 1 person is selected, use a progress indicator
             if rows > 1:
-                progress = ProgressMeter(self.title,_('Starting'),
+                progress = ProgressMeter(self.title, _('Starting'),
                                          parent=self.window)
                 progress.set_pass(
                     # translators: leave all/any {...} untranslated
@@ -332,7 +332,7 @@ class NotRelated(tool.ActivePersonTool, ManagedWindow) :
             # step 1 -- spouses
             for familyHandle in person.get_family_handle_list():
                 family = self.db.get_family_from_handle(familyHandle)
-                spouseHandle = ReportUtils.find_spouse(person, family)
+                spouseHandle = utils.find_spouse(person, family)
                 if spouseHandle and \
                   spouseHandle not in self.handlesOfPeopleAlreadyProcessed:
                     self.handlesOfPeopleToBeProcessed.add(spouseHandle)

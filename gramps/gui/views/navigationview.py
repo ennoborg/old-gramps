@@ -28,6 +28,7 @@ Provide the base classes for GRAMPS' DataView classes
 # python modules
 #
 #----------------------------------------------------------------
+from abc import abstractmethod
 import logging
 
 _LOG = logging.getLogger('.navigationview')
@@ -45,10 +46,10 @@ from gi.repository import Gtk
 # Gramps
 #
 #----------------------------------------------------------------
-from .pageview import PageView
-from ..actiongroup import ActionGroup
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.sgettext
+from .pageview import PageView
+from ..actiongroup import ActionGroup
 from gramps.gen.utils.db import navigation_label
 from gramps.gen.constfunc import mod_key
 
@@ -216,12 +217,12 @@ class NavigationView(PageView):
         if handle and not hobj.lock and not (handle == hobj.present()):
             hobj.push(handle)
 
+    @abstractmethod
     def goto_handle(self, handle):
         """
         Needs to be implemented by classes derived from this.
         Used to move to the given handle.
         """
-        raise NotImplementedError
 
     def selected_handles(self):
         """
@@ -254,7 +255,8 @@ class NavigationView(PageView):
             WarningDialog(
                 _("Could Not Set a Bookmark"),
                 _("A bookmark could not be set because "
-                  "no one was selected."))
+                  "no one was selected."),
+                parent=self.uistate.window)
 
     def edit_bookmarks(self, obj):
         """
@@ -457,50 +459,19 @@ class NavigationView(PageView):
     ####################################################################
     # Template functions
     ####################################################################
-    def get_bookmarks(self):
-        """
-        Template function to get bookmarks.
-        We could implement this here based on navigation_type()
-        """
-        raise NotImplementedError
-
-    def edit(self, obj):
-        """
-        Template function to allow the editing of the selected object
-        """
-        raise NotImplementedError
-
-    def remove(self, handle):
-        """
-        Template function to allow the removal of an object by its handle
-        """
-        raise NotImplementedError
-
-    def add(self, obj):
-        """
-        Template function to allow the adding of a new object
-        """
-        raise NotImplementedError
-
-    def remove_object_from_handle(self, handle):
-        """
-        Template function to allow the removal of an object by its handle
-        """
-        raise NotImplementedError
-
+    @abstractmethod
     def build_tree(self):
         """
         Rebuilds the current display. This must be overridden by the derived
         class.
         """
-        raise NotImplementedError
 
+    @abstractmethod
     def build_widget(self):
         """
         Builds the container widget for the interface. Must be overridden by the
         the base class. Returns a gtk container widget.
         """
-        raise NotImplementedError
 
     def key_press_handler(self, widget, event):
         """

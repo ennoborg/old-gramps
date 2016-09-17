@@ -4,7 +4,7 @@
 #
 # Copyright (C) 2000-2002 Bruce J. DeGrasse
 # Copyright (C) 2000-2007 Donald N. Allingham
-# Copyright (C) 2007-2009 Brian G. Matherly
+# Copyright (C) 2007-2012 Brian G. Matherly
 # Copyright (C) 2008      James Friedmann <jfriedmannj@gmail.com>
 # Copyright (C) 2009      Benny Malengier <benny.malengier@gramps-project.org>
 # Copyright (C) 2010      Jakim Friant
@@ -54,12 +54,13 @@ from gramps.gen.plug.docgen import (IndexMark, FontStyle, ParagraphStyle,
 from gramps.gen.plug.menu import BooleanOption, NumberOption, PersonOption
 from gramps.gen.plug.report import Report, Bibliography
 from gramps.gen.plug.report import endnotes
-from gramps.gen.plug.report import utils as ReportUtils
+from gramps.gen.plug.report import utils
 from gramps.gen.plug.report import MenuReportOptions
 from gramps.gen.plug.report import stdoptions
 from gramps.plugins.lib.libnarrate import Narrator
-from gramps.gen.display.place import displayer as place_displayer
+from gramps.gen.display.place import displayer as _pd
 from gramps.gen.proxy import CacheProxyDb
+from gramps.gen.display.name import displayer as _nd
 
 #------------------------------------------------------------------------
 #
@@ -74,6 +75,7 @@ EMPTY_ENTRY = "_____________"
 #
 #------------------------------------------------------------------------
 class DetAncestorReport(Report):
+    """ the Detailed Ancestor Report """
 
     def __init__(self, database, options, user):
         """
@@ -264,8 +266,8 @@ class DetAncestorReport(Report):
             """ convenience function """
             if first:
                 self.doc.start_paragraph('DAR-MoreHeader')
-                self.doc.write_text(self._('More about %(person_name)s:')
-                                    % {'person_name' : name})
+                self.doc.write_text(self._('More about %(person_name)s:'
+                                          ) % {'person_name' : name})
                 self.doc.end_paragraph()
             return False
 
@@ -276,14 +278,14 @@ class DetAncestorReport(Report):
 
         if self.addimages and len(plist) > 0:
             photo = plist[0]
-            ReportUtils.insert_image(self._db, self.doc, photo, self._user)
+            utils.insert_image(self._db, self.doc, photo, self._user)
 
         self.doc.start_paragraph("DAR-First-Entry", "%d." % self._get_s_s(key))
 
         name = self._nd.display(person)
         if not name:
             name = self._("Unknown")
-        mark = ReportUtils.get_person_mark(self._db, person)
+        mark = utils.get_person_mark(self._db, person)
 
         self.doc.start_bold()
         self.doc.write_text(name, mark)
@@ -300,8 +302,8 @@ class DetAncestorReport(Report):
                     break
                 if self.map[key] == self.map[dkey]:
                     self.doc.write_text(
-                        self._("%(name)s is the same person as [%(id_str)s].")
-                        % {'name' : '', 'id_str' : str(dkey)})
+                        self._("%(name)s is the same person as [%(id_str)s]."
+                              ) % {'name' : '', 'id_str' : str(dkey)})
                     self.doc.end_paragraph()
                     return 1    # Duplicate person
 
@@ -360,10 +362,10 @@ class DetAncestorReport(Report):
                 self.doc.start_paragraph('DAR-MoreDetails')
                 atype = self._get_type(alt_name.get_type())
                 self.doc.write_text_citation(
-                    self._('%(name_kind)s: %(name)s%(endnotes)s') % {
-                        'name_kind' : self._(atype),
-                        'name' : alt_name.get_regular_name(),
-                        'endnotes' : self.endnotes(alt_name)})
+                    self._('%(name_kind)s: %(name)s%(endnotes)s'
+                          ) % {'name_kind' : self._(atype),
+                               'name'      : alt_name.get_regular_name(),
+                               'endnotes'  : self.endnotes(alt_name)})
                 self.doc.end_paragraph()
 
         if self.inc_events:
@@ -388,7 +390,7 @@ class DetAncestorReport(Report):
                 first = write_more_header(first, name)
                 self.doc.start_paragraph('DAR-MoreDetails')
 
-                text = ReportUtils.get_address_str(addr)
+                text = utils.get_address_str(addr)
                 self.doc.write_text(self._('Address: '))
 
                 if self.fulldate:
@@ -411,10 +413,10 @@ class DetAncestorReport(Report):
                 self.doc.start_paragraph('DAR-MoreDetails')
                 attr_name = attr.get_type().type2base()
                 # translators: needed for French, ignore otherwise
-                text = self._("%(type)s: %(value)s%(endnotes)s") % {
-                    'type'     : self._(attr_name),
-                    'value'    : attr.get_value(),
-                    'endnotes' : self.endnotes(attr)}
+                text = self._("%(type)s: %(value)s%(endnotes)s"
+                             ) % {'type'     : self._(attr_name),
+                                  'value'    : attr.get_value(),
+                                  'endnotes' : self.endnotes(attr)}
                 self.doc.write_text_citation(text)
                 self.doc.end_paragraph()
 
@@ -430,16 +432,17 @@ class DetAncestorReport(Report):
         else:
             date = event.get_date_object().get_year()
 
-        place = place_displayer.display_event(self._db, event)
+        place = _pd.display_event(self._db, event)
 
         self.doc.start_paragraph('DAR-MoreDetails')
         if date and place:
-            text += self._('%(date)s, %(place)s') % {
-                'date' : date, 'place' : place}
+            # translators: needed for Arabic, ignore otherwise
+            text += self._('%(str1)s, %(str2)s'
+                          ) % {'str1' : date, 'str2' : place}
         elif date:
-            text += self._('%(date)s') % {'date' : date}
+            text += '%s' % date
         elif place:
-            text += self._('%(place)s') % {'place' : place}
+            text += '%s' % self._(place)
 
         if event.get_description():
             if text:
@@ -454,14 +457,14 @@ class DetAncestorReport(Report):
         event_name = self._(self._get_type(event.get_type()))
         role = event_ref.get_role()
         if role in (EventRoleType.PRIMARY, EventRoleType.FAMILY):
-            text = self._('%(event_name)s: %(event_text)s') % {
-                'event_name' : event_name,
-                'event_text' : text}
+            # translators: needed for French, ignore otherwise
+            text = self._('%(str1)s: %(str2)s'
+                         ) % {'str1' : event_name, 'str2' : text}
         else:
             primaries = get_participant_from_event(self._db, event_ref.ref)
             text = self._('%(event_role)s at %(event_name)s '
-                          'of %(primary_person)s: %(event_text)s') % {
-                              'event_role'     : self._(role.xml_str()),
+                          'of %(primary_person)s: %(event_text)s'
+                         ) % {'event_role'     : self._(role.xml_str()),
                               'event_name'     : event_name,
                               'primary_person' : primaries,
                               'event_text'     : text}
@@ -478,10 +481,10 @@ class DetAncestorReport(Report):
                     text += self._("; ")
                 attr_name = attr.get_type().type2base()
                 # translators: needed for French, ignore otherwise
-                text += self._("%(type)s: %(value)s%(endnotes)s") % {
-                    'type'     : self._(attr_name),
-                    'value'    : attr.get_value(),
-                    'endnotes' : self.endnotes(attr)}
+                text += self._("%(type)s: %(value)s%(endnotes)s"
+                              ) % {'type'     : self._(attr_name),
+                                   'value'    : attr.get_value(),
+                                   'endnotes' : self.endnotes(attr)}
             text = " " + text
             self.doc.write_text_citation(text)
 
@@ -511,14 +514,14 @@ class DetAncestorReport(Report):
             if mother_handle:
                 mother = self._db.get_person_from_handle(mother_handle)
                 mother_name = self._nd.display_name(mother.get_primary_name())
-                mother_mark = ReportUtils.get_person_mark(self._db, mother)
+                mother_mark = utils.get_person_mark(self._db, mother)
             else:
                 mother_name = ""
                 mother_mark = ""
             if father_handle:
                 father = self._db.get_person_from_handle(father_handle)
                 father_name = self._nd.display_name(father.get_primary_name())
-                father_mark = ReportUtils.get_person_mark(self._db, father)
+                father_mark = utils.get_person_mark(self._db, father)
             else:
                 father_name = ""
                 father_mark = ""
@@ -538,10 +541,10 @@ class DetAncestorReport(Report):
         is_first = True
         for family_handle in person.get_family_handle_list():
             family = self._db.get_family_from_handle(family_handle)
-            spouse_handle = ReportUtils.find_spouse(person, family)
+            spouse_handle = utils.find_spouse(person, family)
             if spouse_handle:
                 spouse = self._db.get_person_from_handle(spouse_handle)
-                spouse_mark = ReportUtils.get_person_mark(self._db, spouse)
+                spouse_mark = utils.get_person_mark(self._db, spouse)
             else:
                 spouse_mark = None
 
@@ -579,8 +582,9 @@ class DetAncestorReport(Report):
 
         self.doc.start_paragraph("DAR-ChildTitle")
         self.doc.write_text(
-            self._("Children of %(mother_name)s and %(father_name)s")
-            % {'father_name': father_name, 'mother_name': mother_name})
+            self._("Children of %(mother_name)s and %(father_name)s"
+                  ) % {'father_name' : father_name,
+                       'mother_name' : mother_name})
         self.doc.end_paragraph()
 
         cnt = 1
@@ -590,14 +594,14 @@ class DetAncestorReport(Report):
             child_name = self._nd.display(child)
             if not child_name:
                 child_name = self._("Unknown")
-            child_mark = ReportUtils.get_person_mark(self._db, child)
+            child_mark = utils.get_person_mark(self._db, child)
 
             if self.childref and self.prev_gen_handles.get(child_handle):
                 value = int(self.prev_gen_handles.get(child_handle))
                 child_name += " [%d]" % self._get_s_s(value)
 
             self.doc.start_paragraph("DAR-ChildList",
-                                     ReportUtils.roman(cnt).lower() + ".")
+                                     utils.roman(cnt).lower() + ".")
             cnt += 1
 
             self.__narrator.set_subject(child)
@@ -641,9 +645,9 @@ class DetAncestorReport(Report):
             if first:
                 self.doc.start_paragraph('DAR-MoreHeader')
                 self.doc.write_text(
-                    self._('More about %(mother_name)s and %(father_name)s:')
-                    % {'mother_name' : mother_name,
-                       'father_name' : father_name})
+                    self._('More about %(mother_name)s and %(father_name)s:'
+                          ) % {'mother_name' : mother_name,
+                               'father_name' : father_name})
                 self.doc.end_paragraph()
                 first = False
             self.write_event(event_ref)
@@ -687,19 +691,22 @@ class DetAncestorReport(Report):
 
                 if self.addimages and len(plist) > 0:
                     photo = plist[0]
-                    ReportUtils.insert_image(self._db, self.doc,
+                    utils.insert_image(self._db, self.doc,
                                              photo, self._user)
 
                 name = self._nd.display(ind)
                 if not name:
                     name = self._("Unknown")
-                mark = ReportUtils.get_person_mark(self._db, ind)
+                mark = utils.get_person_mark(self._db, ind)
 
                 if family.get_relationship() == FamilyRelType.MARRIED:
-                    self.doc.write_text(self._("Spouse: %s") % name, mark)
+                    self.doc.write_text(self._("Spouse: %s"
+                                              ) % name,
+                                        mark)
                 else:
-                    self.doc.write_text(self._("Relationship with: %s")
-                                        % name, mark)
+                    self.doc.write_text(self._("Relationship with: %s"
+                                              ) % name,
+                                        mark)
                 if name[-1:] != '.':
                     self.doc.write_text(".")
                 self.doc.write_text_citation(self.endnotes(ind))
@@ -755,7 +762,15 @@ class DetAncestorOptions(MenuReportOptions):
     """
 
     def __init__(self, name, dbase):
+        self.__db = dbase
+        self.__pid = None
         MenuReportOptions.__init__(self, name, dbase)
+
+    def get_subject(self):
+        """ Return a string that describes the subject of the report. """
+        gid = self.__pid.get_value()
+        person = self.__db.get_person_from_gramps_id(gid)
+        return _nd.display(person)
 
     def add_menu_options(self, menu):
         from functools import partial
@@ -764,9 +779,9 @@ class DetAncestorOptions(MenuReportOptions):
         category = _("Report Options")
         addopt = partial(menu.add_option, category)
 
-        pid = PersonOption(_("Center Person"))
-        pid.set_help(_("The center person for the report"))
-        addopt("pid", pid)
+        self.__pid = PersonOption(_("Center Person"))
+        self.__pid.set_help(_("The center person for the report"))
+        addopt("pid", self.__pid)
 
         start_number = NumberOption(_("Sosa-Stradonitz number"), 1, 1, 16384)
         start_number.set_help(

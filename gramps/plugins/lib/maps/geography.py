@@ -133,9 +133,10 @@ class GeoGraphyView(OsmGps, NavigationView):
         NavigationView.__init__(self, title, pdata, dbstate, uistate,
                                 bm_type, nav_group)
 
-        OsmGps.__init__(self)
+        OsmGps.__init__(self, uistate)
         self.dbstate = dbstate
         self.dbstate.connect('database-changed', self.change_db)
+        self.dbstate.connect('no-database', self.clear_view)
         self.default_text = "Enter location here!"
         self.centerlon = config.get("geography.center-lon")
         self.centerlat = config.get("geography.center-lat")
@@ -201,8 +202,8 @@ class GeoGraphyView(OsmGps, NavigationView):
             WarningDialog(
                 _("Could Not Set a Bookmark"),
                 _("A bookmark could not be set because "
-                  "no one was selected."))
-
+                  "no one was selected."),
+                parent=self.uistate.window)
 
     def add_bookmark_from_popup(self, menu, handle):
         """
@@ -217,7 +218,8 @@ class GeoGraphyView(OsmGps, NavigationView):
             WarningDialog(
                 _("Could Not Set a Bookmark"),
                 _("A bookmark could not be set because "
-                  "no one was selected."))
+                  "no one was selected."),
+                parent=self.uistate.window)
 
     def change_page(self):
         """
@@ -226,8 +228,9 @@ class GeoGraphyView(OsmGps, NavigationView):
         NavigationView.change_page(self)
         self.uistate.clear_filter_results()
         self.end_selection = None
-        self.osm.grab_focus()
-        self.set_crosshair(config.get("geography.show_cross"))
+        if self.osm:
+            self.osm.grab_focus()
+            self.set_crosshair(config.get("geography.show_cross"))
 
     def do_size_request(self, requisition):
         """
@@ -259,6 +262,13 @@ class GeoGraphyView(OsmGps, NavigationView):
         NavigationView.on_delete(self)
         self._config.save()
 
+    def clear_view(self):
+        self.place_list = []
+        self.remove_all_markers()
+        self.remove_all_gps()
+        self.remove_all_tracks()
+        self.message_layer.clear_messages()
+
     def change_db(self, dbse):
         """
         Callback associated with DbState. Whenever the database
@@ -270,8 +280,9 @@ class GeoGraphyView(OsmGps, NavigationView):
         if self.active:
             self.bookmarks.redraw()
         self.build_tree()
-        self.osm.grab_focus()
-        self.set_crosshair(config.get("geography.show_cross"))
+        if self.osm:
+            self.osm.grab_focus()
+            self.set_crosshair(config.get("geography.show_cross"))
 
     def can_configure(self):
         """
@@ -609,6 +620,8 @@ class GeoGraphyView(OsmGps, NavigationView):
         """
         Create all markers for the specified person.
         """
+        if self.marker_layer is None:
+            return
         self.remove_all_markers()
         self.remove_all_gps()
         self.remove_all_tracks()
@@ -842,6 +855,14 @@ class GeoGraphyView(OsmGps, NavigationView):
         """
         Print or save the view that is currently shown
         """
+        if Gtk.MAJOR_VERSION == 3 and Gtk.MINOR_VERSION < 11:
+            from gramps.gui.dialog import WarningDialog
+            WarningDialog(
+                _("You can't use the print functionality"),
+                _("Your Gtk version is too old."),
+                parent=self.uistate.window)
+            return
+
         req = self.osm.get_allocation()
         widthpx = req.width
         heightpx = req.height
@@ -1033,7 +1054,8 @@ class GeoGraphyView(OsmGps, NavigationView):
                             'bold_start' : '<b>',
                             'bold_end'   : '</b>',
                             'title': '<b>' + place_title + '</b>',
-                            'gid': gids}
+                            'gid': gids},
+                       parent=self.uistate.window
                       )
             else:
                 self.mark = [None, None, None, None, None, None, None,

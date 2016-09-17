@@ -57,14 +57,7 @@ from gramps.gen.plug.docbackend import DocBackend
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 
-
 _LOG = logging.getLogger(".latexdoc")
-if not HAVE_PIL:
-    _LOG.warning(_("PIL (Python Imaging Library) not loaded. "
-                   "Production of jpg images from non-jpg images "
-                   "in LaTeX documents will not be available. "
-                   "Use your package manager to install python-imaging "
-                   "or python-pillow or python3-pillow"))
 
 _CLICKABLE = '\\url{\\1}'
 
@@ -84,7 +77,7 @@ SEPARATION_PAT = '&&'
 
 #------------------------------------------------------------------------
 #
-# Latex Article Template
+# LaTeX Article Template
 #
 #------------------------------------------------------------------------
 
@@ -414,20 +407,20 @@ _LATEX_TEMPLATE = '''%
 #
 #------------------------------------------------------------------------
 
-# These tables correlate font sizes to Latex.  The first table contains
+# These tables correlate font sizes to LaTeX.  The first table contains
 # typical font sizes in points.  The second table contains the standard
-# Latex font size names. Since we use bisect to map the first table to the
+# LaTeX font size names. Since we use bisect to map the first table to the
 # second, we are guaranteed that any font less than 6 points is 'tiny', fonts
 # from 6-7 points are 'script', etc. and fonts greater than or equal to 22
 # are considered 'Huge'.  Note that fonts from 12-13 points are not given a
-# Latex font size name but are considered "normal."
+# LaTeX font size name but are considered "normal."
 
 _FONT_SIZES = [6, 8, 10, 12, 14, 16, 18, 20, 22]
 _FONT_NAMES = ['tiny', 'scriptsize', 'footnotesize', 'small', '',
                'large', 'Large', 'LARGE', 'huge', 'Huge']
 
 def map_font_size(fontsize):
-    """ Map font size in points to Latex font size """
+    """ Map font size in points to LaTeX font size """
     return _FONT_NAMES[bisect(_FONT_SIZES, fontsize)]
 
 
@@ -552,7 +545,7 @@ def latexescapeverbatim(text):
 #
 #------------------------------------------------------------------------
 
-class LateXBackend(DocBackend):
+class LaTeXBackend(DocBackend):
     """
     Implementation of docbackend for latex docs.
     File and File format management for latex docs
@@ -577,13 +570,13 @@ class LateXBackend(DocBackend):
 
     def setescape(self, preformatted=False):
         """
-        Latex needs two different escape functions depending on the type.
+        LaTeX needs two different escape functions depending on the type.
         This function allows to switch the escape function
         """
         if not preformatted:
-            LateXBackend.ESCAPE_FUNC = lambda x: latexescape
+            LaTeXBackend.ESCAPE_FUNC = lambda x: latexescape
         else:
-            LateXBackend.ESCAPE_FUNC = lambda x: latexescapeverbatim
+            LaTeXBackend.ESCAPE_FUNC = lambda x: latexescapeverbatim
 
     def _create_xmltag(self, type, value):
         """
@@ -956,7 +949,7 @@ class LaTeXDoc(BaseDoc, TextDoc):
     def open(self, filename):
         """Opens the specified file, making sure that it has the
         extension of .tex"""
-        self._backend = LateXBackend(filename)
+        self._backend = LaTeXBackend(filename)
         self._backend.open()
 
         # Font size control seems to be limited. For now, ignore
@@ -1239,9 +1232,22 @@ class LaTeXDoc(BaseDoc, TextDoc):
                                    '\n ***                    to ', outfile,
                                    '%\n')))
         elif not HAVE_PIL:
+            from gramps.gen.config import config
+            if not config.get('interface.ignore-pil'):
+                from gramps.gen.constfunc import has_display
+                if has_display():
+                    from gramps.gui.dialog import MessageHideDialog
+                    title = _("PIL (Python Imaging Library) not loaded.")
+                    message = _("Production of jpg images from non-jpg images "
+                                "in LaTeX documents will not be available. "
+                                "Use your package manager to install "
+                                "python-imaging or python-pillow or "
+                                "python3-pillow")
+                    MessageHideDialog(title, message, # TODO no-parent
+                                      'interface.ignore-pil')
             self.emit(''.join(('%\n *** Error: cannot convert ', infile,
                                '\n ***                    to ', outfile,
-                               'PIL not installed %\n')))
+                               '\n *** PIL not installed %\n')))
 
         if self.in_table:
             self.pict_in_table = True

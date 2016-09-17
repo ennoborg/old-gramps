@@ -1,7 +1,7 @@
 #
 # Gramps - a GTK+/GNOME based genealogy program
 #
-# Copyright (C) 2007-2008  Brian G. Matherly
+# Copyright (C) 2007-2012  Brian G. Matherly
 # Copyright (C) 2010       Jakim Friant
 # Copyright (C) 2013-2014  Paul Franklin
 #
@@ -42,10 +42,11 @@ from gramps.gen.plug.docgen import (IndexMark, FontStyle, ParagraphStyle,
                                     PARA_ALIGN_CENTER)
 from gramps.gen.plug.menu import PersonOption
 from gramps.gen.plug.report import Report
-from gramps.gen.plug.report import utils as ReportUtils
+from gramps.gen.plug.report import utils
 from gramps.gen.plug.report import MenuReportOptions
 from gramps.gen.plug.report import stdoptions
 from gramps.gen.proxy import CacheProxyDb
+from gramps.gen.display.name import displayer as _nd
 
 #------------------------------------------------------------------------
 #
@@ -161,8 +162,8 @@ class EndOfLineReport(Report):
 
         self.doc.start_paragraph("EOL-Subtitle")
         # feature request 2356: avoid genitive form
-        title = self._("All the ancestors of %s "
-                       "who are missing a parent") % pname
+        title = self._("All the ancestors of %s who are missing a parent"
+                      ) % pname
         self.doc.write_text(title)
         self.doc.end_paragraph()
 
@@ -193,7 +194,7 @@ class EndOfLineReport(Report):
         person = self.database.get_person_from_handle(person_handle)
 
         name = self._name_display.display(person)
-        mark = ReportUtils.get_person_mark(self.database, person)
+        mark = utils.get_person_mark(self.database, person)
         birth_date = ""
         birth_ref = person.get_birth_ref()
         if birth_ref:
@@ -207,8 +208,8 @@ class EndOfLineReport(Report):
         dates = ''
         if birth_date or death_date:
             dates = self._(" (%(birth_date)s - %(death_date)s)"
-                           % {'birth_date' : birth_date,
-                              'death_date' : death_date})
+                          ) % {'birth_date' : birth_date,
+                               'death_date' : death_date}
 
         self.doc.start_row()
         self.doc.start_cell('EOL-TableCell', 2)
@@ -251,7 +252,15 @@ class EndOfLineOptions(MenuReportOptions):
     """
 
     def __init__(self, name, dbase):
+        self.__db = dbase
+        self.__pid = None
         MenuReportOptions.__init__(self, name, dbase)
+
+    def get_subject(self):
+        """ Return a string that describes the subject of the report. """
+        gid = self.__pid.get_value()
+        person = self.__db.get_person_from_gramps_id(gid)
+        return _nd.display(person)
 
     def add_menu_options(self, menu):
         """
@@ -259,9 +268,9 @@ class EndOfLineOptions(MenuReportOptions):
         """
         category_name = _("Report Options")
 
-        pid = PersonOption(_("Center Person"))
-        pid.set_help(_("The center person for the report"))
-        menu.add_option(category_name, "pid", pid)
+        self.__pid = PersonOption(_("Center Person"))
+        self.__pid.set_help(_("The center person for the report"))
+        menu.add_option(category_name, "pid", self.__pid)
 
         stdoptions.add_name_format_option(menu, category_name)
 
@@ -281,7 +290,7 @@ class EndOfLineOptions(MenuReportOptions):
         para = ParagraphStyle()
         para.set_header_level(1)
         para.set_bottom_border(1)
-        para.set_bottom_margin(ReportUtils.pt2cm(8))
+        para.set_bottom_margin(utils.pt2cm(8))
         para.set_font(font)
         para.set_alignment(PARA_ALIGN_CENTER)
         para.set_description(_("The style used for the title of the page."))
@@ -290,7 +299,7 @@ class EndOfLineOptions(MenuReportOptions):
         font = FontStyle()
         font.set(face=FONT_SANS_SERIF, size=12, italic=1)
         para = ParagraphStyle()
-        para.set_bottom_margin(ReportUtils.pt2cm(6))
+        para.set_bottom_margin(utils.pt2cm(6))
         para.set_font(font)
         para.set_alignment(PARA_ALIGN_CENTER)
         para.set_description(_('The style used for the section headers.'))
@@ -300,8 +309,8 @@ class EndOfLineOptions(MenuReportOptions):
         font.set_size(10)
         para = ParagraphStyle()
         para.set_font(font)
-        para.set_top_margin(ReportUtils.pt2cm(6))
-        para.set_bottom_margin(ReportUtils.pt2cm(6))
+        para.set_top_margin(utils.pt2cm(6))
+        para.set_bottom_margin(utils.pt2cm(6))
         para.set_description(_('The basic style used for the text display.'))
         default_style.add_paragraph_style("EOL-Normal", para)
 
@@ -310,7 +319,7 @@ class EndOfLineOptions(MenuReportOptions):
         font.set_italic(True)
         para = ParagraphStyle()
         para.set_font(font)
-        para.set_top_margin(ReportUtils.pt2cm(6))
+        para.set_top_margin(utils.pt2cm(6))
         para.set_description(
             _('The basic style used for generation headings.'))
         default_style.add_paragraph_style("EOL-Generation", para)
@@ -320,7 +329,7 @@ class EndOfLineOptions(MenuReportOptions):
         para = ParagraphStyle()
         para.set_font(font)
         para.set_top_margin(0)
-        para.set_bottom_margin(ReportUtils.pt2cm(6))
+        para.set_bottom_margin(utils.pt2cm(6))
         para.set_description(_('The basic style used for the text display.'))
         default_style.add_paragraph_style("EOL-Pedigree", para)
 

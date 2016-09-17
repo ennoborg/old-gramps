@@ -640,9 +640,6 @@ class DbGeneric(DbWriteBase, DbReadBase, UpdateCallback, Callback):
             }
         }
         self.set_save_path(directory)
-        # skip GEDCOM cross-ref check for now:
-        self.set_feature("skip-check-xref", True)
-        self.set_feature("skip-import-additions", True)
         self.readonly = False
         self.db_is_open = False
         self.name_formats = []
@@ -1209,9 +1206,6 @@ class DbGeneric(DbWriteBase, DbReadBase, UpdateCallback, Callback):
             handle = str(handle, "utf-8")
         return Media.create(self._get_raw_media_data(handle))
 
-    def get_media_from_gramps_id(self, gramps_id):
-        return Media.create(self.media_id_map[gramps_id])
-
     def get_tag_from_handle(self, handle):
         if isinstance(handle, bytes):
             handle = str(handle, "utf-8")
@@ -1766,6 +1760,7 @@ class DbGeneric(DbWriteBase, DbReadBase, UpdateCallback, Callback):
                 filename = os.path.join(self._directory, "meta_data.db")
                 touch(filename)
                 # Save metadata
+                self.transaction_backend_begin()
                 self.set_metadata('name_formats', self.name_formats)
                 self.set_metadata('researcher', self.owner)
 
@@ -1814,6 +1809,7 @@ class DbGeneric(DbWriteBase, DbReadBase, UpdateCallback, Callback):
                 self.set_metadata('omap_index', self.omap_index)
                 self.set_metadata('rmap_index', self.rmap_index)
                 self.set_metadata('nmap_index', self.nmap_index)
+                self.transaction_backend_commit()
 
             self.close_backend()
         self.db_is_open = False
@@ -2132,7 +2128,7 @@ class DbGeneric(DbWriteBase, DbReadBase, UpdateCallback, Callback):
         from gramps.cli.user import User
         if user is None:
             user = User()
-        compress = config.get('behavior.database-backup-use-compression')
+        compress = config.get('database.compress-backup')
         writer = XmlWriter(self, user, strip_photos=0, compress=compress)
         timestamp = '{0:%Y-%m-%d-%H-%M-%S}'.format(datetime.datetime.now())
         filename = os.path.join(self._directory, "backup-%s.gramps" % timestamp)

@@ -174,7 +174,7 @@ class _PersonWidgetBase(Gtk.DrawingArea):
 class PersonBoxWidgetCairo(_PersonWidgetBase):
     """Draw person box using cairo library"""
     def __init__(self, view, format_helper, dbstate, person, alive, maxlines,
-                image=None):
+                image=None, tags=False):
         _PersonWidgetBase.__init__(self, view, format_helper, person)
         self.set_size_request(120, 25)
         # Required for tooltip and mouse-over
@@ -193,6 +193,13 @@ class PersonBoxWidgetCairo(_PersonWidgetBase):
         else:
             gender = None
         self.bgcolor, self.bordercolor = color_graph_box(alive, gender)
+        if tags and person:
+            for tag_handle in person.get_tag_list():
+                # For the complete tag, don't modify the default color
+                # which is black (#000000000000)
+                tag = dbstate.db.get_tag_from_handle(tag_handle)
+                if tag.get_color() != "#000000000000": # only if the color
+                    self.bgcolor = tag.get_color()     # is not black
         self.bgcolor = hex_to_rgb_float(self.bgcolor)
         self.bordercolor = hex_to_rgb_float(self.bordercolor)
 
@@ -504,9 +511,14 @@ class PedigreeView(NavigationView):
         ('interface.pedview-layout', 0),
         ('interface.pedview-show-images', True),
         ('interface.pedview-show-marriage', True),
+        ('interface.pedview-show-tags', False),
         ('interface.pedview-tree-direction', 2),
         ('interface.pedview-show-unknown-people', True),
         )
+
+    FLEUR_CURSOR = Gdk.Cursor.new_for_display(Gdk.Display.get_default(),
+                                              Gdk.CursorType.FLEUR)
+
 
     def __init__(self, pdata, dbstate, uistate, nav_group=0):
         NavigationView.__init__(self, _('Pedigree'), pdata, dbstate, uistate,
@@ -545,6 +557,8 @@ class PedigreeView(NavigationView):
         # Hide marriage data by default
         self.show_marriage_data = self._config.get(
                                 'interface.pedview-show-marriage')
+        # Show person with tag color
+        self.show_tag_color = self._config.get('interface.pedview-show-tags')
         # Tree draw direction
         self.tree_direction = self._config.get('interface.pedview-tree-direction')
         self.cb_change_scroll_direction(None, self.tree_direction < 2)
@@ -685,7 +699,8 @@ class PedigreeView(NavigationView):
             else:
                 self.rebuild_trees(None)
         except AttributeError as msg:
-            RunDatabaseRepair(str(msg))
+            RunDatabaseRepair(str(msg),
+                              parent=self.uistate.window)
 
     def _connect_db_signals(self):
         """
@@ -924,7 +939,8 @@ class PedigreeView(NavigationView):
                 # No person -> show empty box
                 #
                 pbw = PersonBoxWidgetCairo(self, self.format_helper,
-                        self.dbstate, None, False, 0, None)
+                        self.dbstate, None, False, 0, None,
+                        tags=self.show_tag_color)
 
                 if i > 0 and lst[((i+1) // 2) - 1]:
                     fam_h = None
@@ -947,7 +963,8 @@ class PedigreeView(NavigationView):
                     image = True
 
                 pbw = PersonBoxWidgetCairo(self, self.format_helper,
-                        self.dbstate, lst[i][0], lst[i][3], height, image)
+                        self.dbstate, lst[i][0], lst[i][3], height, image,
+                        tags=self.show_tag_color)
                 lst[i][4] = pbw
                 if height < 7:
                     pbw.set_tooltip_text(self.format_helper.format_person(
@@ -1325,7 +1342,7 @@ class PedigreeView(NavigationView):
         or call option menu.
         """
         if event.button == 1 and event.type == Gdk.EventType.BUTTON_PRESS:
-            widget.get_window().set_cursor(Gdk.Cursor.new(Gdk.CursorType.FLEUR))
+            widget.get_window().set_cursor(self.FLEUR_CURSOR)
             self._last_x = event.x
             self._last_y = event.y
             self._in_move = True
@@ -1493,7 +1510,8 @@ class PedigreeView(NavigationView):
             alive = probably_alive(person, self.dbstate.db)
         except RuntimeError:
             ErrorDialog(_('Relationship loop detected'),
-                        _('A person was found to be his/her own ancestor.'))
+                        _('A person was found to be his/her own ancestor.'),
+                        parent=self.uistate.window)
             alive = False
         lst[index] = [person, val, None, alive, None]
 
@@ -1911,6 +1929,16 @@ class PedigreeView(NavigationView):
         self.menu.popup(None, None, None, None, 0, event.time)
         return 1
 
+    def cb_update_show_tags(self, client, cnxn_id, entry, data):
+        """
+        Called when the configuration menu changes the tags setting.
+        """
+        if entry == 'True':
+            self.show_tag_color = True
+        else:
+            self.show_tag_color = False
+        self.rebuild_trees(self.get_active())
+
     def cb_update_show_images(self, client, cnxn_id, entry, data):
         """
         Called when the configuration menu changes the images setting.
@@ -1983,6 +2011,8 @@ class PedigreeView(NavigationView):
                           self.cb_update_show_images)
         self._config.connect('interface.pedview-show-marriage',
                           self.cb_update_show_marriage)
+        self._config.connect('interface.pedview-show-tags',
+                          self.cb_update_show_tags)
         self._config.connect('interface.pedview-show-unknown-people',
                           self.cb_update_show_unknown_people)
         self._config.connect('interface.pedview-tree-direction',
@@ -2017,6 +2047,9 @@ class PedigreeView(NavigationView):
         configdialog.add_checkbox(grid,
                 _('Show unknown people'),
                 2, 'interface.pedview-show-unknown-people')
+        configdialog.add_checkbox(grid,
+                _('Show tags'),
+                3, 'interface.pedview-show-tags')
         configdialog.add_combo(grid,
                 _('Tree style'),
                 4, 'interface.pedview-layout',

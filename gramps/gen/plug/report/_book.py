@@ -4,7 +4,7 @@
 # Copyright (C) 2003-2007  Donald N. Allingham
 # Copyright (C) 2007-2008  Brian G. Matherly
 # Copyright (C) 2010       Jakim Friant
-# Copyright (C) 2011-2014  Paul Franklin
+# Copyright (C) 2011-2016  Paul Franklin
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,14 +24,15 @@
 # Written by Alex Roitman,
 # largely based on the BaseDoc classes by Don Allingham
 
+""" the non-UI-specific (i.e. common, shared) classes for books """
+
 #-------------------------------------------------------------------------
 #
 # Standard Python modules
 #
 #-------------------------------------------------------------------------
-from ...const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 import copy
+import os
 
 #------------------------------------------------------------------------
 #
@@ -39,26 +40,23 @@ import copy
 #
 #------------------------------------------------------------------------
 import logging
-log = logging.getLogger(".Book")
-import os
+LOG = logging.getLogger(".Book")
 
 #-------------------------------------------------------------------------
 #
 # SAX interface
 #
 #-------------------------------------------------------------------------
-try:
-    from xml.sax import make_parser, handler, SAXParseException
-    from xml.sax.saxutils import escape
-except:
-    from _xmlplus.sax import make_parser, handler, SAXParseException
-    from _xmlplus.sax.saxutils import escape
+from xml.sax import make_parser, handler, SAXParseException
+from xml.sax.saxutils import escape
 
 #-------------------------------------------------------------------------
 #
-# gramps modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
+from ...const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 from ...const import HOME_DIR
 from ...utils.cast import get_type_converter_by_name, type_name
 from ..docgen import StyleSheet, StyleSheetList
@@ -85,6 +83,7 @@ class BookItem:
     def __init__(self, dbase, name):
         """
         Create a new empty BookItem.
+        TODO: it should be possible to make a non-empty BookItem, a copy
 
         name:   the book item is retrieved
                 from the book item registry using name for lookup
@@ -152,18 +151,24 @@ class BookItem:
 #------------------------------------------------------------------------
 class Book:
     """
-    Interface into the user-defined book -- a collection of book items.
+    Interface into the user-defined Book -- a collection of book items.
     """
 
-    def __init__(self, obj=None):
+    def __init__(self, obj=None, exact_copy=True):
         """
         Create a new empty Book.
 
-        obj:    if not None, creates the Book from the values in
-                obj, instead of creating an empty Book.
+        @param obj:         if not None, creates the Book from obj, from the
+                            items in obj, instead of creating an empty Book.
+        @type obj:          a :class:`.Book` instance
+        @param exact_copy:  if True (and obj is not None) the exact same
+                            BookItem objects will be in the new Book;
+                            if False (and obj is not None) the same number
+                            and same type of BookItem objects will be created
+        @type exact_copy:   boolean
         """
 
-        self.name = ""
+        self.name = "" # this is tested for, in several places
         self.dbname = ""
         self.paper_name = None
         self.paper_orientation = None
@@ -172,10 +177,14 @@ class Book:
         self.paper_margins = None
         self.paper_format = None
         self.paper_output = None
+        self.item_list = []
         if obj:
-            self.item_list = obj.item_list
-        else:
-            self.item_list = []
+            if exact_copy:
+                self.item_list = obj.item_list
+            else:
+                for item in obj.get_item_list():
+                    self.item_list.append(BookItem(item.dbase,
+                                                   item.get_name()))
 
     def set_name(self, name):
         """
@@ -414,6 +423,7 @@ class BookList:
         """
         self.dbase = dbase
         self.bookmap = {}
+        self._needs_saving = None
         self.file = os.path.join(HOME_DIR, filename)
         self.parse()
 
@@ -450,88 +460,120 @@ class BookList:
         Add or replaces a Book in the BookList.
 
         name:   name associated with the Book to add or replace.
-        book:   definition of the Book
+        book:   definition of the book -- a :class:`.Book` instance
         """
         self.bookmap[name] = book
+
+    def set_needs_saving(self, needs_saving):
+        """
+        Set the needs_saving flag for the BookList.
+
+        @param needs_saving: whether the current BookList needs saving
+        @type needs_saving: boolean
+        """
+        self._needs_saving = needs_saving
+
+    def get_needs_saving(self):
+        """
+        Return the needs_saving flag of the BookList.
+
+        @returns: returns whether the current BookList needs saving to a file
+        @rtype: boolean
+        """
+        return self._needs_saving
 
     def save(self):
         """
         Saves the current BookList to the associated file.
         """
-        with open(self.file, "w") as f:
-            f.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
-            f.write('<booklist>\n')
+        with open(self.file, "w") as b_f:
+            b_f.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
+            b_f.write('<booklist>\n')
             for name in sorted(self.bookmap): # enable a diff of archived copies
                 book = self.get_book(name)
                 dbname = book.get_dbname()
-                f.write('  <book name="%s" database="%s">\n' % (name, dbname) )
+                b_f.write('  <book name="%s" database="%s">'
+                          '\n' % (name, dbname))
                 for item in book.get_item_list():
-                    f.write('    <item name="%s" trans_name="%s">\n' %
-                                  (item.get_name(), item.get_translated_name() ) )
+                    b_f.write('    <item name="%s" '
+                              'trans_name="%s">\n' % (
+                                  item.get_name(),
+                                  item.get_translated_name()))
                     options = item.option_class.handler.options_dict
                     for option_name in sorted(options.keys()): # enable a diff
                         option_value = options[option_name]
                         if isinstance(option_value, (list, tuple)):
-                            f.write('      <option name="%s" value="" '
-                                    'length="%d">\n' % (
-                                        escape(option_name),
-                                        len(options[option_name]) ) )
+                            b_f.write('      <option name="%s" value="" '
+                                      'length="%d">\n' % (
+                                          escape(option_name),
+                                          len(options[option_name])))
                             for list_index in range(len(option_value)):
-                                option_type = type_name(option_value[list_index])
+                                option_type = type_name(
+                                    option_value[list_index])
                                 value = escape(str(option_value[list_index]))
                                 value = value.replace('"', '&quot;')
-                                f.write('        <listitem number="%d" type="%s" '
-                                        'value="%s"/>\n' % (
-                                            list_index,
-                                            option_type,
-                                            value ) )
-                            f.write('      </option>\n')
+                                b_f.write('        <listitem number="%d" '
+                                          'type="%s" value="%s"/>\n' % (
+                                              list_index,
+                                              option_type,
+                                              value))
+                            b_f.write('      </option>\n')
                         else:
                             option_type = type_name(option_value)
                             value = escape(str(option_value))
                             value = value.replace('"', '&quot;')
-                            f.write('      <option name="%s" type="%s" '
-                                    'value="%s"/>\n' % (
-                                        escape(option_name),
-                                        option_type,
-                                        value) )
+                            b_f.write('      <option name="%s" type="%s" '
+                                      'value="%s"/>\n' % (
+                                          escape(option_name),
+                                          option_type,
+                                          value))
 
-                    f.write('      <style name="%s"/>\n' % item.get_style_name() )
-                    f.write('    </item>\n')
+                    b_f.write('      <style name="%s"/>'
+                              '\n' % item.get_style_name())
+                    b_f.write('    </item>\n')
                 if book.get_paper_name():
-                    f.write('    <paper name="%s"/>\n' % book.get_paper_name() )
+                    b_f.write('    <paper name="%s"/>'
+                              '\n' % book.get_paper_name())
                 if book.get_orientation() is not None: # 0 is legal
-                    f.write('    <orientation value="%s"/>\n' %
-                            book.get_orientation() )
+                    b_f.write('    <orientation value="%s"/>'
+                              '\n' % book.get_orientation())
                 if book.get_paper_metric() is not None: # 0 is legal
-                    f.write('    <metric value="%s"/>\n' % book.get_paper_metric() )
+                    b_p_metric = book.get_paper_metric()
+                    if isinstance(b_p_metric, bool):
+                        b_p_metric = int(b_p_metric)
+                    b_f.write('    <metric value="%s"/>'
+                              '\n' % b_p_metric)
                 if book.get_custom_paper_size():
                     size = book.get_custom_paper_size()
-                    f.write('    <size value="%f %f"/>\n' % (size[0], size[1]) )
+                    b_f.write('    <size value="%f %f"/>'
+                              '\n' % (size[0], size[1]))
                 if book.get_margins():
                     for pos in range(len(book.get_margins())):
-                        f.write('    <margin number="%s" value="%f"/>\n' %
-                                      (pos, book.get_margin(pos)) )
+                        b_f.write('    <margin number="%s" '
+                                  'value="%f"/>\n' % (
+                                      pos, book.get_margin(pos)))
                 if book.get_format_name():
-                    f.write('    <format name="%s"/>\n' % book.get_format_name() )
+                    b_f.write('    <format name="%s"/>'
+                              '\n' % book.get_format_name())
                 if book.get_output():
-                    f.write('    <output name="%s"/>\n' % book.get_output() )
-                f.write('  </book>\n')
+                    b_f.write('    <output name="%s"/>'
+                              '\n' % book.get_output())
+                b_f.write('  </book>\n')
 
-            f.write('</booklist>\n')
+            b_f.write('</booklist>\n')
 
     def parse(self):
         """
         Loads the BookList from the associated file, if it exists.
         """
         try:
-            p = make_parser()
-            p.setContentHandler(BookParser(self, self.dbase))
+            parser = make_parser()
+            parser.setContentHandler(BookParser(self, self.dbase))
             with open(self.file) as the_file:
-                p.parse(the_file)
+                parser.parse(the_file)
         except (IOError, OSError, ValueError, SAXParseException, KeyError,
-               AttributeError):
-            pass
+                AttributeError):
+            LOG.debug("Failed to parse book list", exc_info=True)
 
 
 #-------------------------------------------------------------------------
@@ -553,25 +595,33 @@ class BookParser(handler.ContentHandler):
         handler.ContentHandler.__init__(self)
         self.dbase = dbase
         self.booklist = booklist
-        self.b = None
-        self.i = None
-        self.o = None
-        self.an_o_name = None
-        self.an_o_value = None
-        self.s = None
+        self.book = None
+        self.item = None
+        self.option = None
+        self.an_opt_name = None
+        self.an_opt_value = None
+        self.style = None
         self.bname = None
         self.iname = None
+        self.dbname = None
+        self.b_p_name = None
+        self.b_p_orient = None
+        self.b_p_metric = None
+        self.b_p_size = None
+        self.b_p_margins = None
+        self.b_p_format = None
+        self.b_p_output = None
 
     def startElement(self, tag, attrs):
         """
         Overridden class that handles the start of a XML element
         """
         if tag == "book":
-            self.b = Book()
+            self.book = Book()
             self.bname = attrs['name']
-            self.b.set_name(self.bname)
+            self.book.set_name(self.bname)
             self.dbname = attrs['database']
-            self.b.set_dbname(self.dbname)
+            self.book.set_dbname(self.dbname)
             self.b_p_name = None
             self.b_p_orient = None
             self.b_p_metric = None
@@ -580,20 +630,20 @@ class BookParser(handler.ContentHandler):
             self.b_p_format = None
             self.b_p_output = None
         elif tag == "item":
-            self.i = BookItem(self.dbase, attrs['name'])
-            self.o = {}
+            self.item = BookItem(self.dbase, attrs['name'])
+            self.option = {}
         elif tag == "option":
-            self.an_o_name = attrs['name']
+            self.an_opt_name = attrs['name']
             if 'length' in attrs:
-                self.an_o_value = []
+                self.an_opt_value = []
             else:
                 converter = get_type_converter_by_name(attrs['type'])
-                self.an_o_value = converter(attrs['value'])
+                self.an_opt_value = converter(attrs['value'])
         elif tag == "listitem":
             converter = get_type_converter_by_name(attrs['type'])
-            self.an_o_value.append(converter(attrs['value']))
+            self.an_opt_value.append(converter(attrs['value']))
         elif tag == "style":
-            self.s = attrs['name']
+            self.style = attrs['name']
         elif tag == 'paper':
             self.b_p_name = attrs['name']
         elif tag == 'orientation':
@@ -615,29 +665,31 @@ class BookParser(handler.ContentHandler):
             pass
 
     def endElement(self, tag):
-        "Overridden class that handles the end of a XML element"
+        """
+        Overridden class that handles the end of a XML element
+        """
         if tag == "option":
-            self.o[self.an_o_name] = self.an_o_value
+            self.option[self.an_opt_name] = self.an_opt_value
         elif tag == "item":
-            self.i.option_class.handler.options_dict.update(self.o)
-            self.i.set_style_name(self.s)
-            self.b.append_item(self.i)
+            self.item.option_class.handler.options_dict.update(self.option)
+            self.item.set_style_name(self.style)
+            self.book.append_item(self.item)
         elif tag == "book":
             if self.b_p_name:
-                self.b.set_paper_name(self.b_p_name)
+                self.book.set_paper_name(self.b_p_name)
             if self.b_p_orient is not None: # 0 is legal
-                self.b.set_orientation(self.b_p_orient)
+                self.book.set_orientation(self.b_p_orient)
             if self.b_p_metric is not None: # 0 is legal
-                self.b.set_paper_metric(self.b_p_metric)
+                self.book.set_paper_metric(self.b_p_metric)
             if self.b_p_size:
-                self.b.set_custom_paper_size(self.b_p_size)
+                self.book.set_custom_paper_size(self.b_p_size)
             if self.b_p_margins:
-                self.b.set_margins(self.b_p_margins)
+                self.book.set_margins(self.b_p_margins)
             if self.b_p_format:
-                self.b.set_format_name(self.b_p_format)
+                self.book.set_format_name(self.b_p_format)
             if self.b_p_output:
-                self.b.set_output(self.b_p_output)
-            self.booklist.set_book(self.bname, self.b)
+                self.book.set_output(self.b_p_output)
+            self.booklist.set_book(self.bname, self.book)
 
 #-------------------------------------------------------------------------
 #
@@ -648,38 +700,38 @@ def append_styles(selected_style, item):
     """
     Append the styles for a book item to the stylesheet.
     """
-    handler = item.option_class.handler
+    ihandler = item.option_class.handler
 
     # Set up default style
-    handler.set_default_stylesheet_name(item.get_style_name())
+    ihandler.set_default_stylesheet_name(item.get_style_name())
     default_style = StyleSheet()
     make_default_style = item.option_class.make_default_style
     make_default_style(default_style)
 
     # Read all style sheets available for this item
-    style_file = handler.get_stylesheet_savefile()
+    style_file = ihandler.get_stylesheet_savefile()
     style_list = StyleSheetList(style_file, default_style)
 
     # Get the selected stylesheet
-    style_name = handler.get_default_stylesheet_name()
+    style_name = ihandler.get_default_stylesheet_name()
     style_sheet = style_list.get_style_sheet(style_name)
 
     for this_style_name in style_sheet.get_paragraph_style_names():
         selected_style.add_paragraph_style(
-                this_style_name,
-                style_sheet.get_paragraph_style(this_style_name))
+            this_style_name,
+            style_sheet.get_paragraph_style(this_style_name))
 
     for this_style_name in style_sheet.get_draw_style_names():
         selected_style.add_draw_style(
-                this_style_name,
-                style_sheet.get_draw_style(this_style_name))
+            this_style_name,
+            style_sheet.get_draw_style(this_style_name))
 
     for this_style_name in style_sheet.get_table_style_names():
         selected_style.add_table_style(
-                this_style_name,
-                style_sheet.get_table_style(this_style_name))
+            this_style_name,
+            style_sheet.get_table_style(this_style_name))
 
     for this_style_name in style_sheet.get_cell_style_names():
         selected_style.add_cell_style(
-                this_style_name,
-                style_sheet.get_cell_style(this_style_name))
+            this_style_name,
+            style_sheet.get_cell_style(this_style_name))

@@ -65,13 +65,17 @@ class PlaceSidebarFilter(SidebarFilter):
         self.filter_place = Place()
         self.filter_place.set_type((PlaceType.CUSTOM, ''))
         self.ptype = Gtk.ComboBox(has_entry=True)
+        if dbstate.is_open():
+            self.custom_types = dbstate.db.get_place_types()
+        else:
+            self.custom_types = []
 
         self.place_menu = widgets.MonitoredDataType(
             self.ptype,
             self.filter_place.set_type,
             self.filter_place.get_type,
             False, # read-only
-            dbstate.db.get_place_types()
+            self.custom_types
         )
         self.filter_code = widgets.BasicEntry()
         self.filter_enclosed = widgets.PlaceEntry(dbstate, uistate, [])
@@ -139,7 +143,7 @@ class PlaceSidebarFilter(SidebarFilter):
                 generic_filter.add_rule(rule)
 
             if enclosed:
-                rule = IsEnclosedBy([enclosed])
+                rule = IsEnclosedBy([enclosed, '0'])
                 generic_filter.add_rule(rule)
 
             rule = HasData([name, ptype, code], use_regex=regex)

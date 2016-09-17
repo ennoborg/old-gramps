@@ -4,6 +4,7 @@
 #
 # Copyright (C) 2008-2011 Reinhard Müller
 # Copyright (C) 2010      Jakim Friant
+# Copyright (C) 2012      Brian G. Matherly
 # Copyright (C) 2013-2016 Paul Franklin
 #
 # This program is free software; you can redistribute it and/or modify
@@ -46,7 +47,7 @@ from gramps.gen.plug.menu import (BooleanOption, EnumeratedListOption,
                                   FilterOption, NumberOption,
                                   PersonOption, StringOption)
 from gramps.gen.plug.report import Report
-from gramps.gen.plug.report import utils as ReportUtils
+from gramps.gen.plug.report import utils
 from gramps.gen.plug.report import MenuReportOptions
 from gramps.gen.plug.report import stdoptions
 from gramps.gen.lib import Span
@@ -144,7 +145,7 @@ class RecordsReport(Report):
                 mark = None
                 if handletype == 'Person':
                     person = self.database.get_person_from_handle(handle)
-                    mark = ReportUtils.get_person_mark(self.database, person)
+                    mark = utils.get_person_mark(self.database, person)
                 elif handletype == 'Family':
                     family = self.database.get_family_from_handle(handle)
                     # librecords.py checks that the family has both
@@ -153,10 +154,10 @@ class RecordsReport(Report):
                     # have to do any similar checking here, it's been done
                     f_handle = family.get_father_handle()
                     dad = self.database.get_person_from_handle(f_handle)
-                    f_mark = ReportUtils.get_person_mark(self.database, dad)
+                    f_mark = utils.get_person_mark(self.database, dad)
                     m_handle = family.get_mother_handle()
                     mom = self.database.get_person_from_handle(m_handle)
-                    m_mark = ReportUtils.get_person_mark(self.database, mom)
+                    m_mark = utils.get_person_mark(self.database, mom)
                 else:
                     raise ReportError(_(
                         "Option '%(opt_name)s' is present "
@@ -205,6 +206,10 @@ class RecordsReportOptions(MenuReportOptions):
         self._nf = None
         MenuReportOptions.__init__(self, name, dbase)
 
+
+    def get_subject(self):
+        """ Return a string that describes the subject of the report. """
+        return self.__filter.get_filter().get_name()
 
     def add_menu_options(self, menu):
 
@@ -262,7 +267,7 @@ class RecordsReportOptions(MenuReportOptions):
         gid = self.__pid.get_value()
         person = self.__db.get_person_from_gramps_id(gid)
         nfv = self._nf.get_value()
-        filter_list = ReportUtils.get_person_filters(person,
+        filter_list = utils.get_person_filters(person,
                                                      include_single=False,
                                                      name_format=nfv)
         self.__filter.set_filters(filter_list)
@@ -308,7 +313,7 @@ class RecordsReportOptions(MenuReportOptions):
         font.set_bold(True)
         para = ParagraphStyle()
         para.set_font(font)
-        para.set_top_margin(ReportUtils.pt2cm(6))
+        para.set_top_margin(utils.pt2cm(6))
         para.set_description(_('The style used for headings.'))
         default_style.add_paragraph_style('REC-Heading', para)
 
@@ -326,6 +331,6 @@ class RecordsReportOptions(MenuReportOptions):
         para.set_font(font)
         para.set_alignment(PARA_ALIGN_CENTER)
         para.set_top_border(True)
-        para.set_top_margin(ReportUtils.pt2cm(8))
+        para.set_top_margin(utils.pt2cm(8))
         para.set_description(_('The style used for the footer.'))
         default_style.add_paragraph_style('REC-Footer', para)

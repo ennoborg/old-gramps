@@ -121,12 +121,6 @@ class DbReadBase:
         """
         self.__feature[feature] = value
 
-    def all_handles(self, table):
-        """
-        Return all handles from the specified table as a list
-        """
-        raise NotImplementedError
-
     def close(self):
         """
         Close the specified database.
@@ -361,12 +355,6 @@ class DbReadBase:
         """
         Return a list of all relationship types associated with Family
         instances in the database.
-        """
-        raise NotImplementedError
-
-    def get_from_handle(self, handle, class_type, data_map):
-        """
-        Return unserialized data from database given handle and object class
         """
         raise NotImplementedError
 
@@ -700,24 +688,6 @@ class DbReadBase:
         """
         raise NotImplementedError
 
-    def get_reference_map_cursor(self):
-        """
-        Returns a reference to a cursor over the reference map
-        """
-        raise NotImplementedError
-
-    def get_reference_map_primary_cursor(self):
-        """
-        Returns a reference to a cursor over the reference map primary map
-        """
-        raise NotImplementedError
-
-    def get_reference_map_referenced_cursor(self):
-        """
-        Returns a reference to a cursor over the reference map referenced map
-        """
-        raise NotImplementedError
-
     def get_repo_bookmarks(self):
         """
         Return the list of Repository handles in the bookmarks.
@@ -906,12 +876,6 @@ class DbReadBase:
         """
         Return a list of all custom place types assocated with Place instances
         in the database.
-        """
-        raise NotImplementedError
-
-    def gramps_upgrade(self):
-        """
-        Return True if database is upgraded
         """
         raise NotImplementedError
 
@@ -1226,16 +1190,6 @@ class DbReadBase:
         """
         raise NotImplementedError
 
-    def set_redo_callback(self, callback):
-        """
-        Define the callback function that is called whenever an redo operation
-        is executed.
-
-        The callback function receives a single argument that is a text string
-        that defines the operation.
-        """
-        raise NotImplementedError
-
     def set_researcher(self, owner):
         """
         Set the information about the owner of the database.
@@ -1245,16 +1199,6 @@ class DbReadBase:
     def set_save_path(self, path):
         """
         Set the save path for the database.
-        """
-        raise NotImplementedError
-
-    def set_undo_callback(self, callback):
-        """
-        Define the callback function that is called whenever an undo operation
-        is executed.
-
-        The callback function receives a single argument that is a text string
-        that defines the operation.
         """
         raise NotImplementedError
 
@@ -1490,12 +1434,6 @@ class DbWriteBase(DbReadBase):
         """
         raise NotImplementedError
 
-    def add_family_event(self, event, transaction):
-        """
-        Deprecated:  Use add_event
-        """
-        raise NotImplementedError
-
     def add_note(self, obj, transaction, set_gid=True):
         """
         Add a Note to the database, assigning internal IDs if they have
@@ -1520,12 +1458,6 @@ class DbWriteBase(DbReadBase):
         not already been defined.
 
         If not set_gid, then gramps_id is not set.
-        """
-        raise NotImplementedError
-
-    def add_person_event(self, event, transaction):
-        """
-        Deprecated:  Use add_event
         """
         raise NotImplementedError
 
@@ -1575,13 +1507,6 @@ class DbWriteBase(DbReadBase):
         """
         raise NotImplementedError
 
-    def commit_base(self, obj, data_map, key, transaction, change_time):
-        """
-        Commit the specified object to the database, storing the changes as
-        part of the transaction.
-        """
-        raise NotImplementedError
-
     def commit_event(self, event, transaction, change_time=None):
         """
         Commit the specified Event to the database, storing the changes as
@@ -1593,12 +1518,6 @@ class DbWriteBase(DbReadBase):
         """
         Commit the specified Family to the database, storing the changes as
         part of the transaction.
-        """
-        raise NotImplementedError
-
-    def commit_family_event(self, event, transaction, change_time=None):
-        """
-        Deprecated:  Use commit_event
         """
         raise NotImplementedError
 
@@ -1620,12 +1539,6 @@ class DbWriteBase(DbReadBase):
         """
         Commit the specified Person to the database, storing the changes as
         part of the transaction.
-        """
-        raise NotImplementedError
-
-    def commit_personal_event(self, event, transaction, change_time=None):
-        """
-        Deprecated:  Use commit_event
         """
         raise NotImplementedError
 
@@ -1657,24 +1570,9 @@ class DbWriteBase(DbReadBase):
         """
         raise NotImplementedError
 
-    def delete_primary_from_reference_map(self, handle, transaction):
-        """
-        Called each time an object is removed from the database.
-
-        This can be used by subclasses to update any additional index tables
-        that might need to be changed.
-        """
-        raise NotImplementedError
-
     def get_undodb(self):
         """
         Return the database that keeps track of Undo/Redo operations.
-        """
-        raise NotImplementedError
-
-    def need_schema_upgrade(self):
-        """
-        Return True if database needs to be upgraded
         """
         raise NotImplementedError
 
@@ -1781,12 +1679,6 @@ class DbWriteBase(DbReadBase):
         """
         raise NotImplementedError
 
-    def set_auto_remove(self):
-        """
-        BSDDB change log settings using new method with renamed attributes
-        """
-        raise NotImplementedError
-
     def set_default_person_handle(self, handle):
         """
         Set the default Person to the passed instance.
@@ -1798,12 +1690,6 @@ class DbWriteBase(DbReadBase):
         Set the default grouping name for a surname.
 
         Needs to be overridden in the derived class.
-        """
-        raise NotImplementedError
-
-    def sort_surname_list(self):
-        """
-        Sort the list of surnames contained in the database by locale ordering.
         """
         raise NotImplementedError
 
@@ -1836,15 +1722,6 @@ class DbWriteBase(DbReadBase):
     def transaction_abort(self, transaction):
         """
         Revert the changes made to the database so far during the transaction.
-        """
-        raise NotImplementedError
-
-    def update_reference_map(self, obj, transaction):
-        """
-        Called each time an object is writen to the database.
-
-        This can be used by subclasses to update any additional index tables
-        that might need to be changed.
         """
         raise NotImplementedError
 

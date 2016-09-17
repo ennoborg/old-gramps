@@ -66,6 +66,7 @@ from gramps.gen.plug.utils import available_updates
 from .plug import PluginWindows
 from gramps.gen.errors import WindowActiveError
 from .spell import HAVE_GTKSPELL
+from gramps.gen.constfunc import win
 _ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
@@ -226,13 +227,15 @@ class ConfigureDialog(ManagedWindow):
             obj.get_text() % 'test_markup'
         except TypeError:
             print("WARNING: ignoring invalid value for '%s'" % constant)
-            ErrorDialog(_("Invalid or incomplete format definition."),
-                        obj.get_text(), parent=self.window)
+            ErrorDialog(
+                _("Invalid or incomplete format definition."),
+                obj.get_text(), parent=self.window)
             obj.set_text('<b>%s</b>')
         except ValueError:
             print("WARNING: ignoring invalid value for '%s'" % constant)
-            ErrorDialog(_("Invalid or incomplete format definition."),
-                        obj.get_text(), parent=self.window)
+            ErrorDialog(
+                _("Invalid or incomplete format definition."),
+                obj.get_text(), parent=self.window)
             obj.set_text('<b>%s</b>')
 
         self.__config.set(constant, obj.get_text())
@@ -1289,6 +1292,13 @@ class GrampsPreferences(ConfigureDialog):
         grid.set_row_spacing(6)
 
         current_line = 0
+        if win():
+            self.add_checkbox(grid,
+                    _('Use alternate Font handler for GUI and Reports '
+                      '(requires restart)'),
+                    current_line, 'preferences.alternate-fonthandler')
+
+            current_line += 1
         self.add_checkbox(grid,
                 _('Add default source on GEDCOM import'),
                 current_line, 'preferences.default-source')
@@ -1398,17 +1408,18 @@ class GrampsPreferences(ConfigureDialog):
             OkDialog(_("Checking Addons Failed"),
                      _("The addon repository appears to be unavailable. "
                        "Please try again later."),
-                     self.window)
+                     parent=self.window)
             return
 
         if len(addon_update_list) > 0:
             PluginWindows.UpdateAddons(addon_update_list, self.window)
         else:
             check_types = config.get('behavior.check-for-update-types')
-            OkDialog(_("There are no available addons of this type"),
-                     _("Checked for '%s'") %
-                     _("' and '").join([_(t) for t in check_types]),
-                     self.window)
+            OkDialog(
+                _("There are no available addons of this type"),
+                _("Checked for '%s'") %
+                      _("' and '").join([_(t) for t in check_types]),
+                parent=self.window)
 
         # List of translated strings used here
         # Dead code for l10n
@@ -1420,7 +1431,7 @@ class GrampsPreferences(ConfigureDialog):
         the_list = obj.get_model()
         the_iter = obj.get_active_iter()
         db_choice = the_list.get_value(the_iter, 2)
-        config.set('behavior.database-backend', db_choice)
+        config.set('database.backend', db_choice)
 
     def add_famtree_panel(self, configdialog):
         grid = Gtk.Grid()
@@ -1429,6 +1440,35 @@ class GrampsPreferences(ConfigureDialog):
         grid.set_row_spacing(6)
 
         current_line = 0
+
+        if __debug__:
+            lwidget = BasicLabel("%s: " % _('Database backend'))
+            grid.attach(lwidget, 1, current_line, 1, 1)
+            obox = self.__create_backend_combo()
+            grid.attach(obox, 2, current_line, 1, 1)
+            current_line += 1
+
+        self.dbpath_entry = Gtk.Entry()
+        self.add_path_box(grid,
+                _('Family Tree Database path'),
+                current_line, self.dbpath_entry, config.get('database.path'),
+                self.set_dbpath, self.select_dbpath)
+        current_line += 1
+
+        #self.add_entry(grid,
+        #        _('Family Tree Database path'),
+        #        0, 'database.path')
+        self.add_checkbox(grid,
+                _('Automatically load last Family Tree'),
+                current_line, 'behavior.autoload')
+        current_line += 1
+
+        return _('Family Tree'), grid
+
+    def __create_backend_combo(self):
+        """
+        Create backend selection widget.
+        """
         backend_plugins = self.uistate.viewmanager._pmgr.get_reg_databases()
         obox = Gtk.ComboBox()
         cell = Gtk.CellRendererText()
@@ -1440,7 +1480,7 @@ class GrampsPreferences(ConfigureDialog):
                               GObject.TYPE_STRING)
         count = 0
         active = 0
-        default = config.get('behavior.database-backend')
+        default = config.get('database.backend')
         for plugin in sorted(backend_plugins, key=lambda plugin: plugin.name):
             if plugin.id == default:
                 active = count
@@ -1450,27 +1490,7 @@ class GrampsPreferences(ConfigureDialog):
         # set the default value as active in the combo
         obox.set_active(active)
         obox.connect('changed', self.database_backend_changed)
-        lwidget = BasicLabel("%s: " % _('Database backend'))
-        grid.attach(lwidget, 1, current_line, 1, 1)
-        grid.attach(obox, 2, current_line, 1, 1)
-        current_line += 1
-
-        self.dbpath_entry = Gtk.Entry()
-        self.add_path_box(grid,
-                _('Family Tree Database path'),
-                current_line, self.dbpath_entry, config.get('behavior.database-path'),
-                self.set_dbpath, self.select_dbpath)
-        current_line += 1
-
-        #self.add_entry(grid,
-        #        _('Family Tree Database path'),
-        #        0, 'behavior.database-path')
-        self.add_checkbox(grid,
-                _('Automatically load last Family Tree'),
-                current_line, 'behavior.autoload')
-        current_line += 1
-
-        return _('Family Tree'), grid
+        return obox
 
     def set_mediapath(self, *obj):
         if self.path_entry.get_text().strip():
@@ -1499,7 +1519,7 @@ class GrampsPreferences(ConfigureDialog):
 
     def set_dbpath(self, *obj):
         path = self.dbpath_entry.get_text().strip()
-        config.set('behavior.database-path', path)
+        config.set('database.path', path)
 
     def select_dbpath(self, *obj):
         f = Gtk.FileChooserDialog(title=_("Select database directory"),
@@ -1510,7 +1530,7 @@ class GrampsPreferences(ConfigureDialog):
                                                 _('_Apply'),
                                                 Gtk.ResponseType.OK)
                                     )
-        dbpath = config.get('behavior.database-path')
+        dbpath = config.get('database.path')
         if not dbpath:
             dbpath = os.path.join(HOME_DIR,'grampsdb')
         f.set_current_folder(os.path.dirname(dbpath))

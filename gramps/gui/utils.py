@@ -31,8 +31,6 @@ import os
 import sys
 import subprocess
 import threading
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 # gtk is not included here, because this file is currently imported
 # by code that needs to run without the DISPLAY variable (eg, in
 # the cli only).
@@ -52,6 +50,8 @@ from gi.repository import GLib
 # Gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 from gramps.gen.lib.person import Person
 from gramps.gen.constfunc import has_display, is_quartz, mac, win
 from gramps.gen.config import config
@@ -300,7 +300,7 @@ class ProgressMeter:
         WarningDialog(
             _("Attempt to force closing the dialog"),
             _("Please do not force closing this important dialog."),
-            self.__dialog)
+            parent=self.__dialog)
         return True
 
     def close(self, widget=None):
@@ -357,7 +357,7 @@ class SystemFonts:
 #
 #
 #-------------------------------------------------------------------------
-def display_error_dialog (index, errorstrings):
+def display_error_dialog (index, errorstrings, uistate=None):
     """
     Display a message box for errors resulting from xdg-open/open
     """
@@ -372,7 +372,8 @@ def display_error_dialog (index, errorstrings):
         else:
             error = errorstrings
 
-    ErrorDialog(_("Error from external program"), error)
+    ErrorDialog(_("Error from external program"),
+                error, parent=uistate.window)
 
 def poll_external (args):
     """
@@ -387,16 +388,16 @@ def poll_external (args):
     :return: bool returned to timeout_add_seconds: should this function be
              called again?
     """
-    (proc, errorstrings) = args
+    (proc, errorstrings, uistate) = args
     resp = proc.poll()
     if resp is None:
         return True
 
     if resp != 0:
-        display_error_dialog(resp, errorstrings)
+        display_error_dialog(resp, errorstrings, uistate)
     return False
 
-def open_file_with_default_application(path):
+def open_file_with_default_application(path, uistate):
     """
     Launch a program to open an arbitrary file. The file will be opened using
     whatever program is configured on the host as the default program for that
@@ -412,14 +413,16 @@ def open_file_with_default_application(path):
 
     norm_path = os.path.normpath(path)
     if not os.path.exists(norm_path):
-        display_error_dialog(0, _("File does not exist"))
+        display_error_dialog(0, _("File %s does not exist") % norm_path,
+                             uistate)
         return
 
     if win():
         try:
             os.startfile(norm_path)
         except WindowsError as msg:
-            display_error_dialog(0, str(msg))
+            display_error_dialog(0, str(msg),
+                             uistate)
 
         return
 
@@ -435,7 +438,7 @@ def open_file_with_default_application(path):
     proc = subprocess.Popen([utility, norm_path], stderr=subprocess.STDOUT)
 
     from gi.repository import GLib
-    GLib.timeout_add_seconds(1, poll_external, (proc, errstrings))
+    GLib.timeout_add_seconds(1, poll_external, (proc, errstrings, uistate))
     return
 
 def process_pending_events(max_count=10):
@@ -587,7 +590,8 @@ def edit_object(dbstate, uistate, reftype, ref):
 
             from .dialog import WarningDialog
             WarningDialog(_("Cannot open new citation editor"),
-                          blocked_text)
+                          blocked_text,
+                          parent=uistate.window)
     elif reftype == 'Place':
         try:
             place = dbstate.db.get_place_from_handle(ref)

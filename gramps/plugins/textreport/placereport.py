@@ -47,7 +47,7 @@ from gramps.gen.plug.docgen import (IndexMark, FontStyle, ParagraphStyle,
                                     INDEX_TYPE_TOC, PARA_ALIGN_CENTER)
 from gramps.gen.sort import Sort
 from gramps.gen.utils.location import get_location_list
-from gramps.gen.display.place import displayer as place_displayer
+from gramps.gen.display.place import displayer as _pd
 from gramps.gen.errors import ReportError
 from gramps.gen.proxy import LivingProxyDb, CacheProxyDb
 
@@ -94,8 +94,8 @@ class PlaceReport(Report):
             if value == self._lv:
                 living_desc = self._(description)
                 break
-        self.living_desc = self._(
-            "(Living people: %(option_name)s)") % {'option_name': living_desc}
+        self.living_desc = self._("(Living people: %(option_name)s)"
+                                 ) % {'option_name': living_desc}
 
         places = menu.get_option_by_name('places').get_value()
         self.center = menu.get_option_by_name('center').get_value()
@@ -177,9 +177,9 @@ class PlaceReport(Report):
         place_details = [self._("Gramps ID: %s ") % place.get_gramps_id()]
         for level in get_location_list(self._db, place):
             # translators: needed for French, ignore otherwise
-            place_details.append(self._(
-                "%(str1)s: %(str2)s") % {'str1': self._(level[1].xml_str()),
-                                         'str2': level[0]})
+            place_details.append(self._("%(str1)s: %(str2)s"
+                                       ) % {'str1': self._(level[1].xml_str()),
+                                            'str2': level[0]})
 
         place_names = ''
         all_names = place.get_all_names()
@@ -193,7 +193,7 @@ class PlaceReport(Report):
                     place_names += ' (%s)' % place_name.get_language()
             place_details += [self._("places|All Names: %s") % place_names,]
         self.doc.start_paragraph("PLC-PlaceTitle")
-        place_title = place_displayer.display(self._db, place)
+        place_title = _pd.display(self._db, place)
         self.doc.write_text(("%(nbr)s. %(place)s") % {'nbr' : place_nbr,
                                                       'place' : place_title})
         self.doc.end_paragraph()
@@ -257,16 +257,16 @@ class PlaceReport(Report):
                 for p_handle in person_list:
                     person = self._db.get_person_from_handle(p_handle)
                     if person:
+                        person_name = self._nd.display(person)
                         if people == "":
-                            people = "%(name)s (%(id)s)" \
-                                     % {'name': self._nd.display(person),
-                                        'id': person.get_gramps_id()}
+                            people = "%(name)s (%(id)s)" % {
+                                'name' : person_name,
+                                'id'   : person.get_gramps_id()}
                         else:
-                            people = self._("%(persons)s and %(name)s "
-                                            "(%(id)s)") \
-                                     % {'persons': people,
-                                        'name': self._nd.display(person),
-                                        'id': person.get_gramps_id()}
+                            people = self._("%(persons)s and %(name)s (%(id)s)"
+                                           ) % {'persons' : people,
+                                                'name'    : person_name,
+                                                'id' : person.get_gramps_id()}
 
                 event_details = [date, event_type, people, descr]
                 self.doc.start_row()
@@ -321,13 +321,16 @@ class PlaceReport(Report):
                     if f_handle and m_handle:
                         father = self._db.get_person_from_handle(f_handle)
                         mother = self._db.get_person_from_handle(m_handle)
-                        name_entry = self._(
-                            "%(father)s (%(father_id)s) and "
-                            "%(mother)s (%(mother_id)s)") % {
-                                'father' : self._nd.display(father),
-                                'father_id' : father.get_gramps_id(),
-                                'mother' : self._nd.display(mother),
-                                'mother_id' : mother.get_gramps_id()}
+                        father_name = self._nd.display(father)
+                        mother_name = self._nd.display(mother)
+                        father_id = father.get_gramps_id()
+                        mother_id = mother.get_gramps_id()
+                        name_entry = self._("%(father)s (%(father_id)s) and "
+                                            "%(mother)s (%(mother_id)s)"
+                                           ) % {'father'    : father_name,
+                                                'father_id' : father_id,
+                                                'mother'    : mother_name,
+                                                'mother_id' : mother_id}
                     elif f_handle or m_handle:
                         if f_handle:
                             p_handle = f_handle
@@ -402,7 +405,25 @@ class PlaceOptions(MenuReportOptions):
     """
 
     def __init__(self, name, dbase):
+        self.__db = dbase
+        self.__filter = None
+        self.__places = None
         MenuReportOptions.__init__(self, name, dbase)
+
+    def get_subject(self):
+        """ Return a string that describes the subject of the report. """
+        subject = ""
+        if self.__filter.get_filter().get_name():
+            # Use the selected filter's name, if any
+            subject += self.__filter.get_filter().get_name()
+        if self.__places.get_value():
+            # Add places selected individually, if any
+            for place_id in self.__places.get_value().split():
+                if subject:
+                    subject += " + "
+                place = self.__db.get_place_from_gramps_id(place_id)
+                subject += _pd.display(self.__db, place)
+        return subject
 
     def add_menu_options(self, menu):
         """
@@ -414,17 +435,17 @@ class PlaceOptions(MenuReportOptions):
         CustomFilters = None
         from gramps.gen.filters import CustomFilters, GenericFilter
 
-        opt = FilterOption(_("Select using filter"), 0)
-        opt.set_help(_("Select places using a filter"))
+        self.__filter = FilterOption(_("Select using filter"), 0)
+        self.__filter.set_help(_("Select places using a filter"))
         filter_list = []
         filter_list.append(GenericFilter())
         filter_list.extend(CustomFilters.get_filters('Place'))
-        opt.set_filters(filter_list)
-        menu.add_option(category_name, "filter", opt)
+        self.__filter.set_filters(filter_list)
+        menu.add_option(category_name, "filter", self.__filter)
 
-        places = PlaceListOption(_("Select places individually"))
-        places.set_help(_("List of places to report on"))
-        menu.add_option(category_name, "places", places)
+        self.__places = PlaceListOption(_("Select places individually"))
+        self.__places.set_help(_("List of places to report on"))
+        menu.add_option(category_name, "places", self.__places)
 
         stdoptions.add_private_data_option(menu, category_name)
 

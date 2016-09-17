@@ -29,8 +29,6 @@ Handles the Tip of the Day dialog
 #-------------------------------------------------------------------------
 from xml.parsers.expat import ParserCreate, ExpatError
 from random import Random
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 import os
 
 #-------------------------------------------------------------------------
@@ -44,6 +42,8 @@ import os
 # Gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 from gramps.gen.const import IMAGE_DIR, TIP_DATA
 from gramps.gen.config import config
 from .managedwindow import ManagedWindow
@@ -84,7 +84,8 @@ class TipOfDay(ManagedWindow):
             self.close()
             ErrorDialog(
                 _("Failed to display tip of the day"),
-                _("Unable to read the tips from external file.\n\n%s")%e)
+                _("Unable to read the tips from external file.\n\n%s") % e,
+                parent=uistate.window)
             return
         self.tip_list = tparser.get()
 

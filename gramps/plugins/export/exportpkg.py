@@ -175,7 +175,7 @@ class PackageWriter:
         try:
             archive = tarfile.open(self.filename,'w:gz')
         except EnvironmentError as msg:
-            log.warn(str(msg))
+            log.warning(str(msg))
             self.user.notify_error(_('Failure writing %s') % self.filename, str(msg))
             return 0
 
@@ -187,26 +187,6 @@ class PackageWriter:
             archname = str(mobject.get_path())
             if os.path.isfile(filename) and os.access(filename, os.R_OK):
                 archive.add(filename, archname)
-#             else:
-#                 # File is lost => ask what to do
-#                 if missmedia_action == 0:
-#                     mmd = MissingMediaDialog(
-#                         _("Media object could not be found"),
-#                         _("%(file_name)s is referenced in the database, "
-#                           "but no longer exists. The file may have been "
-#                           "deleted or moved to a different location. "
-#                           "You may choose to either remove the reference "
-#                           "from the database, keep the reference to the "
-#                           "missing file, or select a new file."
-#                           ) % { 'file_name' : filename },
-#                         remove_clicked, leave_clicked, select_clicked)
-#                     missmedia_action = mmd.default_action
-#                 elif missmedia_action == 1:
-#                     remove_clicked()
-#                 elif missmedia_action == 2:
-#                     leave_clicked()
-#                 elif missmedia_action == 3:
-#                     select_clicked()
 
         # Write XML now
         g = BytesIO()

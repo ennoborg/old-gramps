@@ -24,8 +24,6 @@
 # Python classes
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 from gi.repository import Gtk
 from gi.repository import GObject
 from gi.repository import GLib
@@ -35,6 +33,8 @@ from gi.repository import GLib
 # Gramps classes
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 from gramps.gen.lib import Event, EventRef, EventRoleType, EventType
 from gramps.gen.errors import WindowActiveError
 from ...ddtargets import DdTargets
@@ -265,7 +265,8 @@ class EventEmbedList(DbGUIElement, GroupEmbeddedList):
             except WindowActiveError:
                 from ...dialog import WarningDialog
                 WarningDialog(_("Cannot share this reference"),
-                              self.__blocked_text())
+                              self.__blocked_text(),
+                              parent=self.uistate.window)
 
     def edit_button_clicked(self, obj):
         ref = self.get_selected()
@@ -278,7 +279,8 @@ class EventEmbedList(DbGUIElement, GroupEmbeddedList):
             except WindowActiveError:
                 from ...dialog import WarningDialog
                 WarningDialog(_("Cannot edit this reference"),
-                              self.__blocked_text())
+                              self.__blocked_text(),
+                              parent=self.uistate.window)
         elif ref and ref[0] != self._WORKGROUP:
             #bring up family editor
             key = self._groups[ref[0]][0]
@@ -319,9 +321,9 @@ class EventEmbedList(DbGUIElement, GroupEmbeddedList):
         """
         from ...dialog import WarningDialog
         WarningDialog(
-                    _("Cannot change Person"),
-                    _("You cannot change Person events in the Family Editor")
-                    )
+            _("Cannot change Person"),
+            _("You cannot change Person events in the Family Editor"),
+            parent=self.uistate.window)
 
     def _handle_drag(self, row, obj):
         """
@@ -347,8 +349,8 @@ class EventEmbedList(DbGUIElement, GroupEmbeddedList):
                       "Either the associated event is already being edited "
                       "or another event reference that is associated with "
                       "the same event is being edited.\n\nTo edit this event "
-                      "reference, you need to close the event.")
-                    )
+                      "reference, you need to close the event."),
+                    parent=self.uistate.window)
         else:
             self.dropnotworkgroup(row, obj)
 

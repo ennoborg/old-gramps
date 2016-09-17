@@ -371,7 +371,8 @@ class EditFamily(EditPrimary):
                       "are available when you create a new family. The "
                       "remaining fields will become available after you "
                       "attempt to select a parent."),
-                    'preferences.family-warn')
+                    'preferences.family-warn',
+                    parent=self.window)
         else:
             self.add_parent = False
 
@@ -465,7 +466,8 @@ class EditFamily(EditPrimary):
               "example a source used here is deleted in the source view.\n"
               "To make sure the information shown is still correct, the "
               "data shown has been updated. Some edits you have made may have"
-              " been lost.") % {'object': _('family')}, parent=self.window)
+              " been lost.") % {'object': _('family')},
+            parent=self.window)
 
     def topdata_updated(self, *obj):
         """
@@ -852,13 +854,13 @@ class EditFamily(EditPrimary):
                 self.obj.set_father_handle(person.get_handle())
                 self.update_father(person.get_handle())
             except:
-                log.warn("Failed to update father: \n"
-                         "obj returned from selector was: %s\n"
-                         % (repr(obj),))
+                log.warning("Failed to update father: \n"
+                            "obj returned from selector was: %s\n"
+                            % (repr(obj),))
                 raise
 
         else:
-            log.warn(
+            log.warning(
                 "Object selector returned obj.__class__ = %s, it should "
                 "have been of type %s." % (obj.__class__.__name__,
                                            Person.__name__))
@@ -1041,7 +1043,7 @@ class EditFamily(EditPrimary):
         #try:
         self.__do_save()
         #except bsddb_db.DBRunRecoveryError as msg:
-        #    RunDatabaseRepair(msg[1])
+        #    RunDatabaseRepair(msg[1], parent=self.window)
 
     def __do_save(self):
         self.ok_button.set_sensitive(False)
@@ -1061,8 +1063,9 @@ class EditFamily(EditPrimary):
             name = "%s [%s]" % (name_displayer.display(father),
                                 father.gramps_id)
             ErrorDialog(_("A father cannot be his own child"),
-                                       _("%s is listed as both the father and child "
-                                         "of the family.") % name)
+                        _("%s is listed as both the father and child "
+                          "of the family.") % name,
+                        parent=self.window)
             self.ok_button.set_sensitive(True)
             return
         elif self.obj.get_mother_handle() in child_list:
@@ -1071,8 +1074,9 @@ class EditFamily(EditPrimary):
             name = "%s [%s]" % (name_displayer.display(mother),
                                 mother.gramps_id)
             ErrorDialog(_("A mother cannot be her own child"),
-                                       _("%s is listed as both the mother and child "
-                                         "of the family.") % name)
+                        _("%s is listed as both the mother and child "
+                          "of the family.") % name,
+                        parent=self.window)
             self.ok_button.set_sensitive(True)
             return
 
@@ -1080,7 +1084,8 @@ class EditFamily(EditPrimary):
             ErrorDialog(
                 _("Cannot save family"),
                 _("No data exists for this family. "
-                  "Please enter data or cancel the edit."))
+                  "Please enter data or cancel the edit."),
+                parent=self.window)
             self.ok_button.set_sensitive(True)
             return
 
@@ -1092,7 +1097,7 @@ class EditFamily(EditPrimary):
                          "enter a different ID or leave "
                          "blank to get the next available ID value.") % {
                          'id' : id}
-            ErrorDialog(msg1, msg2)
+            ErrorDialog(msg1, msg2, parent=self.window)
             self.ok_button.set_sensitive(True)
             return
 

@@ -26,7 +26,7 @@ py_str = 'found %d.%d.%d' %  sys.version_info[:3]
 try:
     import gtk
     try:
-        gtkver_str = 'found %d.%d.%d' % Gtk.gtk_version 
+        gtkver_str = 'found %d.%d.%d' % Gtk.gtk_version
     except : # any failure to 'get' the version
         gtkver_str = 'unknown version'
     try:
@@ -44,7 +44,7 @@ try:
         gobjectver_str = 'found %d.%d.%d' % GObject.pygobject_version
     except :# any failure to 'get' the version
         gobjectver_str = 'unknown version'
-    
+
 except ImportError:
     gobjectver_str = 'not found'
 
@@ -52,15 +52,15 @@ except ImportError:
 try:
     import cairo
     try:
-        cairover_str = 'found %d.%d.%d' % cairo.version_info 
+        cairover_str = 'found %d.%d.%d' % cairo.version_info
     except :# any failure to 'get' the version
         cairover_str = 'unknown version'
-    
+
 except ImportError:
     cairover_str = 'not found'
-    
-print 'python:%s;'%py_str
-print 'gtk++:%s;'%gtkver_str
-print 'pygtk:%s;'%pygtkver_str
-print 'gobject:%s;'%gobjectver_str
-print 'cairo:%s;'%cairover_str
+
+print('python:%s;'%py_str)
+print('gtk++:%s;'%gtkver_str)
+print('pygtk:%s;'%pygtkver_str)
+print('gobject:%s;'%gobjectver_str)
+print('cairo:%s;'%cairover_str)

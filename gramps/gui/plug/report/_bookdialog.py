@@ -2,10 +2,10 @@
 # Gramps - a GTK+/GNOME based genealogy program
 #
 # Copyright (C) 2003-2007  Donald N. Allingham
-# Copyright (C) 2007-2008  Brian G. Matherly
+# Copyright (C) 2007-2012  Brian G. Matherly
 # Copyright (C) 2010       Jakim Friant
 # Copyright (C) 2012       Nick Hall
-# Copyright (C) 2011-2014  Paul Franklin
+# Copyright (C) 2011-2016  Paul Franklin
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,6 +22,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
+""" GUI dialog for creating and managing books """
+
 # Written by Alex Roitman,
 # largely based on the BaseDoc classes by Don Allingham
 
@@ -30,8 +32,6 @@
 # Standard Python modules
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 
 #------------------------------------------------------------------------
 #
@@ -39,7 +39,7 @@ _ = glocale.translation.gettext
 #
 #------------------------------------------------------------------------
 import logging
-log = logging.getLogger(".Book")
+LOG = logging.getLogger(".Book")
 
 #-------------------------------------------------------------------------
 #
@@ -52,14 +52,16 @@ from gi.repository import GObject
 
 #-------------------------------------------------------------------------
 #
-# gramps modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 from ...listmodel import ListModel
 from gramps.gen.errors import FilterError, ReportError
 from ...pluginmanager import GuiPluginManager
-from ...dialog import WarningDialog, ErrorDialog
-from gramps.gen.plug.menu import PersonOption, FilterOption, FamilyOption
+from ...dialog import WarningDialog, ErrorDialog, QuestionDialog2
+from gramps.gen.plug.menu import PersonOption, FamilyOption
 from gramps.gen.plug.docgen import StyleSheet
 from ...managedwindow import ManagedWindow, set_titles
 from ...glade import Glade
@@ -101,6 +103,8 @@ def _initialize_options(options, dbstate, uistate):
     if not hasattr(options, "menu"):
         return
     dbase = dbstate.get_database()
+    if dbase.get_total() == 0:
+        return
     menu = options.menu
 
     for name in menu.get_all_option_names():
@@ -133,65 +137,9 @@ def _initialize_options(options, dbstate, uistate):
                 else:
                     print("No family specified for ", name)
 
-def _get_subject(options, dbase):
-    """
-    Attempts to determine the subject of a set of options. The subject would
-    likely be a person (using a PersonOption) or a filter (using a
-    FilterOption)
-
-    options: The ReportOptions class
-    dbase: the database for which it corresponds
-    """
-    if not hasattr(options, "menu"):
-        return ""
-    menu = options.menu
-
-    option_names = menu.get_all_option_names()
-    if not option_names:
-        return _("Entire Database")
-
-    for name in option_names:
-        option = menu.get_option_by_name(name)
-
-        if isinstance(option, FilterOption):
-            return option.get_filter().get_name()
-
-        elif isinstance(option, PersonOption):
-            gid = option.get_value()
-            person = dbase.get_person_from_gramps_id(gid)
-            return _nd.display(person)
-
-        elif isinstance(option, FamilyOption):
-            family = dbase.get_family_from_gramps_id(option.get_value())
-            if not family:
-                return ""
-            family_id = family.get_gramps_id()
-            fhandle = family.get_father_handle()
-            mhandle = family.get_mother_handle()
-
-            if fhandle:
-                father = dbase.get_person_from_handle(fhandle)
-                father_name = _nd.display(father)
-            else:
-                father_name = _("unknown father")
-
-            if mhandle:
-                mother = dbase.get_person_from_handle(mhandle)
-                mother_name = _nd.display(mother)
-            else:
-                mother_name = _("unknown mother")
-
-            name = _("%(father)s and %(mother)s (%(id)s)") % {
-                                                'father' : father_name,
-                                                'mother' : mother_name,
-                                                'id' : family_id }
-            return name
-
-    return ""
-
 #------------------------------------------------------------------------
 #
-# BookList Display class
+# BookListDisplay class
 #
 #------------------------------------------------------------------------
 class BookListDisplay:
@@ -201,13 +149,13 @@ class BookListDisplay:
     Allows the user to select and/or delete a book from the list.
     """
 
-    def __init__(self, booklist, nodelete=0, dosave=0):
+    def __init__(self, booklist, nodelete=False, dosave=False):
         """
         Create a BookListDisplay object that displays the books in BookList.
 
-        booklist:   books that are displayed
-        nodelete:   if not 0 then the Delete button is hidden
-        dosave:     if 1 then the book list is saved on hitting OK
+        booklist:   books that are displayed -- a :class:`.BookList` instance
+        nodelete:   if True then the Delete button is hidden
+        dosave:     if True then the book list is flagged to be saved if needed
         """
 
         self.booklist = booklist
@@ -241,7 +189,7 @@ class BookListDisplay:
         self.guilistbooks = self.xml.get_object('list')
         self.guilistbooks.connect('button-press-event', self.on_button_press)
         self.guilistbooks.connect('key-press-event', self.on_key_pressed)
-        self.blist = ListModel(self.guilistbooks, [('Name',-1,10)],)
+        self.blist = ListModel(self.guilistbooks, [('Name', -1, 10)],)
 
         self.redraw()
         self.selection = None
@@ -260,13 +208,16 @@ class BookListDisplay:
             self.blist.selection.select_iter(the_iter)
 
     def on_booklist_ok_clicked(self, obj):
-        """Return selected book. Saves the current list into xml file."""
+        """
+        Return selected book.
+        Also marks the current list to be saved into the xml file, if needed.
+        """
         store, the_iter = self.blist.get_selected()
         if the_iter:
             data = self.blist.get_data(the_iter, [0])
             self.selection = self.booklist.get_book(str(data[0]))
-        if self.dosave:
-            self.booklist.save()
+        if self.dosave and self.unsaved_changes:
+            self.booklist.set_needs_saving(True)
 
     def on_booklist_delete_clicked(self, obj):
         """
@@ -284,16 +235,15 @@ class BookListDisplay:
         self.top.run()
 
     def on_booklist_cancel_clicked(self, obj):
+        """ cancel the booklist dialog """
         if self.unsaved_changes:
-            from ...dialog import QuestionDialog2
-            q = QuestionDialog2(
+            qqq = QuestionDialog2(
                 _('Discard Unsaved Changes'),
                 _('You have made changes which have not been saved.'),
                 _('Proceed'),
-                _('Cancel'))
-            if q.run():
-                return
-            else:
+                _('Cancel'),
+                parent=self.top)
+            if not qqq.run():
                 self.top.run()
 
     def on_button_press(self, obj, event):
@@ -324,7 +274,8 @@ class BookListDisplay:
                 return True
         return False
 
-    def do_nothing(self, object):
+    def do_nothing(self, obj):
+        """ do nothing """
         pass
 
 #------------------------------------------------------------------------
@@ -346,9 +297,9 @@ class BookOptions(ReportOptions):
             'bookname'    : '',
         }
         self.options_help = {
-            'bookname'    : ("=name",_("Name of the book. MANDATORY"),
-                            BookList('books.xml',dbase).get_book_names(),
-                            False),
+            'bookname'    : ("=name", _("Name of the book. MANDATORY"),
+                             BookList('books.xml', dbase).get_book_names(),
+                             False),
         }
 
 #-------------------------------------------------------------------------
@@ -365,7 +316,7 @@ class BookSelector(ManagedWindow):
     """
 
     def __init__(self, dbstate, uistate):
-        self.db = dbstate.db
+        self._db = dbstate.db
         self.dbstate = dbstate
         self.uistate = uistate
         self.title = _('Manage Books')
@@ -390,14 +341,14 @@ class BookSelector(ManagedWindow):
             "on_open_clicked"       : self.on_open_clicked,
             "on_edit_clicked"       : self.on_edit_clicked,
             "on_book_ok_clicked"    : self.on_book_ok_clicked,
-            "destroy_passed_object" : self.close,
+            "destroy_passed_object" : self.on_close_clicked,
 
-        # Insert dummy handlers for second top level in the glade file
-            "on_booklist_ok_clicked"    : lambda _:None,
-            "on_booklist_delete_clicked": lambda _:None,
-            "on_booklist_cancel_clicked": lambda _:None,
-            "on_booklist_ok_clicked"    : lambda _:None,
-            "on_booklist_ok_clicked"    : lambda _:None,
+            # Insert dummy handlers for second top level in the glade file
+            "on_booklist_ok_clicked"     : lambda _: None,
+            "on_booklist_delete_clicked" : lambda _: None,
+            "on_booklist_cancel_clicked" : lambda _: None,
+            "on_booklist_ok_clicked"     : lambda _: None,
+            "on_booklist_ok_clicked"     : lambda _: None,
             })
 
         self.avail_tree = self.xml.get_object("avail_tree")
@@ -417,14 +368,14 @@ class BookSelector(ManagedWindow):
         book_label.set_use_underline(True)
         book_label.set_use_markup(True)
 
-        avail_titles = [ (_('Name'), 0, 230),
-                      (_('Type'), 1, 80 ),
-                      (  '' ,    -1, 0  ) ]
+        avail_titles = [(_('Name'), 0, 230),
+                        (_('Type'), 1, 80),
+                        ('', -1, 0)]
 
-        book_titles = [ (_('Item name'), -1, 230),
-                      (_('Type'),      -1, 80 ),
-                      (  '',           -1, 0  ),
-                      (_('Subject'),   -1, 50 ) ]
+        book_titles = [(_('Item name'), -1, 230),
+                       (_('Type'), -1, 80),
+                       ('', -1, 0),
+                       (_('Subject'), -1, 50)]
 
         self.avail_nr_cols = len(avail_titles)
         self.book_nr_cols = len(book_titles)
@@ -434,6 +385,8 @@ class BookSelector(ManagedWindow):
         self.draw_avail_list()
 
         self.book = Book()
+        self.book_list = BookList(self.file, self._db)
+        self.book_list.set_needs_saving(False) # just read in: no need to save
 
     def build_menu_names(self, obj):
         return (_("Book selection list"), self.title)
@@ -454,7 +407,7 @@ class BookSelector(ManagedWindow):
             category = _UNSUPPORTED
             if pdata.supported and pdata.category in book_categories:
                 category = book_categories[pdata.category]
-            available_reports.append([ pdata.name, category, pdata.id ])
+            available_reports.append([pdata.name, category, pdata.id])
         for data in sorted(available_reports):
             new_iter = self.avail_model.add(data)
 
@@ -486,24 +439,22 @@ class BookSelector(ManagedWindow):
             self.book.set_format_name(book.get_format_name())
         if book.get_output():
             self.book.set_output(book.get_output())
-        if book.get_dbname() == self.db.get_save_path():
-            same_db = 1
-        else:
-            same_db = 0
-            WarningDialog(_('Different database'), _(
-                'This book was created with the references to database '
-                '%s.\n\n This makes references to the central person '
-                'saved in the book invalid.\n\n'
-                'Therefore, the central person for each item is being set '
-                'to the active person of the currently opened database.')
-                % book.get_dbname(),
+        if book.get_dbname() != self._db.get_save_path():
+            WarningDialog(
+                _('Different database'),
+                _('This book was created with the references to database '
+                  '%s.\n\n This makes references to the central person '
+                  'saved in the book invalid.\n\n'
+                  'Therefore, the central person for each item is being set '
+                  'to the active person of the currently opened database.'
+                 ) % book.get_dbname(),
                 parent=self.window)
 
         self.book.clear()
         self.book_model.clear()
         for saved_item in book.get_item_list():
             name = saved_item.get_name()
-            item = BookItem(self.db, name)
+            item = BookItem(self._db, name)
             item.option_class = saved_item.option_class
 
             # The option values were loaded magically by the book parser.
@@ -519,10 +470,10 @@ class BookSelector(ManagedWindow):
             item.set_style_name(saved_item.get_style_name())
             self.book.append_item(item)
 
-            data = [ item.get_translated_name(),
-                     item.get_category(), item.get_name() ]
+            data = [item.get_translated_name(),
+                    item.get_category(), item.get_name()]
 
-            data[2] = _get_subject(item.option_class, self.db)
+            data[2] = item.option_class.get_subject()
             self.book_model.add(data)
 
     def on_add_clicked(self, obj):
@@ -534,10 +485,11 @@ class BookSelector(ManagedWindow):
         store, the_iter = self.avail_model.get_selected()
         if not the_iter:
             return
-        data = self.avail_model.get_data(the_iter, list(range(self.avail_nr_cols)))
-        item = BookItem(self.db, data[2])
+        data = self.avail_model.get_data(the_iter,
+                                         list(range(self.avail_nr_cols)))
+        item = BookItem(self._db, data[2])
         _initialize_options(item.option_class, self.dbstate, self.uistate)
-        data[2] = _get_subject(item.option_class, self.db)
+        data[2] = item.option_class.get_subject()
         self.book_model.add(data)
         self.book.append_item(item)
 
@@ -567,7 +519,8 @@ class BookSelector(ManagedWindow):
         if not row or row == -1:
             return
         store, the_iter = self.book_model.get_selected()
-        data = self.book_model.get_data(the_iter, list(range(self.book_nr_cols)))
+        data = self.book_model.get_data(the_iter,
+                                        list(range(self.book_nr_cols)))
         self.book_model.remove(the_iter)
         self.book_model.insert(row-1, data, None, 1)
         item = self.book.pop_item(row)
@@ -581,7 +534,8 @@ class BookSelector(ManagedWindow):
         if row + 1 >= self.book_model.count or row == -1:
             return
         store, the_iter = self.book_model.get_selected()
-        data = self.book_model.get_data(the_iter, list(range(self.book_nr_cols)))
+        data = self.book_model.get_data(the_iter,
+                                        list(range(self.book_nr_cols)))
         self.book_model.remove(the_iter)
         self.book_model.insert(row+1, data, None, 1)
         item = self.book.pop_item(row)
@@ -597,7 +551,6 @@ class BookSelector(ManagedWindow):
                           _('Please select a book item to configure.'),
                           parent=self.window)
             return
-        data = self.book_model.get_data(the_iter, list(range(self.book_nr_cols)))
         row = self.book_model.get_selected_row()
         item = self.book.get_item(row)
         option_class = item.option_class
@@ -613,7 +566,7 @@ class BookSelector(ManagedWindow):
                 # rest of dialog is unresponsive, release when finished
                 style = option_class.handler.get_default_stylesheet_name()
                 item.set_style_name(style)
-                subject = _get_subject(option_class, self.db)
+                subject = option_class.get_subject()
                 self.book_model.model.set_value(the_iter, 2, subject)
                 self.book.set_item(row, item)
                 item_dialog.close()
@@ -625,6 +578,11 @@ class BookSelector(ManagedWindow):
                 #just stop, in ManagedWindow, delete-event is already coupled to
                 #correct action.
                 break
+        opt_dict = option_class.handler.options_dict
+        for optname in opt_dict:
+            menu_option = option_class.menu.get_option_by_name(optname)
+            if menu_option:
+                menu_option.set_value(opt_dict[optname])
 
     def book_button_press(self, obj, event):
         """
@@ -666,8 +624,8 @@ class BookSelector(ManagedWindow):
             (_("Edit"), None, self.on_edit_clicked, 1),
         ]
 
-        self.menu = Gtk.Menu()
-        self.menu.set_title(_('Book Menu'))
+        self.menu1 = Gtk.Menu() # TODO could this be just a local "menu ="?
+        self.menu1.set_title(_('Book Menu'))
         for title, icon_name, callback, sensitivity in entries:
             if icon_name:
                 item = Gtk.ImageMenuItem.new_with_mnemonic(title)
@@ -679,8 +637,8 @@ class BookSelector(ManagedWindow):
                 item.connect("activate", callback)
             item.set_sensitive(sensitivity)
             item.show()
-            self.menu.append(item)
-        self.menu.popup(None, None, None, None, event.button, event.time)
+            self.menu1.append(item)
+        self.menu1.popup(None, None, None, None, event.button, event.time)
 
     def build_avail_context_menu(self, event):
         """Builds the menu with the single Add option."""
@@ -694,8 +652,8 @@ class BookSelector(ManagedWindow):
             (_('_Add'), 'list-add', self.on_add_clicked, sensitivity),
         ]
 
-        self.menu = Gtk.Menu()
-        self.menu.set_title(_('Available Items Menu'))
+        self.menu2 = Gtk.Menu() # TODO could this be just a local "menu ="?
+        self.menu2.set_title(_('Available Items Menu'))
         for title, icon_name, callback, sensitivity in entries:
             if icon_name:
                 item = Gtk.ImageMenuItem.new_with_mnemonic(title)
@@ -707,18 +665,54 @@ class BookSelector(ManagedWindow):
                 item.connect("activate", callback)
             item.set_sensitive(sensitivity)
             item.show()
-            self.menu.append(item)
-        self.menu.popup(None, None, None, None, event.button, event.time)
+            self.menu2.append(item)
+        self.menu2.popup(None, None, None, None, event.button, event.time)
+
+    def on_close_clicked(self, obj):
+        """
+        close the BookSelector dialog, saving any changes if needed
+        """
+        if self.book_list.get_needs_saving():
+            self.book_list.save()
+        ManagedWindow.close(self, *obj)
 
     def on_book_ok_clicked(self, obj):
         """
         Run final BookDialog with the current book.
         """
         if self.book.item_list:
-            BookDialog(self.dbstate, self.uistate,
-                             self.book, BookOptions)
+            old_paper_name = self.book.get_paper_name() # from books.xml
+            old_orientation = self.book.get_orientation()
+            old_paper_metric = self.book.get_paper_metric()
+            old_custom_paper_size = self.book.get_custom_paper_size()
+            old_margins = self.book.get_margins()
+            old_format_name = self.book.get_format_name()
+            old_output = self.book.get_output()
+            BookDialog(self.dbstate, self.uistate, self.book, BookOptions)
+            new_paper_name = self.book.get_paper_name()
+            new_orientation = self.book.get_orientation()
+            new_paper_metric = self.book.get_paper_metric()
+            new_custom_paper_size = self.book.get_custom_paper_size()
+            new_margins = self.book.get_margins()
+            new_format_name = self.book.get_format_name()
+            new_output = self.book.get_output()
+            # only books in the booklist have a name (not "ad hoc" ones)
+            if (self.book.get_name() and
+                    (old_paper_name != new_paper_name or
+                     old_orientation != new_orientation or
+                     old_paper_metric != new_paper_metric or
+                     old_custom_paper_size != new_custom_paper_size or
+                     old_margins != new_margins or
+                     old_format_name != new_format_name or
+                     old_output != new_output)):
+                self.book.set_dbname(self._db.get_save_path())
+                self.book_list.set_book(self.book.get_name(), self.book)
+                self.book_list.set_needs_saving(True)
+            if self.book_list.get_needs_saving():
+                self.book_list.save()
         else:
-            WarningDialog(_('No items'), _('This book has no items.'),
+            WarningDialog(_('No items'),
+                          _('This book has no items.'),
                           parent=self.window)
             return
         self.close()
@@ -727,40 +721,51 @@ class BookSelector(ManagedWindow):
         """
         Save the current book in the xml booklist file.
         """
-        self.book_list = BookList(self.file, self.db)
         name = str(self.name_entry.get_text())
         if not name:
-            WarningDialog(_('No book name'), _(
-                'You are about to save away a book with no name.\n\n'
-                'Please give it a name before saving it away.'),
+            WarningDialog(
+                _('No book name'),
+                _('You are about to save away a book with no name.\n\n'
+                  'Please give it a name before saving it away.'),
                 parent=self.window)
             return
         if name in self.book_list.get_book_names():
-            from ...dialog import QuestionDialog2
-            q = QuestionDialog2(
+            qqq = QuestionDialog2(
                 _('Book name already exists'),
                 _('You are about to save away a '
-                  'book with a name which already exists.'
-                ),
+                  'book with a name which already exists.'),
                 _('Proceed'),
                 _('Cancel'),
                 parent=self.window)
-            if q.run():
-                self.book.set_name(name)
-            else:
+            if not qqq.run():
                 return
-        else:
-            self.book.set_name(name)
-        self.book.set_dbname(self.db.get_save_path())
+
+        # previously, the same book could be added to the booklist
+        # under multiple names, which became different books once the
+        # booklist was saved into a file so everything was fine, but
+        # this created a problem once the paper settings were added
+        # to the Book object in the BookDialog, since those settings
+        # were retrieved from the Book object in Book.save, so mutiple
+        # books (differentiated by their names) were assigned the
+        # same paper values, so the solution is to make each Book be
+        # unique in the booklist, so if multiple copies are saved away
+        # only the last one will get the paper values assigned to it
+        # (although when the earlier books are then eventually run,
+        # they'll be assigned paper values also)
+        self.book.set_name(name)
+        self.book.set_dbname(self._db.get_save_path())
         self.book_list.set_book(name, self.book)
-        self.book_list.save()
+        self.book_list.set_needs_saving(True) # user clicked on save
+        self.book = Book(self.book, exact_copy=False) # regenerate old items
+        self.book.set_name(name)
+        self.book.set_dbname(self._db.get_save_path())
 
     def on_open_clicked(self, obj):
         """
         Run the BookListDisplay dialog to present the choice of books to open.
         """
-        self.book_list = BookList(self.file, self.db)
-        booklistdisplay = BookListDisplay(self.book_list, 1, 0)
+        booklistdisplay = BookListDisplay(self.book_list,
+                                          nodelete=True, dosave=False)
         booklistdisplay.top.destroy()
         book = booklistdisplay.selection
         if book:
@@ -772,8 +777,8 @@ class BookSelector(ManagedWindow):
         """
         Run the BookListDisplay dialog to present the choice of books to delete.
         """
-        self.book_list = BookList(self.file, self.db)
-        booklistdisplay = BookListDisplay(self.book_list, 0, 1)
+        booklistdisplay = BookListDisplay(self.book_list,
+                                          nodelete=False, dosave=True)
         booklistdisplay.top.destroy()
         book = booklistdisplay.selection
         if book:
@@ -802,7 +807,7 @@ class BookItemDialog(ReportDialog):
         self.option_class = option_class
         self.is_from_saved_book = item.is_from_saved_book
         ReportDialog.__init__(self, dbstate, uistate,
-                                  option_class, name, translated_name, track)
+                              option_class, name, translated_name, track)
 
     def on_ok_clicked(self, obj):
         """The user is satisfied with the dialog choices. Parse all options
@@ -825,7 +830,7 @@ class BookItemDialog(ReportDialog):
     def init_options(self, option_class):
         try:
             if issubclass(option_class, object):
-                self.options = option_class(self.raw_name, self.db)
+                self.options = option_class(self.raw_name, self.database)
         except TypeError:
             self.options = option_class
         if not self.is_from_saved_book:
@@ -864,6 +869,9 @@ class BookItemDialog(ReportDialog):
 #
 #-------------------------------------------------------------------------
 class _BookFormatComboBox(Gtk.ComboBox):
+    """
+    Build a menu of report types that are appropriate for a book
+    """
 
     def __init__(self, active):
 
@@ -916,22 +924,23 @@ class BookDialog(DocReportDialog):
         self.page_html_added = False
         self.book = book
         self.title = _('Generate Book')
-        DocReportDialog.__init__(self, dbstate, uistate, options,
-                                  'book', self.title)
-        self.options.options_dict['bookname'] = self.book.name
         self.database = dbstate.db
+        DocReportDialog.__init__(self, dbstate, uistate, options,
+                                 'book', self.title)
+        self.options.options_dict['bookname'] = self.book.name
 
         response = self.window.run()
         if response == Gtk.ResponseType.OK:
-            handler = oh = self.options.handler
+            handler = self.options.handler
             if self.book.get_paper_name() != handler.get_paper_name():
                 self.book.set_paper_name(handler.get_paper_name())
             if self.book.get_orientation() != handler.get_orientation():
                 self.book.set_orientation(handler.get_orientation())
             if self.book.get_paper_metric() != handler.get_paper_metric():
                 self.book.set_paper_metric(handler.get_paper_metric())
-            if self.book.get_custom_paper_size() != oh.get_custom_paper_size():
-                self.book.set_custom_paper_size(oh.get_custom_paper_size())
+            if (self.book.get_custom_paper_size() !=
+                    handler.get_custom_paper_size()):
+                self.book.set_custom_paper_size(handler.get_custom_paper_size())
             if self.book.get_margins() != handler.get_margins():
                 self.book.set_margins(handler.get_margins())
             if self.book.get_format_name() != handler.get_format_name():
@@ -944,21 +953,26 @@ class BookDialog(DocReportDialog):
                 ErrorDialog(str(msg), parent=self.window)
         self.close()
 
-    def setup_style_frame(self): pass
-    def setup_other_frames(self): pass
-    def parse_style_frame(self): pass
+    def setup_style_frame(self):
+        pass
+    def setup_other_frames(self):
+        pass
+    def parse_style_frame(self):
+        pass
 
     def get_title(self):
+        """ get the title """
         return self.title
 
     def get_header(self, name):
+        """ get the header """
         return _("Gramps Book")
 
     def make_doc_menu(self, active=None):
         """Build a menu of document types that are appropriate for
         this text report.  This menu will be generated based upon
         whether the document requires table support, etc."""
-        self.format_menu = _BookFormatComboBox( active )
+        self.format_menu = _BookFormatComboBox(active)
 
     def make_document(self):
         """Create a document of the type requested by the user."""
@@ -972,8 +986,9 @@ class BookDialog(DocReportDialog):
         for item in self.book.get_item_list():
             item.option_class.set_document(self.doc)
             report_class = item.get_write_item()
-            obj = write_book_item(self.database, report_class,
-                                  item.option_class, user)
+            obj = (write_book_item(self.database, report_class,
+                                   item.option_class, user),
+                   item.get_translated_name())
             self.rptlist.append(obj)
             append_styles(selected_style, item)
 
@@ -981,28 +996,40 @@ class BookDialog(DocReportDialog):
         self.doc.open(self.target_path)
 
     def make_book(self):
-        """The actual book. Start it out, then go through the item list
-        and call each item's write_book_item method."""
+        """
+        The actual book. Start it out, then go through the item list
+        and call each item's write_book_item method (which were loaded
+        by the previous make_document method).
+        """
 
-        self.doc.init()
-        newpage = 0
-        for rpt in self.rptlist:
-            if newpage:
-                self.doc.page_break()
-            newpage = 1
-            if rpt:
-                rpt.begin_report()
-                rpt.write_report()
-        self.doc.close()
+        try:
+            self.doc.init()
+            newpage = 0
+            for (rpt, name) in self.rptlist:
+                if newpage:
+                    self.doc.page_break()
+                newpage = 1
+                if rpt:
+                    rpt.begin_report()
+                    rpt.write_report()
+            self.doc.close()
+        except ReportError as msg:
+            (msg1, msg2) = msg.messages()
+            msg2 += ' (%s)' % name # which report has the error?
+            ErrorDialog(msg1, msg2, parent=self.uistate.window)
+        except FilterError as msg:
+            (msg1, msg2) = msg.messages()
+            ErrorDialog(msg1, msg2, parent=self.uistate.window)
+        finally:
+            return
 
         if self.open_with_app.get_active():
-            open_file_with_default_application(self.target_path)
+            open_file_with_default_application(self.target_path, self.uistate)
 
     def init_options(self, option_class):
         try:
-            if (issubclass(option_class, object) or     # New-style class
-                isinstance(option_class, ClassType)):   # Old-style class
-                self.options = option_class(self.raw_name, self.db)
+            if issubclass(option_class, object):
+                self.options = option_class(self.raw_name, self.database)
         except TypeError:
             self.options = option_class
         if not self.is_from_saved_book:
@@ -1029,16 +1056,18 @@ class BookDialog(DocReportDialog):
 #
 #------------------------------------------------------------------------
 def write_book_item(database, report_class, options, user):
-    """Write the report using options set.
-    All user dialog has already been handled and the output file opened."""
+    """
+    Write the report using options set.
+    All user dialog has already been handled and the output file opened.
+    """
     try:
         return report_class(database, options, user)
     except ReportError as msg:
-        (m1, m2) = msg.messages()
-        ErrorDialog(m1, m2)
+        (msg1, msg2) = msg.messages()
+        ErrorDialog(msg1, msg2, parent=user.uistate.window)
     except FilterError as msg:
-        (m1, m2) = msg.messages()
-        ErrorDialog(m1, m2)
+        (msg1, msg2) = msg.messages()
+        ErrorDialog(msg1, msg2, parent=user.uistate.window)
     except:
-        log.error("Failed to write book item.", exc_info=True)
+        LOG.error("Failed to write book item.", exc_info=True)
     return None

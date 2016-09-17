@@ -534,7 +534,8 @@ class CitationTreeView(ListView):
                              "source to perform a merge. If you want to merge "
                              "these two citations, then you must merge the "
                              "sources first.")
-                    ErrorDialog(msg, msg2, parent=self.uistate.window)
+                    ErrorDialog(msg, msg2,
+                                parent=self.uistate.window)
                 else:
                     MergeCitation(self.dbstate, self.uistate,  mlist[0],
                                   mlist[1])

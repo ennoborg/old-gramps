@@ -305,7 +305,8 @@ class PluginStatus(ManagedWindow):
         except:
             print("Error: cannot open %s" % URL)
             return
-        pm = ProgressMeter(_("Refreshing Addon List"))
+        pm = ProgressMeter(_("Refreshing Addon List"),
+                           parent=self.uistate.window)
         pm.set_pass(header=_("Reading gramps-project.org..."))
         state = "read"
         rows = []
@@ -383,7 +384,9 @@ class PluginStatus(ManagedWindow):
         Get all addons from the wiki and install them.
         """
         from ..utils import ProgressMeter
-        pm = ProgressMeter(_("Install all Addons"), _("Installing..."), message_area=True)
+        pm = ProgressMeter(
+            _("Install all Addons"), _("Installing..."), message_area=True,
+            parent=self.uistate.window)
         pm.set_pass(total=len(self.addon_model))
         errors = []
         for row in self.addon_model:
@@ -401,7 +404,9 @@ class PluginStatus(ManagedWindow):
         Toplevel method to get an addon.
         """
         from ..utils import ProgressMeter
-        pm = ProgressMeter(_("Installing Addon"), message_area=True)
+        pm = ProgressMeter(
+            _("Installing Addon"), message_area=True,
+            parent=self.uistate.window)
         pm.set_pass(total=2, header=_("Reading gramps-project.org..."))
         pm.step()
         self.__get_addon(obj, callback=pm.append_message)
@@ -611,7 +616,8 @@ class PluginStatus(ManagedWindow):
             'plugfil': _("Filename"),
             'plugpat': _("Location"),
             }
-            InfoDialog(_('Detailed Info'), infotxt, parent=self.window)
+            InfoDialog(_('Detailed Info'), infotxt,
+                       parent=self.window)
 
     def __hide(self, obj, list_obj, id_col, hide_col):
         """ Callback function from the "Hide" button
@@ -655,8 +661,8 @@ class PluginStatus(ManagedWindow):
         pdata = self.__preg.get_plugin(id)
         if pdata.fpath and pdata.fname:
             open_file_with_default_application(
-                os.path.join(pdata.fpath, pdata.fname)
-                )
+                os.path.join(pdata.fpath, pdata.fname),
+                self.uistate)
 
 #-------------------------------------------------------------------------
 #
@@ -759,8 +765,12 @@ class ToolManagedWindowBase(ManagedWindow):
         self.results_text.connect('motion-notify-event',
                                   self.on_motion)
         self.tags = []
-        self.link_cursor = Gdk.Cursor.new(Gdk.CursorType.LEFT_PTR)
-        self.standard_cursor = Gdk.Cursor.new(Gdk.CursorType.XTERM)
+        self.link_cursor = \
+            Gdk.Cursor.new_for_display(Gdk.Display.get_default(),
+                                       Gdk.CursorType.LEFT_PTR)
+        self.standard_cursor = \
+            Gdk.Cursor.new_for_display(Gdk.Display.get_default(),
+                                       Gdk.CursorType.XTERM)
 
         self.setup_other_frames()
         self.set_current_frame(self.initial_frame())
@@ -872,7 +882,8 @@ class ToolManagedWindowBase(ManagedWindow):
 
     def pre_run(self):
         from ..utils import ProgressMeter
-        self.progress = ProgressMeter(self.get_title())
+        self.progress = ProgressMeter(self.get_title(),
+                                      parent=self.uistate.window)
 
     def run(self):
         raise NotImplementedError("tool needs to define a run() method")
@@ -1190,7 +1201,7 @@ class UpdateAddons:
             OkDialog(_("Installation Errors"),
                      _("The following addons had errors: ") +
                      ", ".join(errors),
-                     self.window)
+                     parent=self.window)
         if count:
             OkDialog(_("Done downloading and installing addons"),
                      # translators: leave all/any {...} untranslated
@@ -1198,11 +1209,11 @@ class UpdateAddons:
                                          "{number_of} addons were installed.",
                                          count).format(number_of=count),
                                 _("You need to restart Gramps to see new views.")),
-                     self.window)
+                     parent=self.window)
         else:
             OkDialog(_("Done downloading and installing addons"),
                      _("No addons were installed."),
-                     self.window)
+                     parent=self.window)
         self.window.destroy()
 
 #-------------------------------------------------------------------------

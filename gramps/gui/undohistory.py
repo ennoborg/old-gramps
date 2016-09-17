@@ -198,7 +198,7 @@ class UndoHistory(ManagedWindow):
                        _("Are you sure you want to clear the Undo history?"),
                        _("Clear"),
                        self.clear,
-                       self.window)
+                       parent=self.window)
 
     def clear(self):
         self.undodb.clear()

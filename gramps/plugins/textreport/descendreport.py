@@ -2,12 +2,12 @@
 # Gramps - a GTK+/GNOME based genealogy program
 #
 # Copyright (C) 2000-2007  Donald N. Allingham
-# Copyright (C) 2007-2008  Brian G. Matherly
+# Copyright (C) 2007-2012  Brian G. Matherly
 # Copyright (C) 2009       Gary Burton
-# Copyright (C) 2010       Craig J. Anderson
 # Copyright (C) 2010       Jakim Friant
 # Copyright (C) 2011       Matt Keenan (matt.keenan@gmail.com)
 # Copyright (C) 2013-2014  Paul Franklin
+# Copyright (C) 2010,2015  Craig J. Anderson
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -48,18 +48,91 @@ from gramps.gen.plug.menu import (NumberOption, PersonOption, BooleanOption,
                                   EnumeratedListOption)
 from gramps.gen.errors import ReportError
 from gramps.gen.plug.report import Report
-from gramps.gen.plug.report import utils as ReportUtils
+from gramps.gen.plug.report import utils
 from gramps.gen.plug.report import MenuReportOptions
 from gramps.gen.plug.report import stdoptions
 from gramps.gen.utils.db import (get_birth_or_fallback, get_death_or_fallback,
                                  get_marriage_or_fallback,
                                  get_divorce_or_fallback)
 from gramps.gen.proxy import CacheProxyDb
+from gramps.gen.display.place import displayer as _pd
+from gramps.gen.display.name import displayer as _nd
+
+#------------------------------------------------------------------------
+#
+# PrintDAboville
+#
+#------------------------------------------------------------------------
+class PrintDAboville():
+    """
+    d'Aboville numbering system
+
+    (according to en.wikipedia.org/Genealogical_numbering_systems
+    his name is spelled "d'Aboville" and not "D'Aboville" but I will
+    leave this class name alone, mainly fixing the translated string,
+    so that it is both accurate and also agrees with the DDR string)
+    """
+
+    def __init__(self):
+        self.num = [0]
+
+    def number(self, level):
+        """ Make the current number based upon the current level """
+        # Set up the array based on the current level
+        while len(self.num) > level:  # We can go from a level 8 to level 2
+            self.num.pop()
+        if len(self.num) < level:
+            self.num.append(0)
+
+        # Increment the current level - initalized with 0
+        self.num[-1] += 1
+
+        # Display
+        return ".".join(map(str, self.num))
+
+
+#------------------------------------------------------------------------
+#
+# PrintHenry
+#
+#------------------------------------------------------------------------
+class PrintHenry():
+    """ Henry numbering system """
+
+    def __init__(self, modified=False):
+        self.henry = "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        self.modified = modified
+        self.num = [0]
+
+    def number(self, level):
+        """ Make the current number based upon the current level """
+        # Set up the array based on the current level
+        while len(self.num) > level:  # We can go from a level 8 to level 2
+            self.num.pop()
+        if len(self.num) < level:
+            self.num.append(0)
+
+        # Incriment the current level - initalized with 0
+        self.num[-1] += 1
+
+        def strd(inti):
+            """ no change needed """
+            return "(" + str(inti) + ")"
+
+        # Display
+        if self.modified is False:
+            return "".join(map(
+                lambda x: self.henry[x-1] if x <= len(self.henry) else strd(x)
+                , self.num))
+        else:
+            return "".join(map(
+                lambda x: str(x) if x < 10 else strd(x)
+                , self.num))
+
 
 #------------------------------------------------------------------------
 #
 # PrintSimple
-#   Simple numbering system
 #
 #------------------------------------------------------------------------
 class PrintSimple:
@@ -133,7 +206,7 @@ class PrintMeurgey:
             if len(self.childnum) < level:
                 self.childnum.append(1)
 
-        to_return = (ReportUtils.roman(level) + dash +
+        to_return = (utils.roman(level) + dash +
                      str(self.childnum[level-1]) + ".")
 
         if level > 1:
@@ -171,8 +244,7 @@ class Printinfo:
             date = self._get_date(event.get_date_object())
             place_handle = event.get_place_handle()
             if place_handle:
-                place = self.database.get_place_from_handle(
-                    place_handle).get_title()
+                place = _pd.display_event(self.database, event)
                 return("%(event_abbrev)s %(date)s - %(place)s" % {
                     'event_abbrev': event.type.get_abbreviation(self._),
                     'date' : date,
@@ -217,7 +289,7 @@ class Printinfo:
         """ print the person """
         display_num = self.numbering.number(level)
         self.doc.start_paragraph("DR-Level%d" % min(level, 32), display_num)
-        mark = ReportUtils.get_person_mark(self.database, person)
+        mark = utils.get_person_mark(self.database, person)
         self.doc.write_text(self._name_display.display(person), mark)
         self.dump_string(person)
         self.doc.end_paragraph()
@@ -228,7 +300,7 @@ class Printinfo:
         #Currently print_spouses is the same for all numbering systems.
         if spouse_handle:
             spouse = self.database.get_person_from_handle(spouse_handle)
-            mark = ReportUtils.get_person_mark(self.database, spouse)
+            mark = utils.get_person_mark(self.database, spouse)
             self.doc.start_paragraph("DR-Spouse%d" % min(level, 32))
             name = self._name_display.display(spouse)
             self.doc.write_text(
@@ -246,12 +318,12 @@ class Printinfo:
         #Person and their family have already been printed so
         #print reference here
         if person:
-            mark = ReportUtils.get_person_mark(self.database, person)
+            mark = utils.get_person_mark(self.database, person)
             self.doc.start_paragraph("DR-Spouse%d" % min(level, 32))
             name = self._name_display.display(person)
             self.doc.write_text(self._("sp. see %(reference)s: %(spouse)s"
-                                       % {'reference' : display_num,
-                                          'spouse' : name}),
+                                      ) % {'reference' : display_num,
+                                           'spouse'    : name},
                                 mark)
             self.doc.end_paragraph()
 
@@ -298,7 +370,7 @@ class RecurseDown:
         for family_handle in person.get_family_handle_list():
             family = self.database.get_family_from_handle(family_handle)
 
-            spouse_handle = ReportUtils.find_spouse(person, family)
+            spouse_handle = utils.find_spouse(person, family)
 
             if not self.showdups and spouse_handle in self.person_printed:
                 # Just print a reference
@@ -309,7 +381,7 @@ class RecurseDown:
                 self.obj_print.print_spouse(level, spouse_handle, family)
 
                 if spouse_handle:
-                    spouse_num = self._("%s sp." % (ref_str))
+                    spouse_num = self._("%s sp.") % ref_str
                     self.person_printed[spouse_handle] = spouse_num
 
                 if level >= self.max_generations:
@@ -372,6 +444,12 @@ class DescendantReport(Report):
         numbering = menu.get_option_by_name('numbering').get_value()
         if numbering == "Simple":
             obj = PrintSimple(self._showdups)
+        elif numbering == "Henry":
+            obj = PrintHenry()
+        elif numbering == "Modified Henry":
+            obj = PrintHenry(modified=True)
+        elif numbering == "d'Aboville":
+            obj = PrintDAboville()
         elif numbering == "de Villiers/Pama":
             obj = PrintVilliers()
         elif numbering == "Meurgey de Tupigny":
@@ -412,14 +490,22 @@ class DescendantOptions(MenuReportOptions):
     """
 
     def __init__(self, name, dbase):
+        self.__db = dbase
+        self.__pid = None
         MenuReportOptions.__init__(self, name, dbase)
+
+    def get_subject(self):
+        """ Return a string that describes the subject of the report. """
+        gid = self.__pid.get_value()
+        person = self.__db.get_person_from_gramps_id(gid)
+        return _nd.display(person)
 
     def add_menu_options(self, menu):
         category_name = _("Report Options")
 
-        pid = PersonOption(_("Center Person"))
-        pid.set_help(_("The center person for the report"))
-        menu.add_option(category_name, "pid", pid)
+        self.__pid = PersonOption(_("Center Person"))
+        self.__pid.set_help(_("The center person for the report"))
+        menu.add_option(category_name, "pid", self.__pid)
 
         stdoptions.add_name_format_option(menu, category_name)
 
@@ -430,6 +516,9 @@ class DescendantOptions(MenuReportOptions):
         numbering = EnumeratedListOption(_("Numbering system"), "Simple")
         numbering.set_items([
             ("Simple", _("Simple numbering")),
+            ("d'Aboville", _("d'Aboville numbering")),
+            ("Henry", _("Henry numbering")),
+            ("Modified Henry", _("Modified Henry numbering")),
             ("de Villiers/Pama", _("de Villiers/Pama numbering")),
             ("Meurgey de Tupigny", _("Meurgey de Tupigny numbering"))])
         numbering.set_help(_("The numbering system to be used"))
@@ -464,8 +553,8 @@ class DescendantOptions(MenuReportOptions):
         pstyle = ParagraphStyle()
         pstyle.set_header_level(1)
         pstyle.set_bottom_border(1)
-        pstyle.set_top_margin(ReportUtils.pt2cm(3))
-        pstyle.set_bottom_margin(ReportUtils.pt2cm(3))
+        pstyle.set_top_margin(utils.pt2cm(3))
+        pstyle.set_bottom_margin(utils.pt2cm(3))
         pstyle.set_font(fstyle)
         pstyle.set_alignment(PARA_ALIGN_CENTER)
         pstyle.set_description(_("The style used for the title of the page."))
@@ -476,9 +565,9 @@ class DescendantOptions(MenuReportOptions):
         for i in range(1, 33):
             pstyle = ParagraphStyle()
             pstyle.set_font(fstyle)
-            pstyle.set_top_margin(ReportUtils.pt2cm(fstyle.get_size()*0.125))
+            pstyle.set_top_margin(utils.pt2cm(fstyle.get_size()*0.125))
             pstyle.set_bottom_margin(
-                ReportUtils.pt2cm(fstyle.get_size()*0.125))
+                utils.pt2cm(fstyle.get_size()*0.125))
             pstyle.set_first_indent(-0.5)
             pstyle.set_left_margin(min(10.0, float(i-0.5)))
             pstyle.set_description(
@@ -488,9 +577,9 @@ class DescendantOptions(MenuReportOptions):
 
             pstyle = ParagraphStyle()
             pstyle.set_font(fstyle)
-            pstyle.set_top_margin(ReportUtils.pt2cm(fstyle.get_size()*0.125))
+            pstyle.set_top_margin(utils.pt2cm(fstyle.get_size()*0.125))
             pstyle.set_bottom_margin(
-                ReportUtils.pt2cm(fstyle.get_size()*0.125))
+                utils.pt2cm(fstyle.get_size()*0.125))
             pstyle.set_left_margin(min(10.0, float(i-0.5)))
             pstyle.set_description(
                 _("The style used for the spouse level %d display.") % i)

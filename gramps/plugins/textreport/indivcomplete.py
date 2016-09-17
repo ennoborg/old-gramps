@@ -2,7 +2,7 @@
 # Gramps - a GTK+/GNOME based genealogy program
 #
 # Copyright (C) 2000-2007 Donald N. Allingham
-# Copyright (C) 2007-2008 Brian G. Matherly
+# Copyright (C) 2007-2012 Brian G. Matherly
 # Copyright (C) 2009      Nick Hall
 # Copyright (C) 2009      Benny Malengier
 # Copyright (C) 2010      Jakim Friant
@@ -47,11 +47,11 @@ from gramps.gen.plug.docgen import (IndexMark, FontStyle, ParagraphStyle,
                                     TableStyle, TableCellStyle,
                                     FONT_SANS_SERIF, INDEX_TYPE_TOC,
                                     PARA_ALIGN_CENTER, PARA_ALIGN_RIGHT)
-from gramps.gen.display.place import displayer as place_displayer
+from gramps.gen.display.place import displayer as _pd
 from gramps.gen.plug.menu import (BooleanOption, FilterOption, PersonOption,
                                   BooleanListOption)
 from gramps.gen.plug.report import Report
-from gramps.gen.plug.report import utils as ReportUtils
+from gramps.gen.plug.report import utils
 from gramps.gen.plug.report import MenuReportOptions
 from gramps.gen.plug.report import Bibliography
 from gramps.gen.plug.report import endnotes as Endnotes
@@ -89,6 +89,7 @@ TYPE2GROUP[EventType.UNKNOWN] = _T_("Unknown")
 #
 #------------------------------------------------------------------------
 class IndivCompleteReport(Report):
+    """ the Complete Individual Report """
 
     def __init__(self, database, options, user):
         """
@@ -171,7 +172,7 @@ class IndivCompleteReport(Report):
         place_handle = event.get_place_handle()
         if place_handle:
             place = self._db.get_place_from_handle(place_handle)
-            place_name = place_displayer.display_event(self._db, event)
+            place_name = _pd.display_event(self._db, event)
             place_endnote = self._cite_endnote(place)
         # make sure it's translated, so it can be used below, in "combine"
         ignore = _('%(str1)s in %(str2)s. ') % {'str1':'', 'str2':''}
@@ -230,10 +231,9 @@ class IndivCompleteReport(Report):
         self.write_cell(label)
         if parent_name:
             # for example (a stepfather): John Smith, relationship: Step
-            text = self._(
-                '%(parent-name)s, relationship: %(rel-type)s') % {
-                    'parent-name' : parent_name,
-                    'rel-type' : self._(rel_type)}
+            text = self._('%(parent-name)s, relationship: %(rel-type)s'
+                         ) % {'parent-name' : parent_name,
+                              'rel-type'    : self._(rel_type)}
             self.write_cell(text, mark=pmark)
         else:
             self.write_cell('')
@@ -304,7 +304,7 @@ class IndivCompleteReport(Report):
             if father_handle:
                 father = self._db.get_person_from_handle(father_handle)
                 fname = self._name_display.display(father)
-                mark = ReportUtils.get_person_mark(self._db, father)
+                mark = utils.get_person_mark(self._db, father)
                 self.write_p_entry(self._('Father'), fname, frel, mark)
             else:
                 self.write_p_entry(self._('Father'), '', '')
@@ -313,7 +313,7 @@ class IndivCompleteReport(Report):
             if mother_handle:
                 mother = self._db.get_person_from_handle(mother_handle)
                 mname = self._name_display.display(mother)
-                mark = ReportUtils.get_person_mark(self._db, mother)
+                mark = utils.get_person_mark(self._db, mother)
                 self.write_p_entry(self._('Mother'), mname, mrel, mark)
             else:
                 self.write_p_entry(self._('Mother'), '', '')
@@ -373,7 +373,7 @@ class IndivCompleteReport(Report):
         self.doc.end_row()
 
         for addr in alist:
-            text = ReportUtils.get_address_str(addr)
+            text = utils.get_address_str(addr)
             date = self._get_date(addr.get_date_object())
             endnotes = self._cite_endnote(addr)
             self.doc.start_row()
@@ -471,7 +471,7 @@ class IndivCompleteReport(Report):
             place_handle = lds_ord.get_place_handle()
             if place_handle:
                 place = self._db.get_place_from_handle(place_handle)
-                place_name = place_displayer.display_event(self._db, lds_ord)
+                place_name = _pd.display_event(self._db, lds_ord)
                 place_endnote = self._cite_endnote(place)
             endnotes = self._cite_endnote(lds_ord, prior=place_endnote)
             self.doc.start_row()
@@ -548,8 +548,11 @@ class IndivCompleteReport(Report):
             media_handle = media_ref.get_reference_handle()
             media = self._db.get_media_from_handle(media_handle)
             if media is None:
-                from gramps.gui.dialog import RunDatabaseRepair
-                RunDatabaseRepair(_('Non existing media found in the Gallery'))
+                self._user.notify_db_repair(
+                    _('Non existing media found in the Gallery'))
+                self.doc.end_table()
+                self.doc.start_paragraph('IDS-Normal')
+                self.doc.end_paragraph()
                 return
             mime_type = media.get_mime_type()
             if not mime_type or not mime_type.startswith("image"):
@@ -560,7 +563,7 @@ class IndivCompleteReport(Report):
                 self.doc.start_row()
             self.doc.start_cell('IDS-NormalCell')
             self.write_paragraph(description, style='IDS-ImageCaptionCenter')
-            ReportUtils.insert_image(self._db, self.doc, media_ref, self._user,
+            utils.insert_image(self._db, self.doc, media_ref, self._user,
                                      align='center', w_cm=5.0, h_cm=5.0)
             self.do_attributes(media.get_attribute_list() +
                                media_ref.get_attribute_list())
@@ -604,7 +607,7 @@ class IndivCompleteReport(Report):
             if spouse_id:
                 spouse = self._db.get_person_from_handle(spouse_id)
                 text = self.get_name(spouse)
-                mark = ReportUtils.get_person_mark(self._db, spouse)
+                mark = utils.get_person_mark(self._db, spouse)
             else:
                 spouse = None
                 text = self._("unknown")
@@ -627,7 +630,7 @@ class IndivCompleteReport(Report):
                 for child_ref in child_ref_list:
                     child = self._db.get_person_from_handle(child_ref.ref)
                     name = self.get_name(child)
-                    mark = ReportUtils.get_person_mark(self._db, child)
+                    mark = utils.get_person_mark(self._db, child)
                     endnotes = self._cite_endnote(child_ref)
                     self.write_paragraph(name, endnotes=endnotes, mark=mark)
                 self.doc.end_cell()
@@ -666,8 +669,7 @@ class IndivCompleteReport(Report):
                     place_handle = lds_ord.get_place_handle()
                     if place_handle:
                         place = self._db.get_place_from_handle(place_handle)
-                        place_name = place_displayer.display_event(self._db,
-                                                                   lds_ord)
+                        place_name = _pd.display_event(self._db, lds_ord)
                         place_endnote = self._cite_endnote(place)
                     endnotes = self._cite_endnote(lds_ord, prior=place_endnote)
                     self.doc.start_row()
@@ -802,7 +804,7 @@ class IndivCompleteReport(Report):
 
         name = self.person.get_primary_name()
         text = self.get_name(self.person)
-        mark = ReportUtils.get_person_mark(self._db, self.person)
+        mark = utils.get_person_mark(self._db, self.person)
         endnotes = self._cite_endnote(self.person)
         endnotes = self._cite_endnote(name, prior=endnotes)
 
@@ -814,7 +816,7 @@ class IndivCompleteReport(Report):
                 father_inst = self._db.get_person_from_handle(
                     father_inst_id)
                 father = self.get_name(father_inst)
-                fmark = ReportUtils.get_person_mark(self._db, father_inst)
+                fmark = utils.get_person_mark(self._db, father_inst)
             else:
                 father = ""
                 fmark = None
@@ -822,7 +824,7 @@ class IndivCompleteReport(Report):
             if mother_inst_id:
                 mother_inst = self._db.get_person_from_handle(mother_inst_id)
                 mother = self.get_name(mother_inst)
-                mmark = ReportUtils.get_person_mark(self._db, mother_inst)
+                mmark = utils.get_person_mark(self._db, mother_inst)
             else:
                 mother = ""
                 mmark = None
@@ -847,9 +849,9 @@ class IndivCompleteReport(Report):
                 else:
                     self._user.warn(_("Could not add photo to page"),
                                     # translators: for French, else ignore
-                                    _("%(str1)s: %(str2)s") % {
-                                        'str1' : image_filename,
-                                        'str2' : _('File does not exist')})
+                                    _("%(str1)s: %(str2)s"
+                                     ) % {'str1' : image_filename,
+                                          'str2' : _('File does not exist')})
 
         self.doc.start_table('person', p_style)
         self.doc.start_row()
@@ -887,10 +889,9 @@ class IndivCompleteReport(Report):
                 for attr in attr_list:
                     attr_type = attr.get_type().type2base()
                     # translators: needed for French, ignore otherwise
-                    text = self._(
-                        "%(str1)s: %(str2)s") % {
-                            'str1' : self._(attr_type),
-                            'str2' : attr.get_value()}
+                    text = self._("%(str1)s: %(str2)s"
+                                 ) % {'str1' : self._(attr_type),
+                                      'str2' : attr.get_value()}
                     endnotes = self._cite_endnote(attr, prior=endnotes)
                     self.write_paragraph("(%s)" % text,
                                          endnotes=endnotes,
@@ -929,7 +930,7 @@ class IndivCompleteReport(Report):
         """ Combine two strings with a given format. """
         text = ""
         if str1 and str2:
-            text = self._(format_both) % {'str1':str1, 'str2':str2}
+            text = self._(format_both) % {'str1' : str1, 'str2' : str2}
         elif str1 and not str2:
             text = format_single % str1
         elif str2 and not str1:
@@ -958,10 +959,9 @@ class IndivCompleteReport(Report):
         for attr in attr_list:
             attr_type = attr.get_type().type2base()
             # translators: needed for French, ignore otherwise
-            text = self._(
-                "%(type)s: %(value)s") % {
-                    'type'  : self._(attr_type),
-                    'value' : attr.get_value()}
+            text = self._("%(str1)s: %(str2)s"
+                         ) % {'str1' : self._(attr_type),
+                              'str2' : attr.get_value()}
             endnotes = self._cite_endnote(attr)
             self.write_paragraph(text, endnotes)
 
@@ -982,6 +982,10 @@ class IndivCompleteOptions(MenuReportOptions):
         self.__incsrcnotes = None
         self._nf = None
         MenuReportOptions.__init__(self, name, dbase)
+
+    def get_subject(self):
+        """ Return a string that describes the subject of the report. """
+        return self.__filter.get_filter().get_name()
 
     def add_menu_options(self, menu):
         ################################
@@ -1079,7 +1083,7 @@ class IndivCompleteOptions(MenuReportOptions):
         gid = self.__pid.get_value()
         person = self.__db.get_person_from_gramps_id(gid)
         nfv = self._nf.get_value()
-        filter_list = ReportUtils.get_person_filters(person,
+        filter_list = utils.get_person_filters(person,
                                                      include_single=True,
                                                      name_format=nfv)
         self.__filter.set_filters(filter_list)
@@ -1116,8 +1120,8 @@ class IndivCompleteOptions(MenuReportOptions):
         font.set_size(16)
         para = ParagraphStyle()
         para.set_alignment(PARA_ALIGN_CENTER)
-        para.set_top_margin(ReportUtils.pt2cm(8))
-        para.set_bottom_margin(ReportUtils.pt2cm(8))
+        para.set_top_margin(utils.pt2cm(8))
+        para.set_bottom_margin(utils.pt2cm(8))
         para.set_font(font)
         para.set_description(_("The style used for the title of the page."))
         default_style.add_paragraph_style("IDS-Title", para)
@@ -1129,8 +1133,8 @@ class IndivCompleteOptions(MenuReportOptions):
         font.set_italic(1)
         para = ParagraphStyle()
         para.set_font(font)
-        para.set_top_margin(ReportUtils.pt2cm(3))
-        para.set_bottom_margin(ReportUtils.pt2cm(3))
+        para.set_top_margin(utils.pt2cm(3))
+        para.set_bottom_margin(utils.pt2cm(3))
         para.set_description(_("The style used for category labels."))
         default_style.add_paragraph_style("IDS-TableTitle", para)
 
@@ -1140,8 +1144,8 @@ class IndivCompleteOptions(MenuReportOptions):
         font.set_size(12)
         para = ParagraphStyle()
         para.set_font(font)
-        para.set_top_margin(ReportUtils.pt2cm(3))
-        para.set_bottom_margin(ReportUtils.pt2cm(3))
+        para.set_top_margin(utils.pt2cm(3))
+        para.set_bottom_margin(utils.pt2cm(3))
         para.set_description(_("The style used for the spouse's name."))
         default_style.add_paragraph_style("IDS-Spouse", para)
 
@@ -1149,8 +1153,8 @@ class IndivCompleteOptions(MenuReportOptions):
         font.set_size(12)
         para = ParagraphStyle()
         para.set_font(font)
-        para.set_top_margin(ReportUtils.pt2cm(3))
-        para.set_bottom_margin(ReportUtils.pt2cm(3))
+        para.set_top_margin(utils.pt2cm(3))
+        para.set_bottom_margin(utils.pt2cm(3))
         para.set_description(_('The basic style used for the text display.'))
         default_style.add_paragraph_style("IDS-Normal", para)
 
@@ -1159,8 +1163,8 @@ class IndivCompleteOptions(MenuReportOptions):
         font.set_italic(1)
         para = ParagraphStyle()
         para.set_font(font)
-        para.set_top_margin(ReportUtils.pt2cm(3))
-        para.set_bottom_margin(ReportUtils.pt2cm(3))
+        para.set_top_margin(utils.pt2cm(3))
+        para.set_bottom_margin(utils.pt2cm(3))
         para.set_description(_('The style used for the section headers.'))
         default_style.add_paragraph_style("IDS-Section", para)
 
@@ -1169,8 +1173,8 @@ class IndivCompleteOptions(MenuReportOptions):
         para = ParagraphStyle()
         para.set_alignment(PARA_ALIGN_RIGHT)
         para.set_font(font)
-        para.set_top_margin(ReportUtils.pt2cm(3))
-        para.set_bottom_margin(ReportUtils.pt2cm(3))
+        para.set_top_margin(utils.pt2cm(3))
+        para.set_bottom_margin(utils.pt2cm(3))
         para.set_description(_('A style used for image facts.'))
         default_style.add_paragraph_style("IDS-ImageNote", para)
 
@@ -1179,8 +1183,8 @@ class IndivCompleteOptions(MenuReportOptions):
         para = ParagraphStyle()
         para.set_alignment(PARA_ALIGN_CENTER)
         para.set_font(font)
-        para.set_top_margin(ReportUtils.pt2cm(3))
-        para.set_bottom_margin(ReportUtils.pt2cm(3))
+        para.set_top_margin(utils.pt2cm(3))
+        para.set_bottom_margin(utils.pt2cm(3))
         para.set_description(_('A style used for image captions.'))
         default_style.add_paragraph_style("IDS-ImageCaptionCenter", para)
 

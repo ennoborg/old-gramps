@@ -173,6 +173,19 @@ def get_birth_date(db, person, estimate=False):
         ret = 0 if ret is None else ret
     return ret
 
+def get_death(db, person):
+    """
+    boolean whether there is a death event or not
+    (if a user claims a person is dead, we will believe it even with no date)
+    """
+    if not person:
+        return False
+    death_ref = person.get_death_ref()
+    if death_ref:
+        return True
+    else:
+        return False
+
 def get_death_date(db, person, estimate=False):
     if not person:
         return 0
@@ -331,12 +344,16 @@ class Verify(tool.Tool, ManagedWindow, UpdateCallback):
             self.vr.load_ignored(self.db.full_name)
         except WindowActiveError:
             pass
+        except AttributeError: # VerifyResults.load_ignored was not run
+            self.vr.ignores = {}
 
         self.uistate.set_busy_cursor(True)
         self.uistate.progress.show()
-        self.window.get_window().set_cursor(Gdk.Cursor.new(Gdk.CursorType.WATCH))
+        BUSY_CURSOR = Gdk.Cursor.new_for_display(Gdk.Display.get_default(),
+                                                 Gdk.CursorType.WATCH)
+        self.window.get_window().set_cursor(BUSY_CURSOR)
         try:
-            self.vr.window.get_window().set_cursor(Gdk.Cursor.new(Gdk.CursorType.WATCH))
+            self.vr.window.get_window().set_cursor(BUSY_CURSOR)
         except AttributeError:
             pass
 
@@ -454,6 +471,7 @@ class VerifyResults(ManagedWindow):
         ManagedWindow.__init__(self,uistate,track,self.__class__)
 
         self.dbstate = dbstate
+        self._set_filename()
         self.top = Glade(toplevel="verify_result")
         window = self.top.toplevel
         self.set_window(window,self.top.get_object('title2'),self.title)
@@ -541,15 +559,19 @@ class VerifyResults(ManagedWindow):
         """
         pass
 
-    def load_ignored(self, db_filename):
+    def _set_filename(self):
+        """ set the file where people who will be ignored will be kept """
+        db_filename = self.dbstate.db.get_save_path()
         if isinstance(db_filename, str):
             db_filename = db_filename.encode('utf-8')
         md5sum = md5(db_filename)
+        self.ignores_filename = os.path.join(
+            VERSION_DIR, md5sum.hexdigest() + os.path.extsep + 'vfm')
+
+    def load_ignored(self, db_filename):
         ## a new Gramps major version means recreating the .vfm file.
         ## User can copy over old one, with name of new one, but no guarantee
         ## that will work.
-        self.ignores_filename = os.path.join(
-            VERSION_DIR, md5sum.hexdigest() + os.path.extsep + 'vfm')
         if not self._load_ignored(self.ignores_filename):
             self.ignores = {}
 
@@ -1578,8 +1600,9 @@ class OldAgeButNoDeath(PersonRule):
 
     def broken(self):
         birth_date = get_birth_date(self.db,self.obj,self.est)
-        dead = get_death_date(self.db,self.obj,True) # if no death use burial
-        if dead or not birth_date:
+        dead = get_death(self.db, self.obj)
+        death_date = get_death_date(self.db, self.obj, True) # use burial ...
+        if dead or death_date or not birth_date:
             return 0
         age = ( _today - birth_date ) / 365
         return ( age > self.old_age )

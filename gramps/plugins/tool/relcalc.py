@@ -28,8 +28,6 @@
 # Standard python modules
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
@@ -44,6 +42,8 @@ from gi.repository import Gtk
 # Gramps modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 from gramps.gen.display.name import displayer as name_displayer
 from gramps.gui.managedwindow import ManagedWindow
 from gramps.gui.views.treemodels import PeopleBaseModel, PersonTreeModel
@@ -148,7 +148,8 @@ class RelCalc(tool.Tool, ManagedWindow):
             self.window.hide()
             ErrorDialog(_('Active person has not been set'),
                         _('You must select an active person for this '
-                          'tool to work properly.'))
+                          'tool to work properly.'),
+                        parent=uistate.window)
             self.close()
             return
 

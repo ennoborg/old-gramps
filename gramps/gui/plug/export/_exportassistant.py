@@ -120,6 +120,7 @@ class ExportAssistant(Gtk.Assistant, ManagedWindow) :
         ManagedWindow.set_window(self, self, None,
             self.top_title, isWindow=True)
         self.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
+        self.set_modal(True)
 
         #set up callback method for the export plugins
         self.callback = self.pulse_progressbar
@@ -625,8 +626,11 @@ class ExportAssistant(Gtk.Assistant, ManagedWindow) :
                    a part of ManagedWindow
 
         """
+        BUSY_CURSOR = Gdk.Cursor.new_for_display(Gdk.Display.get_default(),
+                                                 Gdk.CursorType.WATCH)
+
         if value:
-            self.get_window().set_cursor(Gdk.Cursor.new(Gdk.CursorType.WATCH))
+            self.get_window().set_cursor(BUSY_CURSOR)
             #self.set_sensitive(0)
         else:
             self.get_window().set_cursor(None)

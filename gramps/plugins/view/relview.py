@@ -27,9 +27,6 @@ Relationship View
 # Python modules
 #
 #-------------------------------------------------------------------------
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.sgettext
-ngettext = glocale.translation.ngettext # else "nearby" comments are ignored
 from html import escape
 import pickle
 
@@ -55,6 +52,9 @@ from gi.repository import Pango
 # Gramps Modules
 #
 #-------------------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
+ngettext = glocale.translation.ngettext # else "nearby" comments are ignored
 from gramps.gen.lib import (ChildRef, EventRoleType, EventType, Family,
                             FamilyRelType, Name, Person, Surname)
 from gramps.gen.lib.date import Today
@@ -474,7 +474,8 @@ class RelationshipView(NavigationView):
             exc = traceback.format_exc()
             _LOG.error(str(msg) +"\n" + exc)
             from gramps.gui.dialog import RunDatabaseRepair
-            RunDatabaseRepair(str(msg))
+            RunDatabaseRepair(str(msg),
+                              parent=self.uistate.window)
             self.redrawing = False
             return True
 
@@ -673,7 +674,7 @@ class RelationshipView(NavigationView):
         Open this picture in the default picture viewer.
         """
         photo_path = media_path_full(self.dbstate.db, photo.get_path())
-        open_file_with_default_application(photo_path)
+        open_file_with_default_application(photo_path, self.uistate)
 
     def write_person_event(self, ename, event):
         if event:
@@ -1353,7 +1354,8 @@ class RelationshipView(NavigationView):
             from gramps.gui.dialog import WarningDialog
             WarningDialog(
                 _('Broken family detected'),
-                _('Please run the Check and Repair Database tool'))
+                _('Please run the Check and Repair Database tool'),
+                parent=self.uistate.window)
             return
 
         father_handle = family.get_father_handle()

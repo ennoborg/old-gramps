@@ -29,6 +29,7 @@ Provide the base classes for GRAMPS' DataView classes
 # python modules
 #
 #----------------------------------------------------------------
+from abc import abstractmethod
 import pickle
 import time
 import logging
@@ -49,21 +50,21 @@ from gi.repository import Pango
 # Gramps
 #
 #----------------------------------------------------------------
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.sgettext
 from .pageview import PageView
 from .navigationview import NavigationView
 from ..actiongroup import ActionGroup
 from ..columnorder import ColumnOrder
 from gramps.gen.config import config
-from gramps.gen.errors import WindowActiveError
+from gramps.gen.errors import WindowActiveError, FilterError
 from ..filters import SearchBar
 from ..widgets.menuitem import add_menuitem
 from gramps.gen.const import CUSTOM_FILTERS
 from gramps.gen.utils.debug import profile
 from gramps.gen.utils.string import data_recover_msg
-from ..dialog import QuestionDialog, QuestionDialog2
+from ..dialog import QuestionDialog, QuestionDialog2, ErrorDialog
 from ..editors import FilterEditor
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.sgettext
 from ..ddtargets import DdTargets
 from ..plug.quick import create_quickreport_menu, create_web_connect_menu
 from ..utils import is_right_click
@@ -327,7 +328,12 @@ class ListView(NavigationView):
                 #run only the part that determines what to show
                 self.list.set_model(None)
                 self.model.set_search(filter_info)
-                self.model.rebuild_data()
+                try:
+                    self.model.rebuild_data()
+                except FilterError as msg:
+                    (msg1, msg2) = msg.messages()
+                    ErrorDialog(msg1, msg2,
+                                parent=self.uistate.window)
 
             cput1 = time.clock()
             self.build_columns()
@@ -444,10 +450,10 @@ class ListView(NavigationView):
             self.bookmarks.add(mlist[0])
         else:
             from ..dialog import WarningDialog
-            WarningDialog(
-                _("Could Not Set a Bookmark"),
-                _("A bookmark could not be set because "
-                  "nothing was selected."))
+            WarningDialog(_("Could Not Set a Bookmark"),
+                          _("A bookmark could not be set because "
+                            "nothing was selected."),
+                          parent=self.uistate.window)
 
     ####################################################################
     #
@@ -541,7 +547,8 @@ class ListView(NavigationView):
                 _("More than one item has been selected for deletion. "
                   "Select the option indicating how to delete the items:"),
                 _("Delete All"),
-                _("Confirm Each Delete"))
+                _("Confirm Each Delete"),
+                parent=self.uistate.window)
             prompt = not q.run()
 
         if not prompt:
@@ -563,7 +570,8 @@ class ListView(NavigationView):
                 descr = object.get_gramps_id()
                 self.uistate.set_busy_cursor(True)
                 QuestionDialog(_('Delete %s?') % descr, msg,
-                               _('_Delete Item'), query.query_response)
+                               _('_Delete Item'), query.query_response,
+                               parent=self.uistate.window)
                 self.uistate.set_busy_cursor(False)
             else:
                 query.query_response()
@@ -805,7 +813,7 @@ class ListView(NavigationView):
         """
         Called when a mouse is clicked.
         """
-        if not self.dbstate.open:
+        if not self.dbstate.is_open():
             return False
         if event.type == Gdk.EventType._2BUTTON_PRESS and event.button == 1:
             if self.model.get_flags() & Gtk.TreeModelFlags.LIST_ONLY:
@@ -869,7 +877,7 @@ class ListView(NavigationView):
         """
         Called when a key is pressed on a listview
         """
-        if not self.dbstate.open:
+        if not self.dbstate.is_open():
             return False
         if self.model.get_flags() & Gtk.TreeModelFlags.LIST_ONLY:
             # Flat list
@@ -1095,42 +1103,35 @@ class ListView(NavigationView):
     ####################################################################
     # Template functions
     ####################################################################
-    def get_bookmarks(self):
-        """
-        Template function to get bookmarks.
-        We could implement this in the NavigationView
-        """
-        raise NotImplementedError
-
+    @abstractmethod
     def edit(self, obj, data=None):
         """
         Template function to allow the editing of the selected object
         """
-        raise NotImplementedError
 
+    @abstractmethod
     def remove(self, handle, data=None):
         """
         Template function to allow the removal of an object by its handle
         """
-        raise NotImplementedError
 
+    @abstractmethod
     def add(self, obj, data=None):
         """
         Template function to allow the adding of a new object
         """
-        raise NotImplementedError
 
+    @abstractmethod
     def merge(self, obj, data=None):
         """
         Template function to allow the merger of two objects.
         """
-        raise NotImplementedError
 
+    @abstractmethod
     def remove_object_from_handle(self, handle):
         """
         Template function to allow the removal of an object by its handle
         """
-        raise NotImplementedError
 
     def open_all_nodes(self, obj):
         """

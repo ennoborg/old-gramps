@@ -110,7 +110,7 @@ class History(Callback):
         self.index = -1
         self.lock = False
 
-        if self.dbstate.open and self.nav_type == 'Person':
+        if self.dbstate.is_open() and self.nav_type == 'Person':
             initial_person = self.dbstate.db.find_initial_person()
             if initial_person:
                 self.push(initial_person.get_handle())
@@ -386,7 +386,8 @@ class DisplayState(Callback):
         'Note': _("No active note"),
         }
 
-    BUSY_CURSOR = Gdk.Cursor.new(Gdk.CursorType.WATCH)
+    BUSY_CURSOR = Gdk.Cursor.new_for_display(Gdk.Display.get_default(),
+                                             Gdk.CursorType.WATCH)
 
     def __init__(self, window, status, uimanager, viewmanager=None):
 

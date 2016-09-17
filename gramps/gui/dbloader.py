@@ -83,24 +83,28 @@ class DbLoader(CLIDbLoader):
         self.import_info = None
 
     def _warn(self, title, warnmessage):
-        WarningDialog(title, warnmessage, parent=self.uistate.window)
+        WarningDialog(title, warnmessage,
+                      parent=self.uistate.window)
 
     def _errordialog(self, title, errormessage):
         """
         Show the error.
         In the GUI, the error is shown, and a return happens
         """
-        ErrorDialog(title, errormessage, parent=self.uistate.window)
+        ErrorDialog(title, errormessage,
+                    parent=self.uistate.window)
         return 1
 
     def _dberrordialog(self, msg):
         import traceback
         exc = traceback.format_exc()
         try:
-            DBErrorDialog(str(msg.value), parent=self.uistate.window)
+            DBErrorDialog(str(msg.value),
+                          parent=self.uistate.window)
             _LOG.error(str(msg.value))
         except:
-            DBErrorDialog(str(msg), parent=self.uistate.window)
+            DBErrorDialog(str(msg),
+                          parent=self.uistate.window)
             _LOG.error(str(msg) +"\n" + exc)
 
     def _begin_progress(self):
@@ -129,7 +133,7 @@ class DbLoader(CLIDbLoader):
                   'If you think you may want to revert the import, '
                   'please stop here and backup your database.'),
                 _('_Proceed with import'), _('_Stop'),
-                self.uistate.window)
+                parent=self.uistate.window)
             if not warn_dialog.run():
                 return False
 
@@ -332,7 +336,7 @@ class DbLoader(CLIDbLoader):
                             force_bsddb_downgrade,
                             force_python_upgrade)
                     db.set_save_path(filename)
-                    if self.dbstate.db.is_open():
+                    if self.dbstate.is_open():
                         self.dbstate.db.close(
                             user=User(callback=self._pulse_progress,
                                       uistate=self.uistate,
@@ -340,12 +344,13 @@ class DbLoader(CLIDbLoader):
                     self.dbstate.change_database(db)
                     break
                 except DbUpgradeRequiredError as msg:
-                    if QuestionDialog2(_("Are you sure you want to upgrade "
-                                         "this Family Tree?"),
+                    if QuestionDialog2(_("Are you sure you want "
+                                         "to upgrade this Family Tree?"),
                                        str(msg),
                                        _("I have made a backup,\n"
                                          "please upgrade my Family Tree"),
-                                       _("Cancel"), self.uistate.window).run():
+                                       _("Cancel"),
+                                       parent=self.uistate.window).run():
                         force_schema_upgrade = True
                         force_bsddb_upgrade = False
                         force_bsddb_downgrade = False
@@ -354,12 +359,13 @@ class DbLoader(CLIDbLoader):
                         self.dbstate.no_database()
                         break
                 except BsddbUpgradeRequiredError as msg:
-                    if QuestionDialog2(_("Are you sure you want to upgrade "
-                                         "this Family Tree?"),
+                    if QuestionDialog2(_("Are you sure you want "
+                                         "to upgrade this Family Tree?"),
                                        str(msg),
                                        _("I have made a backup,\n"
                                          "please upgrade my Family Tree"),
-                                       _("Cancel"), self.uistate.window).run():
+                                       _("Cancel"),
+                                       parent=self.uistate.window).run():
                         force_schema_upgrade = False
                         force_bsddb_upgrade = True
                         force_bsddb_downgrade = False
@@ -368,12 +374,13 @@ class DbLoader(CLIDbLoader):
                         self.dbstate.no_database()
                         break
                 except BsddbDowngradeRequiredError as msg:
-                    if QuestionDialog2(_("Are you sure you want to downgrade "
-                                         "this Family Tree?"),
+                    if QuestionDialog2(_("Are you sure you want "
+                                         "to downgrade this Family Tree?"),
                                        str(msg),
                                        _("I have made a backup,\n"
                                          "please downgrade my Family Tree"),
-                                       _("Cancel"), self.uistate.window).run():
+                                       _("Cancel"),
+                                       parent=self.uistate.window).run():
                         force_schema_upgrade = False
                         force_bsddb_upgrade = False
                         force_bsddb_downgrade = True
@@ -382,12 +389,13 @@ class DbLoader(CLIDbLoader):
                         self.dbstate.no_database()
                         break
                 except PythonUpgradeRequiredError as msg:
-                    if QuestionDialog2(_("Are you sure you want to upgrade "
-                                         "this Family Tree?"),
+                    if QuestionDialog2(_("Are you sure you want "
+                                         "to upgrade this Family Tree?"),
                                        str(msg),
                                        _("I have made a backup,\n"
                                          "please upgrade my Family Tree"),
-                                       _("Cancel"), self.uistate.window).run():
+                                       _("Cancel"),
+                                       parent=self.uistate.window).run():
                         force_schema_upgrade = False
                         force_bsddb_upgrade = False
                         force_bsddb_downgrade = False

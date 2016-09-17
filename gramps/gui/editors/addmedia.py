@@ -157,7 +157,7 @@ class AddMedia(ManagedWindow):
         if self.file_text.get_filename() is None:
             msgstr = _("Import failed")
             msgstr2 = _("The filename supplied could not be found.")
-            ErrorDialog(msgstr, msgstr2)
+            ErrorDialog(msgstr, msgstr2, parent=self.window)
             return
 
         filename = self.file_text.get_filename()
@@ -167,8 +167,12 @@ class AddMedia(ManagedWindow):
             pname = str(media_path(self.dbase))
             if not os.path.exists(pname):
                 msgstr = _("Cannot import %s")
-                msgstr2 = _("Directory specified in preferences: Base path for relative media paths: %s does not exist. Change preferences or do not use relative path when importing")
-                ErrorDialog(msgstr % filename, msgstr2 % pname)
+                msgstr2 = _("Directory specified in preferences: "
+                            "Base path for relative media paths: "
+                            "%s does not exist. Change preferences "
+                            "or do not use relative path when importing")
+                ErrorDialog(msgstr % filename, msgstr2 % pname,
+                            parent=self.window)
                 return
             filename = relative_path(filename, pname)
 
@@ -210,7 +214,7 @@ class AddMedia(ManagedWindow):
         if filename:
             mtype = get_type(filename)
             if mtype and mtype.startswith("image"):
-                image = scale_image(filename, THUMBSCALE)
+                image = self.scale_image(filename, THUMBSCALE)
             else:
                 image = find_mime_type_pixbuf(mtype)
             self.image.set_from_pixbuf(image)
@@ -220,28 +224,28 @@ class AddMedia(ManagedWindow):
         config.set('behavior.addmedia-relative-path', self.relative_path)
         config.save()
 
-#-------------------------------------------------------------------------
-#
-# scale_image
-#
-#-------------------------------------------------------------------------
-def scale_image(path, size):
-    """
-    Scales the image to the specified size
-    """
+    #-------------------------------------------------------------------------
+    #
+    # scale_image
+    #
+    #-------------------------------------------------------------------------
+    def scale_image(self, path, size):
+        """
+        Scales the image to the specified size
+        """
 
-    title_msg = _("Cannot display %s") % path
-    detail_msg =  _('Gramps is not able to display the image file. '
-                    'This may be caused by a corrupt file.')
+        title_msg = _("Cannot display %s") % path
+        detail_msg =  _('Gramps is not able to display the image file. '
+                        'This may be caused by a corrupt file.')
 
-    try:
-        image1 = GdkPixbuf.Pixbuf.new_from_file(path)
-        width  = image1.get_width()
-        height = image1.get_height()
-
-        scale = size / float(max(width, height))
-        return image1.scale_simple(int(scale*width), int(scale*height),
-                                   GdkPixbuf.InterpType.BILINEAR)
-    except:
-        WarningDialog(title_msg, detail_msg)
-        return GdkPixbuf.Pixbuf.new_from_file(ICON)
+        try:
+            image1 = GdkPixbuf.Pixbuf.new_from_file(path)
+            width  = image1.get_width()
+            height = image1.get_height()
+            scale = size / float(max(width, height))
+            return image1.scale_simple(int(scale*width), int(scale*height),
+                                       GdkPixbuf.InterpType.BILINEAR)
+        except:
+            WarningDialog(title_msg, detail_msg,
+                          parent=self.window)
+            return GdkPixbuf.Pixbuf.new_from_file(ICON)

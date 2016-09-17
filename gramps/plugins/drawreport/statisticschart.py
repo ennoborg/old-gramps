@@ -3,7 +3,7 @@
 #
 # Copyright (C) 2003-2006 Donald N. Allingham
 # Copyright (C) 2004-2005 Eero Tamminen
-# Copyright (C) 2007-2008 Brian G. Matherly
+# Copyright (C) 2007-2012 Brian G. Matherly
 # Copyright (C) 2008      Peter Landgren
 # Copyright (C) 2010      Jakim Friant
 # Copyright (C) 2012-2016 Paul Franklin
@@ -54,11 +54,11 @@ from gramps.gen.plug.menu import (BooleanOption,
                                   EnumeratedListOption, NumberOption,
                                   FilterOption, PersonOption)
 from gramps.gen.plug.report import Report
-from gramps.gen.plug.report import utils as ReportUtils
+from gramps.gen.plug.report import utils
 from gramps.gen.plug.report import MenuReportOptions
 from gramps.gen.plug.report import stdoptions
 from gramps.gen.datehandler import parser
-from gramps.gen.display.place import displayer as place_displayer
+from gramps.gen.display.place import displayer as _pd
 from gramps.gen.proxy import CacheProxyDb
 
 #------------------------------------------------------------------------
@@ -184,7 +184,7 @@ def draw_legend(doc, start_x, start_y, data, title, label_style):
         gstyle = style_sheet.get_draw_style(label_style)
         pstyle_name = gstyle.get_paragraph_style()
         pstyle = style_sheet.get_paragraph_style(pstyle_name)
-        size = ReportUtils.pt2cm(pstyle.get_font().get_size())
+        size = utils.pt2cm(pstyle.get_font().get_size())
         doc.draw_text(label_style, title,
                       start_x + (3*size), start_y - (size*0.25))
         start_y += size * 1.3
@@ -193,7 +193,7 @@ def draw_legend(doc, start_x, start_y, data, title, label_style):
         gstyle = style_sheet.get_draw_style(sformat)
         pstyle_name = gstyle.get_paragraph_style()
         pstyle = style_sheet.get_paragraph_style(pstyle_name)
-        size = ReportUtils.pt2cm(pstyle.get_font().get_size())
+        size = utils.pt2cm(pstyle.get_font().get_size())
         doc.draw_box(sformat, "", start_x, start_y, (2*size), size)
         doc.draw_text(label_style, legend,
                       start_x + (3*size), start_y - (size*0.25))
@@ -437,7 +437,7 @@ class Extract:
         "return place for given event"
         place_handle = event.get_place_handle()
         if place_handle:
-            place = place_displayer.display_event(self.db, event)
+            place = _pd.display_event(self.db, event)
             if place:
                 return [place]
         return [_T_("Place missing")]
@@ -450,7 +450,7 @@ class Extract:
             event = self.db.get_event_from_handle(event_handle)
             place_handle = event.get_place_handle()
             if place_handle:
-                place = place_displayer.display_event(self.db, event)
+                place = _pd.display_event(self.db, event)
                 if place:
                     places.append(place)
             else:
@@ -768,8 +768,8 @@ class StatisticsChart(Report):
             if value == living_value:
                 living_desc = self._(description)
                 break
-        self.living_desc = self._(
-            "(Living people: %(option_name)s)") % {'option_name': living_desc}
+        self.living_desc = self._("(Living people: %(option_name)s)"
+                                 ) % {'option_name' : living_desc}
 
         # title needs both data extraction method name + gender name
         if gender == Person.MALE:
@@ -788,10 +788,12 @@ class StatisticsChart(Report):
 
         if genders:
             span_string = self._("%(genders)s born "
-                                 "%(year_from)04d-%(year_to)04d" % mapping)
+                                 "%(year_from)04d-%(year_to)04d"
+                                ) % mapping
         else:
             span_string = self._("Persons born "
-                                 "%(year_from)04d-%(year_to)04d") % mapping
+                                 "%(year_from)04d-%(year_to)04d"
+                                ) % mapping
 
         # extract requested items from the database and count them
         self._user.begin_progress(_('Statistics Charts'),
@@ -867,9 +869,9 @@ class StatisticsChart(Report):
         pstyle = style_sheet.get_paragraph_style('SC-Title')
         mark = IndexMark(title1, INDEX_TYPE_TOC, 2)
         self.doc.center_text('SC-title', title1, middle_w, 0, mark)
-        yoffset = ReportUtils.pt2cm(pstyle.get_font().get_size())
+        yoffset = utils.pt2cm(pstyle.get_font().get_size())
         self.doc.center_text('SC-title', self.fil_name, middle_w, yoffset)
-        yoffset = 2 * ReportUtils.pt2cm(pstyle.get_font().get_size())
+        yoffset = 2 * utils.pt2cm(pstyle.get_font().get_size())
         self.doc.center_text('SC-title', self.living_desc, middle_w, yoffset)
 
         # collect data for output
@@ -900,7 +902,7 @@ class StatisticsChart(Report):
 
     def output_barchart(self, title1, typename, data, lookup):
 
-        pt2cm = ReportUtils.pt2cm
+        pt2cm = utils.pt2cm
         style_sheet = self.doc.get_style_sheet()
         pstyle = style_sheet.get_paragraph_style('SC-Text')
         font = pstyle.get_font()
@@ -968,6 +970,10 @@ class StatisticsChartOptions(MenuReportOptions):
         self.__db = dbase
         self._nf = None
         MenuReportOptions.__init__(self, name, dbase)
+
+    def get_subject(self):
+        """ Return a string that describes the subject of the report. """
+        return self.__filter.get_filter().get_name()
 
     def add_menu_options(self, menu):
         """
@@ -1080,7 +1086,7 @@ class StatisticsChartOptions(MenuReportOptions):
         gid = self.__pid.get_value()
         person = self.__db.get_person_from_gramps_id(gid)
         nfv = self._nf.get_value()
-        filter_list = ReportUtils.get_person_filters(person,
+        filter_list = utils.get_person_filters(person,
                                                      include_single=False,
                                                      name_format=nfv)
         self.__filter.set_filters(filter_list)

@@ -24,11 +24,12 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-#------------------------------------------------------------------------
+#-------------------------------------------------------------------------
 #
-# python modules
+# Standard Python modules
 #
-#------------------------------------------------------------------------
+#-------------------------------------------------------------------------
+from abc import ABCMeta, abstractmethod
 import os
 from io import BytesIO
 import tempfile
@@ -85,6 +86,10 @@ _RATIO = [ { 'name' : _("Compress to minimal size"),    'value': "compress" },
 
 _NOTELOC = [ { 'name' : _("Top"),    'value' : "t" },
              { 'name' : _("Bottom"), 'value' : "b" }]
+
+_SPLINE = [ { 'name' : _("Straight"), 'value' : "false" },
+            { 'name' : _("Curved"), 'value' : "true", },
+            { 'name' : _("Orthogonal"), 'value' : 'ortho'} ]
 
 if win():
     _DOT_FOUND = search_for("dot.exe")
@@ -173,6 +178,12 @@ class GVOptions:
                             "This option only applies if the horizontal pages "
                             "or vertical pages are greater than 1."))
         menu.add_option(category, "page_dir", page_dir)
+
+        spline = EnumeratedListOption(_("Connecting lines"), "true")
+        for item in _SPLINE:
+            spline.add_item(item["value"], item["name"])
+        spline.set_help(_("How the lines between objects will be drawn."))
+        menu.add_option(category, "spline", spline)
 
         # the page direction option only makes sense when the
         # number of horizontal and/or vertical pages is > 1,
@@ -278,12 +289,14 @@ class GVOptions:
 # GVDoc
 #
 #-------------------------------------------------------------------------------
-class GVDoc:
+class GVDoc(metaclass=ABCMeta):
     """
     Abstract Interface for Graphviz document generators. Output formats
     for Graphviz reports must implement this interface to be used by the
     report system.
     """
+
+    @abstractmethod
     def add_node(self, node_id, label, shape="", color="",
                  style="", fillcolor="", url="", htmloutput=False):
         """
@@ -313,8 +326,8 @@ class GVDoc:
         :type htmloutput: boolean
         :return: nothing
         """
-        raise NotImplementedError
 
+    @abstractmethod
     def add_link(self, id1, id2, style="", head="", tail="", comment=""):
         """
         Add a link between two nodes.
@@ -330,8 +343,8 @@ class GVDoc:
         :type comment: string
         :return: nothing
         """
-        raise NotImplementedError
 
+    @abstractmethod
     def add_comment(self, comment):
         """
         Add a comment to the source file.
@@ -341,8 +354,8 @@ class GVDoc:
         :type comment: string
         :return: nothing
         """
-        raise NotImplementedError
 
+    @abstractmethod
     def start_subgraph(self, graph_id):
         """
         Start a subgraph in this graph.
@@ -352,15 +365,14 @@ class GVDoc:
         :type id1: string
         :return: nothing
         """
-        raise NotImplementedError
 
+    @abstractmethod
     def end_subgraph(self):
         """
         End a subgraph that was previously started in this graph.
 
         :return: nothing
         """
-        raise NotImplementedError
 
 #-------------------------------------------------------------------------------
 #
@@ -397,6 +409,7 @@ class GVDocBase(BaseDoc, GVDoc):
         self.ratio         = get_value('ratio')
         self.vpages        = get_value('v_pages')
         self.usesubgraphs  = get_value('usesubgraphs')
+        self.spline        = get_value('spline')
 
         paper_size          = paper_style.get_size()
 
@@ -441,7 +454,7 @@ class GVDocBase(BaseDoc, GVDoc):
             '  ratio="%s";\n'               % self.ratio +
             '  searchsize="100";\n'         +
             '  size="%3.2f,%3.2f"; \n'      % (sizew, sizeh) +
-            '  splines="true";\n'           +
+            '  splines="%s";\n'               % self.spline +
             '\n'                            +
             '  edge [len=0.5 style=solid fontsize=%d];\n' % self.fontsize
             )
