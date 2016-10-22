@@ -55,10 +55,12 @@ from glade import Glade
 #-------------------------------------------------------------------------
 
 prefix_list = [
-    "de", "van", "von", "di", "le", "du", "dela", "della",
-    "des", "vande", "ten", "da", "af", "ap", "den", "das", "dello",
-    "del", "en", "ein", "el" "et", "les", "lo", "los", "of", "un",
-    "um", "una", "uno",
+    "de", "van", "von", "di", "le", "du", "dela", "della", "der", "la",
+    "des", "vande", "ten", "da", "af", "ap", "den", "das", "dello", "te",
+    "del", "en", "ein", "el" "et", "les", "lo", "los", "of", "un", "sur",
+    "um", "una", "uno", "a", "alias", "y", "d", "and", "or", "zu", "tot",
+    "the", "et", "in", "ter", "auf", "l", "s", "zum", "und", "ferch",
+    "verch", "dem", "till"
     ]
 
 WIKI_HELP_PAGE = '%s_-_Tools' % const.URL_MANUAL_PAGE
