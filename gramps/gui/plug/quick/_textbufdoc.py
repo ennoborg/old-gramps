@@ -70,7 +70,7 @@ class DisplayBuf(ManagedWindow):
         scrolled_window.add(document.text_view)
         self.window.vbox.pack_start(scrolled_window, True, True, 0)
         self.window.show_all()
-        
+
     def build_menu_names(self, obj):
         return ('View', _('Quick View'))
 
