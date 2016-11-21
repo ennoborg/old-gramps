@@ -1317,6 +1317,7 @@ class ViewManager(CLIManager):
                                                         mbytes, _("Megabyte|MB")))
         exclude = gtk.RadioButton(include, _("Exclude"))
         include.connect("toggled", lambda widget: self.media_toggle(widget, file_entry))
+        exclude.set_active(True)
         hbox.pack_start(include, True)
         hbox.pack_end(exclude, True)
         vbox.pack_start(hbox, False)
