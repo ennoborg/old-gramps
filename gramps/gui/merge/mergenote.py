@@ -64,6 +64,7 @@ class MergeNote(ManagedWindow):
         self.set_window(self._gladeobj.toplevel,
                         self.get_widget("note_title"),
                         _("Merge Notes"))
+        self.setup_configs('interface.merge-note', 600, 250)
 
         # Detailed selection widgets
         text1 = self.no1.get_styledtext()

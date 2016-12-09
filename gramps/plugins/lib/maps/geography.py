@@ -412,6 +412,16 @@ class GeoGraphyView(OsmGps, NavigationView):
             changemapitem.connect("activate", self.change_map, my_map)
             changemap.append(changemapitem)
 
+        reload_text = _("Reload all visible tiles for '%(map)s'.") % {
+                   'map' : map_name
+                  }
+        self.reloadtiles = Gtk.MenuItem(label=reload_text)
+        reloadtiles = self.reloadtiles
+        reloadtiles.connect("activate", self.reload_visible_tiles)
+
+        reloadtiles.show()
+        menu.append(reloadtiles)
+
         clear_text = _("Clear the '%(map)s' tiles cache.") % {
                    'map' : map_name
                   }
@@ -428,6 +438,11 @@ class GeoGraphyView(OsmGps, NavigationView):
                    None, event.button, event.time)
         return 1
 
+    def reload_visible_tiles(self, menu):
+        """
+        We need to reload all visible tiles for the current map
+        """
+        self.reload_tiles()
 
     def clear_map(self, menu, the_map):
         """
@@ -436,7 +451,7 @@ class GeoGraphyView(OsmGps, NavigationView):
         import shutil
 
         path = "%s%c%s" % (config.get('geography.path'), os.sep, the_map)
-        shutil.rmtree(path)
+        shutil.rmtree(path, ignore_errors=True)
 
     def add_specific_menu(self, menu, event, lat, lon):
         """
@@ -526,7 +541,8 @@ class GeoGraphyView(OsmGps, NavigationView):
         """
         self.osm.remove_layer(layer)
 
-    def add_marker(self, menu, event, lat, lon, event_type, differtype, count):
+    def add_marker(self, menu, event, lat, lon, event_type, differtype,
+                   count, color=None):
         """
         Add a new marker
         """
@@ -541,7 +557,8 @@ class GeoGraphyView(OsmGps, NavigationView):
             value = self.geo_othermap.get(int(event_type), default_image)
         if differtype:                   # in case multiple evts
             value = default_image # we use default icon.
-        self.marker_layer.add_marker((float(lat), float(lon)), value, count)
+        self.marker_layer.add_marker((float(lat), float(lon)), value,
+                                     count, color=color)
 
     def remove_all_gps(self):
         """
@@ -570,7 +587,8 @@ class GeoGraphyView(OsmGps, NavigationView):
 
     def _append_to_places_list(self, place, evttype, name, lat,
                                longit, descr, year, icontype,
-                               gramps_id, place_id, event_id, family_id
+                               gramps_id, place_id, event_id, family_id,
+                               color=None
                               ):
         """
         Create a list of places with coordinates.
@@ -585,7 +603,8 @@ class GeoGraphyView(OsmGps, NavigationView):
             self.places_found.append([place, lat, longit])
         self.place_list.append([place, name, evttype, lat,
                                 longit, descr, year, icontype,
-                                gramps_id, place_id, event_id, family_id
+                                gramps_id, place_id, event_id, family_id,
+                                color
                                ])
         self.nbmarkers += 1
         tfa = float(lat)
@@ -650,7 +669,8 @@ class GeoGraphyView(OsmGps, NavigationView):
                 count = 1
                 continue
             if last != current:
-                self.add_marker(None, None, lat, lon, icon, differtype, count)
+                self.add_marker(None, None, lat, lon, icon, differtype,
+                                count, color=mark[12])
                 differtype = False
                 count = 1
                 last = current
@@ -662,7 +682,8 @@ class GeoGraphyView(OsmGps, NavigationView):
                 if icon != mark[7]:
                     differtype = True
         if lat != 0.0 and lon != 0.0:
-            self.add_marker(None, None, lat, lon, icon, differtype, count)
+            self.add_marker(None, None, lat, lon, icon, differtype,
+                            count, color=mark[12])
             self._set_center_and_zoom()
         _LOG.debug("%s", time.strftime(" stop create_marker : "
                    "%a %d %b %Y %H:%M:%S", time.gmtime()))

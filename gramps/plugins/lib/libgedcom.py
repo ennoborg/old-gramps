@@ -729,6 +729,7 @@ class GedcomDateParser(DateParser):
         'may' : 5,  'jun' : 6,  'jul' : 7,  'aug' : 8,
         'sep' : 9,  'oct' : 10, 'nov' : 11, 'dec' : 12,
         }
+    fmt = "%m/%d/%y"
 
 #-------------------------------------------------------------------------
 #
@@ -1634,8 +1635,8 @@ class IdFinder:
 #-------------------------------------------------------------------------
 class IdMapper:
 
-    def __init__(self, trans, find_next, id2user_format):
-        self.trans = trans
+    def __init__(self, has_gid, find_next, id2user_format):
+        self.has_gid = has_gid
         self.find_next = find_next
         self.id2user_format = id2user_format
         self.swap = {}
@@ -1660,10 +1661,7 @@ class IdMapper:
                 # have found it. If we had already encountered I0001 and we are
                 # now looking for I1, it wouldn't be in self.swap, and we now
                 # find that I0001 is in use, so we have to create a new id.
-                bformatted_gid = formatted_gid
-                if isinstance(bformatted_gid, str):
-                    bformatted_gid = bformatted_gid.encode('utf-8')
-                if self.trans.get(bformatted_gid) or \
+                if self.has_gid(formatted_gid) or \
                         (formatted_gid in list(self.swap.values())):
                     new_val = self.find_next()
                     while new_val in list(self.swap.values()):
@@ -1759,7 +1757,7 @@ class GedcomParser(UpdateCallback):
         self.number_of_errors = 0
         self.maxpeople = stage_one.get_person_count()
         self.dbase = dbase
-        self.import_researcher = self.dbase.is_empty()
+        self.import_researcher = self.dbase.get_total() == 0
         self.emapper = IdFinder(dbase.get_gramps_ids(EVENT_KEY),
                                 dbase.event_prefix)
         self.famc_map = stage_one.get_famc_map()
@@ -1795,27 +1793,27 @@ class GedcomParser(UpdateCallback):
         self.want_parse_warnings = True
 
         self.pid_map = IdMapper(
-            self.dbase.id_trans,
+            self.dbase.has_person_gramps_id,
             self.dbase.find_next_person_gramps_id,
             self.dbase.id2user_format)
         self.fid_map = IdMapper(
-            self.dbase.fid_trans,
+            self.dbase.has_family_gramps_id,
             self.dbase.find_next_family_gramps_id,
             self.dbase.fid2user_format)
         self.sid_map = IdMapper(
-            self.dbase.sid_trans,
+            self.dbase.has_source_gramps_id,
             self.dbase.find_next_source_gramps_id,
             self.dbase.sid2user_format)
         self.oid_map = IdMapper(
-            self.dbase.oid_trans,
+            self.dbase.has_media_gramps_id,
             self.dbase.find_next_media_gramps_id,
             self.dbase.oid2user_format)
         self.rid_map = IdMapper(
-            self.dbase.rid_trans,
+            self.dbase.has_repository_gramps_id,
             self.dbase.find_next_repository_gramps_id,
             self.dbase.rid2user_format)
         self.nid_map = IdMapper(
-            self.dbase.nid_trans,
+            self.dbase.has_note_gramps_id,
             self.dbase.find_next_note_gramps_id,
             self.dbase.nid2user_format)
 
@@ -2778,12 +2776,11 @@ class GedcomParser(UpdateCallback):
 
     def __find_or_create_note(self, gramps_id):
         """
-        Finds or creates a repository based on the GRAMPS ID. If the ID is
+        Finds or creates a note based on the GRAMPS ID. If the ID is
         already used (is in the db), we return the item in the db. Otherwise,
-        we create a new repository, assign the handle and GRAMPS ID.
-
-        Some GEDCOM "flavors" destroy the specification, and declare the
-        repository inline instead of in a object.
+        we create a new note, assign the handle and GRAMPS ID.
+        If no GRAMPS ID is passed in, we not only make a Note with GID, we
+        commit it.
         """
         note = Note()
         if not gramps_id:
@@ -3078,11 +3075,11 @@ class GedcomParser(UpdateCallback):
 
     def __check_xref(self):
 
-        def __check(map, trans, class_func, commit_func, gramps_id2handle, msg):
+        def __check(map, has_gid_func, class_func, commit_func,
+                    gramps_id2handle, msg):
             for input_id, gramps_id in map.map().items():
                 # Check whether an object exists for the mapped gramps_id
-                bgramps_id = gramps_id.encode('utf-8')
-                if not trans.get(bgramps_id):
+                if not has_gid_func(gramps_id):
                     handle = self.__find_from_handle(gramps_id,
                                                      gramps_id2handle)
                     if msg == "FAM":
@@ -3109,18 +3106,24 @@ class GedcomParser(UpdateCallback):
 
         self.missing_references = 0
         previous_errors = self.number_of_errors
-        __check(self.pid_map, self.dbase.id_trans, self.__find_or_create_person,
-                self.dbase.commit_person, self.gid2id, "INDI")
-        __check(self.fid_map, self.dbase.fid_trans, self.__find_or_create_family,
-                self.dbase.commit_family, self.fid2id, "FAM")
-        __check(self.sid_map, self.dbase.sid_trans, self.__find_or_create_source,
-                self.dbase.commit_source, self.sid2id, "SOUR")
-        __check(self.oid_map, self.dbase.oid_trans, self.__find_or_create_media,
-                self.dbase.commit_media, self.oid2id, "OBJE")
-        __check(self.rid_map, self.dbase.rid_trans, self.__find_or_create_repository,
-                self.dbase.commit_repository, self.rid2id, "REPO")
-        __check(self.nid_map, self.dbase.nid_trans, self.__find_or_create_note,
-                self.dbase.commit_note, self.nid2id, "NOTE")
+        __check(self.pid_map, self.dbase.has_person_gramps_id,
+                self.__find_or_create_person, self.dbase.commit_person,
+                self.gid2id, "INDI")
+        __check(self.fid_map, self.dbase.has_family_gramps_id,
+                self.__find_or_create_family, self.dbase.commit_family,
+                self.fid2id, "FAM")
+        __check(self.sid_map, self.dbase.has_source_gramps_id,
+                self.__find_or_create_source, self.dbase.commit_source,
+                self.sid2id, "SOUR")
+        __check(self.oid_map, self.dbase.has_media_gramps_id,
+                self.__find_or_create_media, self.dbase.commit_media,
+                self.oid2id, "OBJE")
+        __check(self.rid_map, self.dbase.has_repository_gramps_id,
+                self.__find_or_create_repository, self.dbase.commit_repository,
+                self.rid2id, "REPO")
+        __check(self.nid_map, self.dbase.has_note_gramps_id,
+                self.__find_or_create_note, self.dbase.commit_note,
+                self.nid2id, "NOTE")
 
         # Check persons membership in referenced families
         def __input_fid(gramps_id):
@@ -3347,7 +3350,7 @@ class GedcomParser(UpdateCallback):
         if self.use_def_src:
             repo.set_name(submitter_name)
             repo.set_handle(create_id())
-            repo.set_gramps_id(self.dbase.find_next_repository_gramps_id())
+            repo.set_gramps_id(self.rid_map[""])
 
             addr = Address()
             addr.set_street(state.res.get_address())
@@ -5971,7 +5974,7 @@ class GedcomParser(UpdateCallback):
         @type state: CurrentState
         """
         # The ADDR may already have been parsed by the level above
-        assert state.addr.get_street() == ""
+        # assert state.addr.get_street() == ""
         if state.addr.get_street() != "":
             self.__add_msg(_("Warn: ADDR overwritten"), line, state)
         state.addr.set_street(line.data)
@@ -6096,7 +6099,7 @@ class GedcomParser(UpdateCallback):
     def __source_text(self, line, state):
         note = Note()
         note.set(line.data)
-        gramps_id = self.dbase.find_next_note_gramps_id()
+        gramps_id = self.nid_map[""]
         note.set_gramps_id(gramps_id)
         note.set_type(NoteType.SOURCE_TEXT)
         self.dbase.add_note(note, self.trans)
@@ -6106,7 +6109,7 @@ class GedcomParser(UpdateCallback):
     def __citation_data_text(self, line, state):
         note = Note()
         note.set(line.data)
-        gramps_id = self.dbase.find_next_note_gramps_id()
+        gramps_id = self.nid_map[""]
         note.set_gramps_id(gramps_id)
         note.set_type(NoteType.SOURCE_TEXT)
         self.dbase.add_note(note, self.trans)
@@ -6123,7 +6126,7 @@ class GedcomParser(UpdateCallback):
                              line.data,
                              [(0, len(line.data))])
         note.set_styledtext(StyledText(line.data, [tags]))
-        gramps_id = self.dbase.find_next_note_gramps_id()
+        gramps_id = self.nid_map[""]
         note.set_gramps_id(gramps_id)
         note.set_type(NoteType.CITATION)
         self.dbase.add_note(note, self.trans)
@@ -6136,7 +6139,7 @@ class GedcomParser(UpdateCallback):
         """
         note = Note()
         note.set(line.data)
-        gramps_id = self.dbase.find_next_note_gramps_id()
+        gramps_id = self.nid_map[""]
         note.set_gramps_id(gramps_id)
         note.set_type(_("Citation Justification"))
         self.dbase.add_note(note, self.trans)
@@ -6333,7 +6336,7 @@ class GedcomParser(UpdateCallback):
             # This format has no repository name. See http://west-
             # penwith.org.uk/misc/ftmged.htm which points out this is
             # incorrect
-            gid = self.dbase.find_next_repository_gramps_id()
+            gid = self.rid_map[""]
             repo = self.__find_or_create_repository(gid)
             self.dbase.commit_repository(repo, self.trans)
         else:
@@ -6347,7 +6350,7 @@ class GedcomParser(UpdateCallback):
             # non-standard GEDCOM.
             gid = self.repo2id.get(line.data)
             if gid is None:
-                gid = self.dbase.find_next_repository_gramps_id()
+                gid = self.rid_map[""]
             repo = self.__find_or_create_repository(gid)
             self.repo2id[line.data] = repo.get_gramps_id()
             repo.set_name(line.data)
@@ -7267,7 +7270,7 @@ class GedcomParser(UpdateCallback):
             if self.__level_is_finished(line, state.level+1):
                 break
             elif line.token == TOKEN_VERS:
-                if line.data[0] != "5":
+                if (not line.data) or line.data[0] != "5":
                     self.__add_msg(_("GEDCOM version not supported"),
                                    line, state)
                 if self.use_def_src:
@@ -7524,7 +7527,7 @@ class GedcomParser(UpdateCallback):
             handle = self.inline_srcs.get(title, create_id())
             src = Source()
             src.handle = handle
-            src.gramps_id = self.dbase.find_next_source_gramps_id()
+            src.gramps_id = self.sid_map[""]
             self.inline_srcs[title] = handle
         else:
             src = self.__find_or_create_source(self.sid_map[line.data])

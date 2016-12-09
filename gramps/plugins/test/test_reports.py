@@ -24,7 +24,7 @@ import os
 import shutil
 
 from gramps.test.test_util import Gramps
-from gramps.gen.db import open_database
+from gramps.gen.db.utils import open_database
 
 ddir = os.path.dirname(__file__)
 example = os.path.join(ddir, "..", "..", "..",
@@ -51,9 +51,6 @@ class ReportControl:
         self.tearDown() # removes it if it existed
         out, err = self.call("-C", TREE_NAME,
                              "--import", example)
-        db = open_database(TREE_NAME, force_unlock=True)
-        db.Person.filter(lambda person: person.gramps_id == "I0000").tag("Cool")
-        db.close()
 
     def addreport(self, class_, report_name, test_function,
                   files, **options):

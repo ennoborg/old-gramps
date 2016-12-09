@@ -75,6 +75,7 @@ class MergePlace(ManagedWindow):
         self.set_window(self._gladeobj.toplevel,
                         self.get_widget('place_title'),
                         _("Merge Places"))
+        self.setup_configs('interface.merge-place', 500, 250)
 
         # Detailed selection widgets
         if not config.get('preferences.place-auto'):

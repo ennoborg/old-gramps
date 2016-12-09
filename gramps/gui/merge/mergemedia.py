@@ -64,6 +64,7 @@ class MergeMedia(ManagedWindow):
         self.set_window(self._gladeobj.toplevel,
                         self.get_widget('object_title'),
                         _("Merge Media Objects"))
+        self.setup_configs('interface.merge-media', 500, 250)
 
         # Detailed selection Widgets
         desc1 = self.mo1.get_description()

@@ -51,7 +51,8 @@ from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 from gramps.gen.lib import EventRoleType, EventType, Person, PlaceType
 from gramps.gen.utils.file import media_path_full
-from gramps.gen.utils.thumbnails import get_thumbnail_path
+from gramps.gen.utils.thumbnails import (get_thumbnail_path, SIZE_NORMAL,
+                                         SIZE_LARGE)
 from gramps.gen.plug.report import Report
 from gramps.gen.plug.report import utils
 from gramps.gen.plug.report import MenuReportOptions
@@ -62,6 +63,7 @@ from gramps.gen.plug.menu import (NumberOption, ColorOption, BooleanOption,
 from gramps.gen.utils.db import get_birth_or_fallback, get_death_or_fallback
 from gramps.gen.utils.location import get_main_location
 from gramps.gen.proxy import CacheProxyDb
+from gramps.gen.errors import ReportError
 
 #------------------------------------------------------------------------
 #
@@ -236,6 +238,12 @@ class FamilyLinesOptions(MenuReportOptions):
                                        'should appear relative to the name'))
         add_option('imageonside', self.image_location)
 
+        self.image_size = EnumeratedListOption(_('Thumbnail size'), SIZE_NORMAL)
+        self.image_size.add_item(SIZE_NORMAL, _('Normal'))
+        self.image_size.add_item(SIZE_LARGE, _('Large'))
+        self.image_size.set_help(_('Size of the thumbnail image'))
+        add_option('imagesize', self.image_size)
+
         # ----------------------------
         add_option = partial(menu.add_option, _('Family Colors'))
         # ----------------------------
@@ -280,6 +288,7 @@ class FamilyLinesOptions(MenuReportOptions):
         Handle the change of including images.
         """
         self.image_location.set_available(self.include_images.get_value())
+        self.image_size.set_available(self.include_images.get_value())
 
     def include_dates_changed(self):
         """
@@ -348,6 +357,7 @@ class FamilyLinesReport(Report):
         self._maxchildren = get_value('maxchildren')
         self._incimages = get_value('incimages')
         self._imageonside = get_value('imageonside')
+        self._imagesize = get_value('imagesize')
         self._useroundedcorners = get_value('useroundedcorners')
         self._usesubgraphs = get_value('usesubgraphs')
         self._incdates = get_value('incdates')
@@ -361,8 +371,8 @@ class FamilyLinesReport(Report):
         # entire list right now and not have to deal with it ever again
         self._interest_set = set()
         if not self._gidlist:
-            self._user.warn(_('Empty report'),
-                            _('You did not specify anybody'))
+            raise ReportError(_('Empty report'),
+                              _('You did not specify anybody'))
         for gid in self._gidlist.split():
             person = self._db.get_person_from_gramps_id(gid)
             if person:
@@ -781,7 +791,8 @@ class FamilyLinesReport(Report):
                 else:
                     birth_str = self._get_date(date)
 
-            # get birth place (one of:  city, state, or country) we can use
+            # get birth place (one of:  hamlet, village, town, city, parish,
+            # county, province, region, state or country)
             birthplace = None
             if bth_event and self._incplaces:
                 birthplace = self.get_event_place(bth_event)
@@ -795,7 +806,8 @@ class FamilyLinesReport(Report):
                 else:
                     death_str = self._get_date(date)
 
-            # get death place (one of:  city, state, or country) we can use
+            # get death place (one of:  hamlet, village, town, city, parish,
+            # county, province, region, state or country)
             deathplace = None
             if dth_event and self._incplaces:
                 deathplace = self.get_event_place(dth_event)
@@ -811,7 +823,8 @@ class FamilyLinesReport(Report):
                     if media_mime_type[0:5] == "image":
                         image_path = get_thumbnail_path(
                             media_path_full(self._db, media.get_path()),
-                            rectangle=media_list[0].get_rectangle())
+                            rectangle=media_list[0].get_rectangle(),
+                            size=self._imagesize)
 
             # put the label together and output this person
             label = ""
@@ -1034,8 +1047,22 @@ class FamilyLinesReport(Report):
             place = self._db.get_place_from_handle(place_handle)
             if place:
                 location = get_main_location(self._db, place)
-                if location.get(PlaceType.CITY):
-                    place_text = location.get(PlaceType.CITY)
+                if location.get(PlaceType.HAMLET):
+                    place_text = location.get(PlaceType.HAMLET)
+                elif location.get(PlaceType.VILLAGE):
+                    place_text = location.get(PlaceType.VILLAGE)
+                elif location.get(PlaceType.TOWN):
+                    place_text = location.get(PlaceType.TOWN)
+                elif location.get(PlaceType.CITY):
+                     place_text = location.get(PlaceType.CITY)
+                elif location.get(PlaceType.PARISH):
+                    place_text = location.get(PlaceType.PARISH)
+                elif location.get(PlaceType.COUNTY):
+                    place_text = location.get(PlaceType.COUNTY)
+                elif location.get(PlaceType.PROVINCE):
+                    place_text = location.get(PlaceType.PROVINCE)
+                elif location.get(PlaceType.REGION):
+                    place_text = location.get(PlaceType.REGION)
                 elif location.get(PlaceType.STATE):
                     place_text = location.get(PlaceType.STATE)
                 elif location.get(PlaceType.COUNTRY):

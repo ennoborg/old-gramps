@@ -91,6 +91,7 @@ from .aboutdialog import GrampsAboutDialog
 from .navigator import Navigator
 from .views.tags import Tags
 from .actiongroup import ActionGroup
+from gramps.gen.db.exceptions import DbWriteFailure
 
 #-------------------------------------------------------------------------
 #
@@ -311,6 +312,9 @@ class ViewManager(CLIManager):
         # Need to call after plugins have been registered
         self.uistate.connect('update-available', self.process_updates)
         self.check_for_updates()
+        # Set autobackup
+        self.uistate.connect('autobackup', self.autobackup)
+        self.uistate.set_backup_timer()
 
     def check_for_updates(self):
         """
@@ -750,7 +754,11 @@ class ViewManager(CLIManager):
         # mark interface insenstitive to prevent unexpected events
         self.uistate.set_sensitive(False)
 
-        # backup data, and close the database
+        # backup data
+        if config.get('database.backup-on-exit'):
+            self.autobackup()
+
+        # close the database
         if self.dbstate.is_open():
             self.dbstate.db.close(user=self.user)
 
@@ -1280,7 +1288,7 @@ class ViewManager(CLIManager):
         window = Gtk.Dialog(_("Gramps XML Backup"),
                             self.uistate.window,
                             Gtk.DialogFlags.DESTROY_WITH_PARENT, None)
-        window.set_size_request(400, -1)
+        window.set_size_request(700, -1)
         ok_button = window.add_button(_('_OK'),
                                       Gtk.ResponseType.APPLY)
         close_button = window.add_button(_('_Close'),
@@ -1352,6 +1360,11 @@ class ViewManager(CLIManager):
                                                                 _("Exclude"))
         include.connect("toggled", lambda widget: self.media_toggle(widget,
                                                                     file_entry))
+        include_mode = config.get('preferences.quick-backup-include-mode')
+        if include_mode:
+            include.set_active(True)
+        else:
+            exclude.set_active(True)
         hbox.pack_start(include, False, True, 0)
         hbox.pack_end(exclude, False, True, 0)
         vbox.pack_start(hbox, False, True, 0)
@@ -1395,6 +1408,37 @@ class ViewManager(CLIManager):
             self.uistate.push_message(self.dbstate, _("Backup aborted"))
         window.destroy()
 
+    def autobackup(self):
+        """
+        Backup the current family tree.
+        """
+        if self.dbstate.db.is_open() and self.dbstate.db.has_changed:
+            self.uistate.set_busy_cursor(True)
+            self.uistate.progress.show()
+            self.uistate.push_message(self.dbstate, _("Autobackup..."))
+            try:
+                self.__backup()
+            except DbWriteFailure as msg:
+                self.uistate.push_message(self.dbstate,
+                                          _("Error saving backup data"))
+            self.uistate.set_busy_cursor(False)
+            self.uistate.progress.hide()
+
+    def __backup(self):
+        """
+        Backup database to a Gramps XML file.
+        """
+        from gramps.plugins.export.exportxml import XmlWriter
+        backup_path = config.get('database.backup-path')
+        compress = config.get('database.compress-backup')
+        writer = XmlWriter(self.dbstate.db, self.user, strip_photos=0,
+                           compress=compress)
+        timestamp = '{0:%Y-%m-%d-%H-%M-%S}'.format(datetime.datetime.now())
+        backup_name = "%s-%s.gramps" % (self.dbstate.db.get_dbname(),
+                                        timestamp)
+        filename = os.path.join(backup_path, backup_name)
+        writer.write(filename)
+
     def select_backup_path(self, widget, path_entry):
         """
         Choose a backup folder. Make sure there is one highlighted in
@@ -1426,6 +1470,7 @@ class ViewManager(CLIManager):
         Toggles media include values in the quick backup dialog.
         """
         include = widget.get_active()
+        config.set('preferences.quick-backup-include-mode', include)
         extension = "gpkg" if include else "gramps"
         filename = file_entry.get_text()
         if "." in filename:

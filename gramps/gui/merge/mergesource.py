@@ -65,6 +65,7 @@ class MergeSource(ManagedWindow):
         self.set_window(self._gladeobj.toplevel,
                         self.get_widget('source_title'),
                         _("Merge Sources"))
+        self.setup_configs('interface.merge-source', 500, 250)
 
         # Detailed Selection widgets
         title1 = self.src1.get_title()

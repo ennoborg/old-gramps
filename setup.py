@@ -401,6 +401,7 @@ for (dirpath, dirnames, filenames) in os.walk(basedir):
         #we add to data_list so glade , xml, files are found, we don't need the gramps/ part
         package_data_core.append(dirpath[7:] + '/' + dirname + '/*.glade')
         package_data_core.append(dirpath[7:] + '/' + dirname + '/*.xml')
+        package_data_core.append(dirpath[7:] + '/' + dirname + '/*.ini')
 
 package_data_core.append('gen/utils/resource-path')
 
@@ -414,8 +415,8 @@ package_data = package_data_core + package_data_gui
 #-------------------------------------------------------------------------
 data_files_core = [('share/mime-info', ['data/gramps.mime']),
                    ('share/icons', ['images/gramps.png'])]
-DOC_FILES = ['AUTHORS', 'COPYING', 'FAQ', 'INSTALL', 'LICENSE', 'NEWS',
-             'README.md', 'TODO']
+DOC_FILES = ['AUTHORS', 'COPYING', 'FAQ', 'INSTALL', 'NEWS', 'README.md',
+             'TODO']
 GEDCOM_FILES = glob.glob(os.path.join('example', 'gedcom', '*.*'))
 GRAMPS_FILES = glob.glob(os.path.join('example', 'gramps', '*.*'))
 IMAGE_WEB = glob.glob(os.path.join('images', 'webstuff', '*.png'))
@@ -449,11 +450,13 @@ IMAGE_FILES = glob.glob(os.path.join('images', '*.*'))
 THEME = os.path.join('images', 'hicolor')
 ICON_16 = glob.glob(os.path.join(THEME, '16x16', 'actions', '*.png'))
 ICON_22 = glob.glob(os.path.join(THEME, '22x22', 'actions', '*.png'))
+ICON_24 = glob.glob(os.path.join(THEME, '24x24', 'actions', '*.png'))
 ICON_48 = glob.glob(os.path.join(THEME, '48x48', 'actions', '*.png'))
 ICON_SC = glob.glob(os.path.join(THEME, 'scalable', 'actions', '*.svg'))
 data_files_gui.append(('share/gramps/images', IMAGE_FILES))
 data_files_gui.append(('share/gramps/images/hicolor/16x16/actions', ICON_16))
 data_files_gui.append(('share/gramps/images/hicolor/22x22/actions', ICON_22))
+data_files_gui.append(('share/gramps/images/hicolor/24x24/actions', ICON_24))
 data_files_gui.append(('share/gramps/images/hicolor/48x48/actions', ICON_48))
 data_files_gui.append(('share/gramps/images/hicolor/scalable/actions', ICON_SC))
 

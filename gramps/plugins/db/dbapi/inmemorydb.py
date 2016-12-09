@@ -20,7 +20,8 @@
 
 from gramps.plugins.db.dbapi.dbapi import DBAPI
 from gramps.plugins.db.dbapi.sqlite import Sqlite
-from gramps.gen.db.generic import DbGeneric, DBBACKEND, LOG
+from gramps.gen.db import DBBACKEND
+from gramps.gen.db.generic import DbGeneric, LOG
 import os
 import glob
 
@@ -36,29 +37,19 @@ class InMemoryDB(DBAPI):
         })
         return summary
 
-    def initialize_backend(self, directory):
+    def _initialize(self, directory):
         """
         Create an in-memory sqlite database.
         """
         self.dbapi = Sqlite(":memory:")
-        self.update_schema()
+        self._create_schema()
 
     def write_version(self, directory):
         """Write files for a newly created DB."""
-        versionpath = os.path.join(directory, str(DBBACKEND))
+        versionpath = os.path.join(directory, DBBACKEND)
         LOG.debug("Write database backend file to 'inmemorydb'")
         with open(versionpath, "w") as version_file:
             version_file.write("inmemorydb")
-        versionpath = os.path.join(directory, "bdbversion.txt")
-        with open(versionpath, "w") as version_file:
-            version_file.write(str(self.VERSION))
-
-    def autobackup(self, user=None):
-        """
-        Nothing to do, as we write it out anyway.
-        No backups for inmemory databases.
-        """
-        pass
 
     def load(self, directory, callback=None, mode=None,
              force_schema_upgrade=False,
