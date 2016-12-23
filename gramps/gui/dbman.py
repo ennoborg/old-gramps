@@ -36,6 +36,7 @@ import copy
 import subprocess
 from urllib.parse import urlparse
 import logging
+import re
 
 #-------------------------------------------------------------------------
 #
@@ -190,7 +191,7 @@ class DbManager(CLIDbManager):
         self.before_change = ""
         self.after_change = ""
         self._select_default()
-        self.user = User(error=ErrorDialog,
+        self.user = User(error=ErrorDialog, parent=self.parent,
                          callback=self.uistate.pulse_progressbar,
                          uistate=self.uistate)
 
@@ -543,6 +544,8 @@ class DbManager(CLIDbManager):
         If the new string is empty, do nothing. Otherwise, renaming the
         database is simply changing the contents of the name file.
         """
+        # kill special characters so can use as file name in backup.
+        new_text = re.sub(r"[':<>|,;=\"\[\]\.\+\*\/\?\\]", "_", new_text)
         #path is a string, convert to TreePath first
         path = Gtk.TreePath(path=path)
         if len(new_text) > 0:

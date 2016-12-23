@@ -941,13 +941,15 @@ class EditFamily(EditPrimary):
             if birth:
                 #if event changes it view needs to update
                 self.callman.register_handles({'event': [birth.get_handle()]})
-                birth_label.set_label("%s:" % birth.get_type())
+                # translators: needed for French, ignore otherwise
+                birth_label.set_label(_("%s:") % birth.get_type())
 
             death = get_death_or_fallback(db, person)
             if death:
                 #if event changes it view needs to update
                 self.callman.register_handles({'event': [death.get_handle()]})
-                death_label.set_label("%s:" % death.get_type())
+                # translators: needed for French, ignore otherwise
+                death_label.set_label(_("%s:") % death.get_type())
 
             btn_edit.set_tooltip_text(_('Edit %s') % name)
             btn_index.hide()
@@ -1207,16 +1209,17 @@ class EditFamily(EditPrimary):
             child = self.db.get_person_from_handle(ref.ref)
             if child:
                 pname = child.get_primary_name()
-                preset_name(child, name)
-                if len(name.get_surname_list()) < 2:
+                preset_name(child, name) # add the known family surnames, etc.
+                surnames = name.get_surname_list()
+                if len(surnames) < 2:
                     return name
                 else:
                     #return first for the father, and last for the mother
                     if parent == 'father':
-                        name.set_surname_list(name.get_surname_list()[0])
+                        name.set_surname_list([surnames[0]])
                         return name
                     else:
-                        name.set_surname_list(name.get_surname_list()[-1])
+                        name.set_surname_list([surnames[-1]])
                         return name
         return name
 

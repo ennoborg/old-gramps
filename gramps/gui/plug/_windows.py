@@ -674,7 +674,7 @@ class PluginTrace(ManagedWindow):
 
     def __init__(self, uistate, track, data, name):
         self.name = name
-        title = "%s: %s" % (_("Plugin Error"), name)
+        title = _("%s: %s") % (_("Plugin Error"), name)
         ManagedWindow.__init__(self, uistate, track, self)
 
         self.set_window(Gtk.Dialog("", uistate.window,
@@ -883,7 +883,7 @@ class ToolManagedWindowBase(ManagedWindow):
     def pre_run(self):
         from ..utils import ProgressMeter
         self.progress = ProgressMeter(self.get_title(),
-                                      parent=self.uistate.window)
+                                      parent=self.window)
 
     def run(self):
         raise NotImplementedError("tool needs to define a run() method")

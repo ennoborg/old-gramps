@@ -29,14 +29,6 @@ class InMemoryDB(DBAPI):
     """
     A DB-API 2.0 In-memory SQL database.
     """
-    @classmethod
-    def get_class_summary(cls):
-        summary = DBAPI.get_class_summary()
-        summary.update({
-            "Database location": "in memory",
-        })
-        return summary
-
     def _initialize(self, directory):
         """
         Create an in-memory sqlite database.
@@ -64,16 +56,3 @@ class InMemoryDB(DBAPI):
                        force_bsddb_upgrade,
                        force_bsddb_downgrade,
                        force_python_upgrade)
-        # Dictionary-specific load:
-        from gramps.plugins.importer.importxml import importData
-        from gramps.cli.user import User
-        if self._directory:
-            backups = sorted(glob.glob(os.path.join(
-                self._directory, "backup-*.gramps")), reverse=True)
-            if backups:
-                filename = backups[0]
-                if os.path.isfile(filename):
-                    importData(self, filename, User())
-                    self.reindex_reference_map(lambda progress: None)
-                    self.rebuild_secondary(lambda progress: None)
-                    self.has_changed = False
