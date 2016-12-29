@@ -74,10 +74,15 @@ try:
         _encoding = sys.stdout.encoding
 except:
     _encoding = "UTF-8"
-sys.stdout = open(sys.stdout.fileno(), mode='w', encoding=_encoding,
-                  buffering=1, errors='backslashreplace')
-sys.stderr = open(sys.stderr.fileno(), mode='w', encoding=_encoding,
-                  buffering=1, errors='backslashreplace')
+
+try:
+    # On Windows there is no std handles in GUI mode
+    sys.stdout = open(sys.stdout.fileno(), mode='w', encoding=_encoding,
+                      buffering=1, errors='backslashreplace')
+    sys.stderr = open(sys.stderr.fileno(), mode='w', encoding=_encoding,
+                      buffering=1, errors='backslashreplace')
+except:
+    pass
 
 #-------------------------------------------------------------------------
 #
@@ -100,7 +105,7 @@ form = logging.Formatter(fmt="%(asctime)s.%(msecs).03d: %(levelname)s: "
 # Create the log handlers
 if win():
     # If running in GUI mode redirect stdout and stderr to log file
-    if hasattr(sys.stdout, "fileno") and sys.stdout.fileno() < 0:
+    if not sys.stdout:
         logfile = os.path.join(HOME_DIR,
             "Gramps%s%s.log") % (VERSION_TUPLE[0],
             VERSION_TUPLE[1])
@@ -245,6 +250,8 @@ def show_settings():
         from gi import Repository
         repository = Repository.get_default()
         if repository.enumerate_versions("OsmGpsMap"):
+            import gi
+            gi.require_version('OsmGpsMap', '1.0')
             from gi.repository import OsmGpsMap as osmgpsmap
             try:
                 osmgpsmap_str = osmgpsmap._version

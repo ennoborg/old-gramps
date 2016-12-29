@@ -62,6 +62,8 @@ from gramps.gui.editors import EditPlace, EditEvent, EditFamily, EditPerson
 from gramps.gui.selectors.selectplace import SelectPlace
 from gramps.gen.constfunc import conv_to_unicode
 
+import gi
+gi.require_version('OsmGpsMap', '1.0')
 from gi.repository import OsmGpsMap as osmgpsmap
 from . import constants
 from .osmgps import OsmGps
@@ -403,7 +405,7 @@ class GeoGraphyView(OsmGps, NavigationView):
         import shutil
      
         path = "%s%c%s" % ( config.get('geography.path'), os.sep, the_map )
-        shutil.rmtree(path)
+        shutil.rmtree(path, ignore_errors=True)
         pass
 
     def add_specific_menu(self, menu, event, lat, lon):
