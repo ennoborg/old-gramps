@@ -30,7 +30,8 @@ pkgpython_PYTHON = \
 	SoundGen.py \
 	tools.gpr.py \
 	Verify.py \
-	MergeCitations.py
+	MergeCitations.py \
+	MergePlaces.py
 #	DumpGenderStats.py \
 #	PHPGedViewConnector.py \
 #	TestcaseGenerator.py

@@ -541,3 +541,26 @@ optionclass = 'MergeCitationsOptions',
 tool_modes = [TOOL_MODE_GUI]
   )
 
+#------------------------------------------------------------------------
+#
+# Merge places
+#
+#------------------------------------------------------------------------
+
+register(TOOL, 
+id    = 'mergeplaces',
+name  = _("Merge Places"),
+description =  _("Searches the entire database, looking for "
+                    "places that have the same title and location details."),
+version = '1.0',
+gramps_target_version = '3.4',
+status = STABLE,
+fname = 'MergePlaces.py',
+authors = ["Enno F Borgsteede"],
+authors_email = ["gramps-project.org"],
+category = TOOL_DBPROC,
+toolclass = 'MergePlaces',
+optionclass = 'MergePlacesOptions',
+tool_modes = [TOOL_MODE_GUI]
+  )
+
