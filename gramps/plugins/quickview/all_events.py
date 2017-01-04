@@ -24,7 +24,7 @@
 Display a person's events, both personal and family
 """
 
-from gramps.gen.simple import SimpleAccess, by_date, SimpleDoc
+from gramps.gen.simple import SimpleAccess, SimpleDoc
 from gramps.gui.plug.quick import QuickTable
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
@@ -117,7 +117,7 @@ def run_fam(database, document, family):
     if document.has_data:
         stab.write(sdoc)
     else:
-        sdoc.header1(_("Not found\n"))
+        sdoc.header1(_("Not found") + "\n")
 
     stab = QuickTable(sdb)
     sdoc.header1(_("Personal events of the children"))
@@ -131,4 +131,4 @@ def run_fam(database, document, family):
     if document.has_data:
         stab.write(sdoc)
     else:
-        sdoc.header1(_("Not found\n"))
+        sdoc.header1(_("Not found") + "\n")
