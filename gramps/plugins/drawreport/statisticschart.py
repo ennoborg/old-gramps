@@ -210,7 +210,7 @@ def estimate_age(dbase, person,
     and lower bounds of the person's age is returned. If either
     the birth or death date is missing, a (-1, -1) is returned.
 
-    @param dbase: GRAMPS database to which the Person object belongs
+    @param dbase: Gramps database to which the Person object belongs
     @type dbase: DbBase
     @param person: Person object to calculate the age of
     @type person: Person
@@ -575,7 +575,7 @@ class Extract:
             for child_ref in fam.get_child_ref_list():
                 children.append(child_ref.ref)
         # TODO: it would be good to return only biological children,
-        # but GRAMPS doesn't offer any efficient way to check that
+        # but Gramps doesn't offer any efficient way to check that
         # (I don't want to check each children's parent family mother
         # and father relations as that would make this *much* slower)
         if children:
@@ -637,13 +637,13 @@ class Extract:
                     chart[1][key] = 1
 
 
-    def collect_data(self, dbase, filter_func, menu, genders,
+    def collect_data(self, dbase, people, menu, genders,
                      year_from, year_to, no_years, cb_progress, rlocale):
         """goes through the database and collects the selected personal
         data persons fitting the filter and birth year criteria. The
         arguments are:
-        dbase       - the GRAMPS database
-        filter_func - filtering function selected by the StatisticsDialog
+        dbase       - the Gramps database
+        people      - a list of filtered people
         options     - report options_dict which sets which methods are used
         genders     - which gender(s) to include into statistics
         year_from   - use only persons who've born this year of after
@@ -672,9 +672,7 @@ class Extract:
                 data.append((ext[name][1], {}, ext[name][2], ext[name][3]))
 
         # go through the people and collect data
-        for person_handle in filter_func.apply(dbase,
-                                               dbase.iter_person_handles(),
-                                               cb_progress):
+        for person_handle in people:
             cb_progress()
             person = dbase.get_person_from_handle(person_handle)
             # check whether person has suitable gender
@@ -731,7 +729,7 @@ class StatisticsChart(Report):
 
         The arguments are:
 
-        database        - the GRAMPS database instance
+        database        - the Gramps database instance
         options         - instance of the Options class for this report
         user            - a gen.user.User() instance
         incl_private  - Whether to include private data
@@ -795,11 +793,15 @@ class StatisticsChart(Report):
                                  "%(year_from)04d-%(year_to)04d"
                                 ) % mapping
 
+        people = self.filter.apply(self.database,
+                                   self.database.iter_person_handles(),
+                                   user=self._user)
+
         # extract requested items from the database and count them
         self._user.begin_progress(_('Statistics Charts'),
                                   _('Collecting data...'),
                                   self.database.get_number_of_people())
-        tables = _Extract.collect_data(self.database, self.filter, menu,
+        tables = _Extract.collect_data(self.database, people, menu,
                                        gender, year_from, year_to,
                                        get_value('no_years'),
                                        self._user.step_progress,
@@ -996,22 +998,6 @@ class StatisticsChartOptions(MenuReportOptions):
         menu.add_option(category_name, "pid", self.__pid)
         self.__pid.connect('value-changed', self.__update_filters)
 
-        self._nf = stdoptions.add_name_format_option(menu, category_name)
-        self._nf.connect('value-changed', self.__update_filters)
-
-        self.__update_filters()
-
-        stdoptions.add_private_data_option(menu, category_name)
-
-        stdoptions.add_living_people_option(menu, category_name)
-
-        stdoptions.add_localization_option(menu, category_name)
-
-        ################################
-        category_name = _("Report Details")
-        add_option = partial(menu.add_option, category_name)
-        ################################
-
         sortby = EnumeratedListOption(_('Sort chart items by'),
                                       _options.SORT_VALUE)
         for item_idx in range(len(_options.opt_sorts)):
@@ -1055,8 +1041,26 @@ class StatisticsChartOptions(MenuReportOptions):
                              "used instead of a bar chart."))
         add_option("bar_items", bar_items)
 
-        # -------------------------------------------------
+        ################################
+        category_name = _("Report Options (2)")
+        add_option = partial(menu.add_option, category_name)
+        ################################
+
+        self._nf = stdoptions.add_name_format_option(menu, category_name)
+        self._nf.connect('value-changed', self.__update_filters)
+
+        self.__update_filters()
+
+        stdoptions.add_private_data_option(menu, category_name)
+
+        stdoptions.add_living_people_option(menu, category_name)
+
+        stdoptions.add_localization_option(menu, category_name)
+
+        ################################
         # List of available charts on separate option tabs
+        ################################
+
         idx = 0
         third = (len(_Extract.extractors) + 1) // 3
         chart_types = []

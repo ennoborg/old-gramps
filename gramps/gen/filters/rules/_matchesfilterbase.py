@@ -33,10 +33,10 @@ LOG = logging.getLogger(".filter")
 #-------------------------------------------------------------------------
 # we need global variableCustomFilters, so we need to query gramps.gen.filters
 # when we need this variable, not import it at the start!
-from gramps.gen.const import GRAMPS_LOCALE as glocale
-_ = glocale.translation.gettext
 import gramps.gen.filters
 from . import Rule
+from ...const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
@@ -56,13 +56,13 @@ class MatchesFilterBase(Rule):
     description = "Matches objects matched by the specified filter name"
     category    = _('General filters')
 
-    def prepare(self, db):
+    def prepare(self, db, user):
         if gramps.gen.filters.CustomFilters:
             filters = gramps.gen.filters.CustomFilters.get_filters_dict(self.namespace)
             if self.list[0] in filters:
                 filt = filters[self.list[0]]
                 for rule in filt.flist:
-                    rule.requestprepare(db)
+                    rule.requestprepare(db, user)
             else:
                 LOG.warning(_("Can't find filter %s in the defined custom filters")
                                     % self.list[0])

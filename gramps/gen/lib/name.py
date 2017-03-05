@@ -5,6 +5,7 @@
 # Copyright (C) 2010       Michiel D. Nauta
 # Copyright (C) 2011       Tim G L Lyons
 # Copyright (C) 2013       Doug Blank <doug.blank@gmail.com>
+# Copyright (C) 2017       Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,10 +38,9 @@ from .notebase import NoteBase
 from .datebase import DateBase
 from .surnamebase import SurnameBase
 from .nametype import NameType
-from .handle import Handle
 from .const import IDENTICAL, EQUAL, DIFFERENT
 from .date import Date
-from gramps.gen.const import GRAMPS_LOCALE as glocale
+from ..const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
@@ -129,110 +129,55 @@ class Name(SecondaryObject, PrivacyBase, SurnameBase, CitationBase, NoteBase,
                 self.group_as, self.sort_as, self.display_as, self.call,
                 self.nick, self.famnick)
 
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {"_class": "Name",
-                "private": PrivacyBase.to_struct(self),
-                "citation_list": CitationBase.to_struct(self),
-                "note_list": NoteBase.to_struct(self),
-                "date": DateBase.to_struct(self),
-                "first_name": self.first_name,
-                "surname_list": SurnameBase.to_struct(self),
-                "suffix": self.suffix,
-                "title": self.title,
-                "type": self.type.to_struct(),
-                "group_as": self.group_as,
-                "sort_as": self.sort_as,
-                "display_as": self.display_as,
-                "call": self.call,
-                "nick": self.nick,
-                "famnick": self.famnick}
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = Name()
-        return (PrivacyBase.from_struct(struct.get("private", default.private)),
-                CitationBase.from_struct(struct.get("citation_list",
-                                                    default.citation_list)),
-                NoteBase.from_struct(struct.get("note_list",
-                                                default.note_list)),
-                DateBase.from_struct(struct.get("date", {})),
-                struct.get("first_name", default.first_name),
-                SurnameBase.from_struct(struct.get("surname_list",
-                                                   default.surname_list)),
-                struct.get("suffix", default.suffix),
-                struct.get("title", default.title),
-                NameType.from_struct(struct.get("type", {})),
-                struct.get("group_as", default.group_as),
-                struct.get("sort_as", default.sort_as),
-                struct.get("display_as", default.display_as),
-                struct.get("call", default.call),
-                struct.get("nick", default.nick),
-                struct.get("famnick", default.famnick))
-
-    @classmethod
-    def get_labels(cls, _):
-        return {
-            "_class": _("Name"),
-            "private": _("Private"),
-            "citation_list": _("Citations"),
-            "note_list": _("Notes"),
-            "date": _("Date"),
-            "first_name": _("Given name"),
-            "surname_list": _("Surnames"),
-            "suffix": _("Suffix"),
-            "title": _("Title"),
-            "type": _("Type"),
-            "group_as": _("Group as"),
-            "sort_as": _("Sort as"),
-            "display_as": _("Display as"),
-            "call": _("Call name"),
-            "nick": _("Nick name"),
-            "famnick": _("Family nick name"),
-        }
-
     @classmethod
     def get_schema(cls):
+        """
+        Returns the JSON Schema for this class.
+
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
+        """
         from .surname import Surname
         return {
-            "private": bool,
-            "citation_list": [Handle("Citation", "CITATION-HANDLE")],
-            "note_list": [Handle("Note", "NOTE-HANDLE")],
-            "date": Date,
-            "first_name": str,
-            "surname_list": [Surname],
-            "suffix": str,
-            "title": str,
-            "type": NameType,
-            "group_as": str,
-            "sort_as": str,
-            "display_as": str,
-            "call": str,
-            "nick": str,
-            "famnick": str,
+            "type": "object",
+            "title": _("Name"),
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "private": {"type": "boolean",
+                            "title": _("Private")},
+                "citation_list": {"type": "array",
+                                  "items": {"type": "string",
+                                            "maxLength": 50},
+                                  "title": _("Citations")},
+                "note_list": {"type": "array",
+                              "items": {"type": "string",
+                                        "maxLength": 50},
+                              "title": _("Notes")},
+                "date": {"oneOf": [{"type": "null"}, Date.get_schema()],
+                         "title": _("Date")},
+                "first_name": {"type": "string",
+                               "title": _("Given name")},
+                "surname_list": {"type": "array",
+                                 "items": Surname.get_schema(),
+                                 "title": _("Surnames")},
+                "suffix": {"type": "string",
+                           "title": _("Suffix")},
+                "title": {"type": "string",
+                          "title": _("Title")},
+                "type": NameType.get_schema(),
+                "group_as": {"type": "string",
+                             "title": _("Group as")},
+                "sort_as": {"type": "integer",
+                            "title": _("Sort as")},
+                "display_as": {"type": "integer",
+                               "title": _("Display as")},
+                "call": {"type": "string",
+                         "title": _("Call name")},
+                "nick": {"type": "string",
+                         "title": _("Nick name")},
+                "famnick": {"type": "string",
+                            "title": _("Family nick name")}
+            }
         }
 
     def is_empty(self):

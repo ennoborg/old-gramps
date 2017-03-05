@@ -2,7 +2,7 @@
 # Gramps - a GTK+/GNOME based genealogy program
 #
 # Copyright (C) 2000-2007  Donald N. Allingham
-# Copyright (C) 2013       Nick Hall
+# Copyright (C) 2013,2017  Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -32,7 +32,6 @@ from .secondaryobj import SecondaryObject
 from .refbase import RefBase
 from .datebase import DateBase
 from .const import IDENTICAL, EQUAL, DIFFERENT
-from .handle import Handle
 
 #-------------------------------------------------------------------------
 #
@@ -63,45 +62,6 @@ class PlaceRef(RefBase, DateBase, SecondaryObject):
             DateBase.serialize(self)
             )
 
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {
-            "_class": "PlaceRef",
-            "ref": Handle("Place", self.ref),
-            "date": DateBase.to_struct(self)
-            }
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = PlaceRef()
-        return (
-            RefBase.from_struct(struct.get("ref", default.ref)),
-            DateBase.from_struct(struct.get("date", {}))
-            )
-
     def unserialize(self, data):
         """
         Convert a serialized tuple of data to an object.
@@ -110,6 +70,25 @@ class PlaceRef(RefBase, DateBase, SecondaryObject):
         RefBase.unserialize(self, ref)
         DateBase.unserialize(self, date)
         return self
+
+    @classmethod
+    def get_schema(cls):
+        """
+        Returns the JSON Schema for this class.
+
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
+        """
+        from .date import Date
+        return {
+            "type": "object",
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "ref": {"type": "string",
+                        "maxLength": 50},
+                "date": {"oneOf": [{"type": "null"}, Date.get_schema()]}
+            }
+        }
 
     def get_text_data_list(self):
         """

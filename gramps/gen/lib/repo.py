@@ -4,6 +4,7 @@
 # Copyright (C) 2000-2007  Donald N. Allingham
 # Copyright (C) 2010       Michiel D. Nauta
 # Copyright (C) 2011       Tim G L Lyons
+# Copyright (C) 2017       Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -35,8 +36,9 @@ from .addressbase import AddressBase
 from .urlbase import UrlBase
 from .tagbase import TagBase
 from .repotype import RepositoryType
-from .handle import Handle
 from .citationbase import IndirectCitationBase
+from ..const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
@@ -70,90 +72,48 @@ class Repository(NoteBase, AddressBase, UrlBase, IndirectCitationBase,
                 self.change, TagBase.serialize(self), self.private)
 
     @classmethod
-    def get_labels(cls, _):
-        return {
-            "handle": _("Handle"),
-            "gramps_id": _("Gramps ID"),
-            "type": _("Type"),
-            "name": _("Name"),
-            "note_list": _("Notes"),
-            "address_list": _("Addresses"),
-            "urls": _("URLs"),
-            "change": _("Last changed"),
-            "tag_list": _("Tags"),
-            "private": _("Private")
-        }
-
-    @classmethod
     def get_schema(cls):
         """
-        Return the schema as a dictionary for this class.
+        Returns the JSON Schema for this class.
+
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
         """
         from .address import Address
         from .url import Url
         return {
-            "handle": Handle("Repository", "REPOSITORY-HANDLE"),
-            "gramps_id": str,
-            "type": RepositoryType,
-            "name": str,
-            "note_list": [Handle("Note", "NOTE-HANDLE")],
-            "address_list": [Address],
-            "urls": [Url],
-            "change": int,
-            "tag_list": [Handle("Tag", "TAG-HANDLE")],
-            "private": bool
+            "type": "object",
+            "title": _("Repository"),
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "handle": {"type": "string",
+                           "maxLength": 50,
+                           "title": _("Handle")},
+                "gramps_id": {"type": "string",
+                              "title": _("Gramps ID")},
+                "type": RepositoryType.get_schema(),
+                "name": {"type": "string",
+                         "title": _("Name")},
+                "note_list": {"type": "array",
+                              "items": {"type": "string",
+                                        "maxLength": 50},
+                              "title": _("Notes")},
+                "address_list": {"type": "array",
+                                 "items": Address.get_schema(),
+                                 "title": _("Addresses")},
+                "urls": {"type": "array",
+                         "items": Url.get_schema(),
+                         "title": _("URLs")},
+                "change": {"type": "integer",
+                           "title": _("Last changed")},
+                "tag_list": {"type": "array",
+                             "items": {"type": "string",
+                                       "maxLength": 50},
+                             "title": _("Tags")},
+                "private": {"type": "boolean",
+                            "title": _("Private")}
+            }
         }
-
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {"_class": "Repository",
-                "handle": Handle("Repository", self.handle),
-                "gramps_id": self.gramps_id,
-                "type": self.type.to_struct(),
-                "name": str(self.name),
-                "note_list": NoteBase.to_struct(self),
-                "address_list": AddressBase.to_struct(self),
-                "urls": UrlBase.to_struct(self),
-                "change": self.change,
-                "tag_list": TagBase.to_struct(self),
-                "private": self.private}
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = Repository()
-        return (Handle.from_struct(struct.get("handle", default.handle)),
-                struct.get("gramps_id", default.gramps_id),
-                RepositoryType.from_struct(struct.get("type", {})),
-                struct.get("name", default.name),
-                NoteBase.from_struct(struct.get("note_list", default.note_list)),
-                AddressBase.from_struct(struct.get("address_list", default.address_list)),
-                UrlBase.from_struct(struct.get("urls", default.urls)),
-                struct.get("change", default.change),
-                TagBase.from_struct(struct.get("tag_list", default.tag_list)),
-                struct.get("private", default.private))
 
     def unserialize(self, data):
         """

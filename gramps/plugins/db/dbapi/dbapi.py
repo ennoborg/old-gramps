@@ -2,7 +2,7 @@
 # Gramps - a GTK+/GNOME based genealogy program
 #
 # Copyright (C) 2015-2016 Douglas S. Blank <doug.blank@gmail.com>
-# Copyright (C) 2016      Nick Hall
+# Copyright (C) 2016-2017 Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -128,6 +128,8 @@ class DBAPI(DbGeneric):
         """
         Create and update schema.
         """
+        self.dbapi.begin()
+
         # make sure schema is up to date:
         self.dbapi.execute('CREATE TABLE person '
                            '('
@@ -261,6 +263,7 @@ class DBAPI(DbGeneric):
         self.dbapi.execute('CREATE INDEX reference_obj_handle '
                            'ON reference(obj_handle)')
 
+        self.dbapi.commit()
 
     def _close(self):
         self.dbapi.close()
@@ -375,6 +378,7 @@ class DBAPI(DbGeneric):
         key: string
         value: item, will be serialized here
         """
+        self._txn_begin()
         self.dbapi.execute("SELECT 1 FROM metadata WHERE setting = ?", [key])
         row = self.dbapi.fetchone()
         if row:
@@ -385,6 +389,7 @@ class DBAPI(DbGeneric):
             self.dbapi.execute(
                 "INSERT INTO metadata (setting, value) VALUES (?, ?)",
                 [key, pickle.dumps(value)])
+        self._txn_commit()
 
     def get_name_group_keys(self):
         """
@@ -868,6 +873,7 @@ class DBAPI(DbGeneric):
         return gstats
 
     def save_gender_stats(self, gstats):
+        self._txn_begin()
         self.dbapi.execute("DELETE FROM gender_stats")
         for key in gstats.stats:
             female, male, unknown = gstats.stats[key]
@@ -875,6 +881,7 @@ class DBAPI(DbGeneric):
                                "(given_name, female, male, unknown) "
                                "VALUES (?, ?, ?, ?)",
                                [key, female, male, unknown])
+        self._txn_commit()
 
     def get_surname_list(self):
         """
@@ -888,19 +895,19 @@ class DBAPI(DbGeneric):
             surname_list.append(row[0])
         return surname_list
 
-    def _sql_type(self, python_type):
+    def _sql_type(self, schema_type, max_length):
         """
         Given a schema type, return the SQL type for
         a new column.
         """
-        from gramps.gen.lib.handle import HandleClass
-        if isinstance(python_type, HandleClass):
-            return "VARCHAR(50)"
-        elif python_type == str:
-            return "TEXT"
-        elif python_type in [bool, int]:
+        if schema_type == 'string':
+            if max_length:
+                return "VARCHAR(%s)" % max_length
+            else:
+                return "TEXT"
+        elif schema_type in ['boolean', 'integer']:
             return "INTEGER"
-        elif python_type in [float]:
+        elif schema_type == 'number':
             return "REAL"
         else:
             return "BLOB"
@@ -910,26 +917,21 @@ class DBAPI(DbGeneric):
         Create secondary columns.
         """
         LOG.info("Creating secondary columns...")
-        for table in self.get_table_func():
-            if not hasattr(self.get_table_func(table, "class_func"),
-                           "get_secondary_fields"):
-                continue
-            table_name = table.lower()
-            for field_pair in self.get_table_func(
-                    table, "class_func").get_secondary_fields():
-                field, python_type = field_pair
-                field = self._hash_name(table, field)
-                sql_type = self._sql_type(python_type)
+        for cls in (Person, Family, Event, Place, Repository, Source,
+                    Citation, Media, Note, Tag):
+            table_name = cls.__name__.lower()
+            for field, schema_type, max_length in cls.get_secondary_fields():
+                sql_type = self._sql_type(schema_type, max_length)
                 try:
                     # test to see if it exists:
                     self.dbapi.execute("SELECT %s FROM %s LIMIT 1"
                                        % (field, table_name))
                     LOG.info("    Table %s, field %s is up to date",
-                             table, field)
+                             table_name, field)
                 except:
                     # if not, let's add it
                     LOG.info("    Table %s, field %s was added",
-                             table, field)
+                             table_name, field)
                     self.dbapi.execute("ALTER TABLE %s ADD COLUMN %s %s"
                                        % (table_name, field, sql_type))
 
@@ -940,15 +942,12 @@ class DBAPI(DbGeneric):
         Does not commit.
         """
         table = obj.__class__.__name__
-        fields = self.get_table_func(table, "class_func").get_secondary_fields()
-        fields = [field for (field, direction) in fields]
+        fields = [field[0] for field in obj.get_secondary_fields()]
         sets = []
         values = []
         for field in fields:
-            value = obj.get_field(field, self, ignore_errors=True)
-            field = self._hash_name(obj.__class__.__name__, field)
             sets.append("%s = ?" % field)
-            values.append(value)
+            values.append(getattr(obj, field))
 
         # Derived fields
         if table == 'Person':
@@ -966,10 +965,10 @@ class DBAPI(DbGeneric):
             table_name = table.lower()
             self.dbapi.execute("UPDATE %s SET %s where handle = ?"
                                % (table_name, ", ".join(sets)),
-                               self._sql_cast_list(table, sets, values)
+                               self._sql_cast_list(values)
                                + [obj.handle])
 
-    def _sql_cast_list(self, table, fields, values):
+    def _sql_cast_list(self, values):
         """
         Given a list of field names and values, return the values
         in the appropriate type.

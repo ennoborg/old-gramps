@@ -565,8 +565,7 @@ class EditRule(ManagedWindow):
                 elif v == _('Regular-Expression matching:'):
                     t = MyBoolean(_('Use regular expression'))
                 elif v == _('Include Family events:'):
-                    t = MyBoolean(_('Also family events where person is '
-                                    'wife/husband'))
+                    t = MyBoolean(_('Also family events where person is spouse'))
                 elif v == _('Primary Role:'):
                     t = MyBoolean(_('Only include primary participants'))
                 elif v == _('Tag:'):
@@ -805,7 +804,7 @@ class EditFilter(ManagedWindow):
         self.filterdb = filterdb
         self.selection_callback = selection_callback
 
-        self.define_glade('define_filter', RULE_GLADE)
+        self.define_glade('define_filter', RULE_GLADE, also_load=["model1"])
 
         self.set_window(
             self.get_widget('define_filter'),

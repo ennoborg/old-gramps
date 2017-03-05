@@ -26,9 +26,9 @@
 # Gramps modules
 #
 #-------------------------------------------------------------------------
-from gramps.gen.utils.grampslocale import GrampsLocale
-from gramps.gen.display.name import NameDisplay
-from gramps.gen.config import config
+from ...utils.grampslocale import GrampsLocale
+from ...display.name import NameDisplay
+from ...config import config
 
 #-------------------------------------------------------------------------
 #
@@ -45,6 +45,7 @@ class Report:
     def __init__(self, database, options_class, user):
         self.database = database
         self.options_class = options_class
+        self._user = user
 
         self.doc = options_class.get_document()
 

@@ -3,6 +3,7 @@
 #
 # Copyright (C) 2010       Benny Malengier
 # Copyright (C) 2013       Doug Blank <doug.blank@gmail.com>
+# Copyright (C) 2017       Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -31,6 +32,8 @@ Surname class for Gramps.
 from .secondaryobj import SecondaryObject
 from .nameorigintype import NameOriginType
 from .const import IDENTICAL, EQUAL, DIFFERENT
+from ..const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
@@ -71,67 +74,30 @@ class Surname(SecondaryObject):
         return (self.surname, self.prefix, self.primary,
                 self.origintype.serialize(), self.connector)
 
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {"_class": "Surname",
-                "surname": self.surname,
-                "prefix": self.prefix,
-                "primary": self.primary,
-                "origintype": self.origintype.to_struct(),
-                "connector": self.connector}
-
     @classmethod
     def get_schema(cls):
-        return {
-            "surname": str,
-            "prefix": str,
-            "primary": str,
-            "origintype": NameOriginType,
-            "connector": str
-        }
-
-    @classmethod
-    def get_labels(cls, _):
-        return {
-            "_class": _("Surname"),
-            "surname": _("Surname"),
-            "prefix": _("Prefix"),
-            "primary": _("Primary"),
-            "origintype": _("Origin type"),
-            "connector": _("Connector")
-        }
-
-    @classmethod
-    def from_struct(cls, struct):
         """
-        Given a struct data representation, return a serialized object.
+        Returns the JSON Schema for this class.
 
-        :returns: Returns a serialized object
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
         """
-        default = Surname()
-        return (struct.get("surname", default.surname),
-                struct.get("prefix", default.prefix),
-                struct.get("primary", default.primary),
-                NameOriginType.from_struct(struct.get("origintype", {})),
-                struct.get("connector", default.connector))
+        return {
+            "type": "object",
+            "title": _("Surname"),
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "surname": {"type": "string",
+                            "title": _("Surname")},
+                "prefix": {"type": "string",
+                           "title": _("Prefix")},
+                "primary": {"type": "boolean",
+                            "title": _("Primary")},
+                "origintype": NameOriginType.get_schema(),
+                "connector": {"type": "string",
+                              "title": _("Connector")}
+            }
+        }
 
     def is_empty(self):
         """

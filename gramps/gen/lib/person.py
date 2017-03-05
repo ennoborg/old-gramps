@@ -3,7 +3,7 @@
 #
 # Copyright (C) 2000-2007  Donald N. Allingham
 # Copyright (C) 2010       Michiel D. Nauta
-# Copyright (C) 2010       Nick Hall
+# Copyright (C) 2010,2017  Nick Hall
 # Copyright (C) 2011       Tim G L Lyons
 #
 # This program is free software; you can redistribute it and/or modify
@@ -46,7 +46,6 @@ from .attrtype import AttributeType
 from .eventroletype import EventRoleType
 from .attribute import Attribute
 from .const import IDENTICAL, EQUAL, DIFFERENT
-from .handle import Handle
 from ..const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 
@@ -157,157 +156,86 @@ class Person(CitationBase, NoteBase, AttributeBase, MediaBase,
             [pr.serialize() for pr in self.person_ref_list]      # 20
             )
 
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {
-            "_class": "Person",
-            "handle":  Handle("Person", self.handle),            #  0
-            "gramps_id": self.gramps_id,                         #  1
-            "gender": self.__gender,                             #  2
-            "primary_name": self.primary_name.to_struct(),       #  3
-            "alternate_names": [name.to_struct()
-                                for name in self.alternate_names], #  4
-            "death_ref_index": self.death_ref_index,             #  5
-            "birth_ref_index": self.birth_ref_index,             #  6
-            "event_ref_list": [er.to_struct()
-                               for er in self.event_ref_list],   #  7
-            "family_list": [Handle("Family", f) for f in
-                            self.family_list],                   #  8
-            "parent_family_list": [Handle("Family", f) for f in
-                                   self.parent_family_list],     #  9
-            "media_list": MediaBase.to_struct(self),             # 10
-            "address_list": AddressBase.to_struct(self),         # 11
-            "attribute_list": AttributeBase.to_struct(self),     # 12
-            "urls": UrlBase.to_struct(self),                     # 13
-            "lds_ord_list": LdsOrdBase.to_struct(self),          # 14
-            "citation_list": CitationBase.to_struct(self),       # 15
-            "note_list": NoteBase.to_struct(self),               # 16
-            "change": self.change,                               # 17
-            "tag_list": TagBase.to_struct(self),                 # 18
-            "private": self.private,                             # 19
-            "person_ref_list": [pr.to_struct()
-                                for pr in self.person_ref_list]  # 20
-            }
-
-    @classmethod
-    def get_labels(cls, _):
-        return {
-            "handle":  _("Handle"),
-            "gramps_id": _("Gramps ID"),
-            "gender": _("Gender"),
-            "primary_name": _("Primary name"),
-            "alternate_names": _("Alternate names"),
-            "death_ref_index": _("Death reference index"),
-            "birth_ref_index": _("Birth reference index"),
-            "event_ref_list": _("Event references"),
-            "family_list": _("Families"),
-            "parent_family_list": _("Parent families"),
-            "media_list": _("Media"),
-            "address_list": _("Addresses"),
-            "attribute_list": _("Attributes"),
-            "urls": _("Urls"),
-            "lds_ord_list": _("LDS ordinances"),
-            "citation_list": _("Citations"),
-            "note_list": _("Notes"),
-            "change": _("Last changed"),
-            "tag_list": _("Tags"),
-            "private": _("Private"),
-            "person_ref_list": _("Person references"),
-            "probably_alive": _("Probably alive"),
-        }
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = Person()
-        return (
-            Handle.from_struct(struct.get("handle", default.handle)),
-            struct.get("gramps_id", default.gramps_id),
-            struct.get("gender", default.gender),
-            Name.from_struct(struct.get("primary_name", {})),
-            [Name.from_struct(name)
-             for name in struct.get("alternate_names",
-                                    default.alternate_names)],
-            struct.get("death_ref_index", default.death_ref_index),
-            struct.get("birth_ref_index", default.birth_ref_index),
-            [EventRef.from_struct(er)
-             for er in struct.get("event_ref_list", default.event_ref_list)],
-            [Handle.from_struct(handle)
-             for handle in struct.get("family_list", default.family_list)],
-            [Handle.from_struct(handle)
-             for handle in struct.get("parent_family_list",
-                                      default.parent_family_list)],
-            MediaBase.from_struct(struct.get("media_list", default.media_list)),
-            AddressBase.from_struct(struct.get("address_list",
-                                               default.address_list)),
-            AttributeBase.from_struct(struct.get("attribute_list",
-                                                 default.attribute_list)),
-            UrlBase.from_struct(struct.get("urls", default.urls)),
-            LdsOrdBase.from_struct(struct.get("lds_ord_list",
-                                              default.lds_ord_list)),
-            CitationBase.from_struct(struct.get("citation_list",
-                                                default.citation_list)),
-            NoteBase.from_struct(struct.get("note_list", default.note_list)),
-            struct.get("change", default.change),
-            TagBase.from_struct(struct.get("tag_list", default.tag_list)),
-            struct.get("private", default.private),
-            [PersonRef.from_struct(p)
-             for p in struct.get("person_ref_list", default.person_ref_list)]
-        )
-
     @classmethod
     def get_schema(cls):
         """
-        Return the schema as a dictionary for this class.
+        Returns the JSON Schema for this class.
+
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
         """
         from .mediaref import MediaRef
         from .address import Address
         from .url import Url
         from .ldsord import LdsOrd
         return {
-            "handle":  Handle("Person", "PERSON-HANDLE"),
-            "gramps_id": str,
-            "gender": int,
-            "primary_name": Name,
-            "alternate_names": [Name],
-            "death_ref_index": int,
-            "birth_ref_index": int,
-            "event_ref_list": [EventRef],
-            "family_list": [Handle("Family", "FAMILY-HANDLE")],
-            "parent_family_list": [Handle("Family", "FAMILY-HANDLE")],
-            "media_list": [MediaRef],
-            "address_list": [Address],
-            "attribute_list": [Attribute],
-            "urls": [Url],
-            "lds_ord_list": [LdsOrd],
-            "citation_list": [Handle("Citation", "CITATION-HANDLE")],
-            "note_list": [Handle("Note", "NOTE-HANDLE")],
-            "change": int,
-            "tag_list": [Handle("Tag", "TAG-HANDLE")],
-            "private": bool,
-            "person_ref_list": [PersonRef]
+            "type": "object",
+            "title": _("Person"),
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "handle": {"type": "string",
+                           "maxLength": 50,
+                           "title": _("Handle")},
+                "gramps_id": {"type": "string",
+                              "title": _("Gramps ID")},
+                "gender": {"type": "integer",
+                           "minimum": 0,
+                           "maximum": 2,
+                           "title": _("Gender")},
+                "primary_name": Name.get_schema(),
+                "alternate_names": {"type": "array",
+                                    "items": Name.get_schema(),
+                                    "title": _("Alternate names")},
+                "death_ref_index": {"type": "integer",
+                                    "title": _("Death reference index")},
+                "birth_ref_index": {"type": "integer",
+                                    "title": _("Birth reference index")},
+                "event_ref_list": {"type": "array",
+                                   "items": EventRef.get_schema(),
+                                   "title": _("Event references")},
+                "family_list": {"type": "array",
+                                "items": {"type": "string",
+                                          "maxLength": 50},
+                                "title": _("Families")},
+                "parent_family_list": {"type": "array",
+                                       "items": {"type": "string",
+                                                 "maxLength": 50},
+                                       "title": _("Parent families")},
+                "media_list": {"type": "array",
+                               "items": MediaRef.get_schema(),
+                               "title": _("Media")},
+                "address_list": {"type": "array",
+                                 "items": Address.get_schema(),
+                                 "title": _("Addresses")},
+                "attribute_list": {"type": "array",
+                                   "items": Attribute.get_schema(),
+                                   "title": _("Attributes")},
+                "urls": {"type": "array",
+                         "items": Url.get_schema(),
+                         "title": _("Urls")},
+                "lds_ord_list": {"type": "array",
+                                 "items": LdsOrd.get_schema(),
+                                 "title": _("LDS ordinances")},
+                "citation_list": {"type": "array",
+                                  "items": {"type": "string",
+                                            "maxLength": 50},
+                                  "title": _("Citations")},
+                "note_list": {"type": "array",
+                              "items": {"type": "string",
+                                        "maxLength": 50},
+                              "title": _("Notes")},
+                "change": {"type": "integer",
+                           "title": _("Last changed")},
+                "tag_list": {"type": "array",
+                             "items": {"type": "string",
+                                       "maxLength": 50},
+                             "title": _("Tags")},
+                "private": {"type": "boolean",
+                            "title": _("Private")},
+                "person_ref_list": {"type": "array",
+                                    "items": PersonRef.get_schema(),
+                                    "title": _("Person references")}
+            }
         }
 
     def unserialize(self, data):

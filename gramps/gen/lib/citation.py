@@ -4,6 +4,7 @@
 # Copyright (C) 2000-2007  Donald N. Allingham
 # Copyright (C) 2010       Michiel D. Nauta
 # Copyright (C) 2011       Tim G L Lyons
+# Copyright (C) 2017       Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,7 +44,8 @@ from .datebase import DateBase
 from .tagbase import TagBase
 from .attrbase import SrcAttributeBase
 from .citationbase import IndirectCitationBase
-from .handle import Handle
+from ..const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 
 LOG = logging.getLogger(".citation")
 
@@ -82,41 +84,54 @@ class Citation(MediaBase, NoteBase, SrcAttributeBase, IndirectCitationBase,
     @classmethod
     def get_schema(cls):
         """
-        Return the schema as a dictionary for this class.
+        Returns the JSON Schema for this class.
+
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
         """
         from .srcattribute import SrcAttribute
+        from .mediaref import MediaRef
         from .date import Date
         return {
-            "handle": Handle("Citation", "CITATION-HANDLE"),
-            "gramps_id": str,
-            "date": Date,
-            "page": str,
-            "confidence": str,
-            "source_handle": Handle("Source", "SOURCE-HANDLE"),
-            "note_list": [Handle("Note", "NOTE-HANDLE")],
-            "media_list": [Handle("Media", "MEDIA-HANDLE")],
-            "srcattr_list": [SrcAttribute],
-            "change": int,
-            "tag_list": [Handle("Tag", "TAG-HANDLE")],
-            "private": bool,
-        }
-
-    @classmethod
-    def get_labels(cls, _):
-        return {
-            "_class": _("Citation"),
-            "handle":  _("Handle"),
-            "gramps_id": _("Gramps ID"),
-            "date": _("Date"),
-            "page": _("Page"),
-            "confidence":  _("Confidence"),
-            "source_handle": _("Source"),
-            "note_list": _("Notes"),
-            "media_list": _("Media"),
-            "srcattribute_list": _("Source Attributes"),
-            "change": _("Last changed"),
-            "tag_list": _("Tags"),
-            "private": _("Private"),
+            "type": "object",
+            "title": _("Citation"),
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "handle": {"type": "string",
+                           "maxLength": 50,
+                           "title": _("Handle")},
+                "gramps_id": {"type": "string",
+                              "title": _("Gramps ID")},
+                "date": {"oneOf": [{"type": "null"}, Date.get_schema()],
+                         "title": _("Date")},
+                "page": {"type": "string",
+                         "title": _("Page")},
+                "confidence": {"type": "integer",
+                               "minimum": 0,
+                               "maximum": 4,
+                               "title": _("Confidence")},
+                "source_handle": {"type": "string",
+                                  "maxLength": 50,
+                                  "title": _("Source")},
+                "note_list": {"type": "array",
+                              "items": {"type": "string",
+                                        "maxLength": 50},
+                              "title": _("Notes")},
+                "media_list": {"type": "array",
+                               "items": MediaRef.get_schema(),
+                               "title": _("Media")},
+                "srcattr_list": {"type": "array",
+                                 "items": SrcAttribute.get_schema(),
+                                 "title": _("Source Attributes")},
+                "change": {"type": "integer",
+                           "title": _("Last changed")},
+                "tag_list": {"type": "array",
+                             "items": {"type": "string",
+                                       "maxLength": 50},
+                             "title": _("Tags")},
+                "private": {"type": "boolean",
+                            "title": _("Private")}
+            }
         }
 
     def serialize(self, no_text_date=False):
@@ -135,61 +150,6 @@ class Citation(MediaBase, NoteBase, SrcAttributeBase, IndirectCitationBase,
                 self.change,                           #  9
                 TagBase.serialize(self),               # 10
                 self.private)                          # 11
-
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {"_class": "Citation",
-                "handle": Handle("Citation", self.handle),       #  0
-                "gramps_id": self.gramps_id,                     #  1
-                "date": DateBase.to_struct(self),                #  2
-                "page": str(self.page),                         #  3
-                "confidence": self.confidence,                   #  4
-                "source_handle": Handle("Source", self.source_handle), #  5
-                "note_list": NoteBase.to_struct(self),           #  6
-                "media_list": MediaBase.to_struct(self),         #  7
-                "srcattr_list": SrcAttributeBase.to_struct(self),#  8
-                "change": self.change,                           #  9
-                "tag_list": TagBase.to_struct(self),             # 10
-                "private": self.private}                         # 11
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = Citation()
-        return (Handle.from_struct(struct.get("handle", default.handle)),
-                struct.get("gramps_id", default.gramps_id),
-                DateBase.from_struct(struct.get("date", {})),
-                struct.get("page", default.page),
-                struct.get("confidence", default.confidence),
-                Handle.from_struct(struct.get("source_handle", default.source_handle)),
-                NoteBase.from_struct(struct.get("note_list", default.note_list)),
-                MediaBase.from_struct(struct.get("media_list", default.media_list)),
-                SrcAttributeBase.from_struct(struct.get("srcattr_list", [])),
-                struct.get("change", default.change),
-                TagBase.from_struct(struct.get("tag_list", default.tag_list)),
-                struct.get("private", default.private))
 
     def unserialize(self, data):
         """

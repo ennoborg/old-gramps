@@ -116,7 +116,7 @@ def cross_table_duplicates(db, uistate):
         parent = uistate.window
     else:
         parent = None
-    progress = ProgressMeter(_('Checking Database'), '', parent)
+    progress = ProgressMeter(_('Checking Database'), '', parent=parent)
     progress.set_pass(_('Looking for cross table duplicates'), 9)
     logging.info('Looking for cross table duplicates')
     total_nr_handles = 0
@@ -381,7 +381,7 @@ class CheckIntegrity:
         error_count = 0
         for bhandle in self.db.get_media_handles():
             handle = bhandle.decode('utf-8')
-            data = self.db.media_map[bhandle]
+            data = self.db.get_raw_media_data(handle)
             if not isinstance(data[2], str) or not isinstance(data[4], str):
                 obj = self.db.get_media_from_handle(handle)
                 if not isinstance(data[2], str):

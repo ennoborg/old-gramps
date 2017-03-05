@@ -25,7 +25,6 @@ Provide a simplified database access interface to the Gramps database.
 """
 from ..lib import (Person, Family, Event, Source, Place, Citation,
                    Media, Repository, Note, Date, Tag)
-from ..lib.handle import Handle
 from ..datehandler import displayer
 from ..utils.string import gender as gender_map
 from ..utils.db import get_birth_or_fallback, get_death_or_fallback
@@ -382,10 +381,11 @@ class SimpleAccess:
                 if family:
                     reflist = family.get_event_ref_list()
                     if reflist:
+                        # 'evnt' should be renamed to 'event'?
                         elist = [ self.dbase.get_event_from_handle(ref.ref)
                                   for ref in reflist ]
                         events = [ evnt for evnt in elist
-                                   if event.type == EventType.MARRIAGE ]
+                                   if evnt.type == EventType.MARRIAGE ]
                         if events:
                             return place_displayer.display_event(self.dbase, events[0])
         return ''
@@ -416,7 +416,7 @@ class SimpleAccess:
                         elist = [ self.dbase.get_event_from_handle(ref.ref)
                                   for ref in reflist ]
                         events = [ evnt for evnt in elist
-                                   if event.type == EventType.MARRIAGE ]
+                                   if evnt.type == EventType.MARRIAGE ]
                         if events:
                             date_obj = events[0].get_date_object()
                             if date_obj:
@@ -1008,8 +1008,6 @@ class SimpleAccess:
                     return "Error: incorrect object class in display: '%s'" % type(obj)
             else:
                 return "Error: missing object"
-        elif object_class == "Handle":
-            return "%s.handle [%s]" % (prop, value)
         else:
             return "Error: invalid object class in display: '%s'" % object_class
 
@@ -1050,8 +1048,6 @@ class SimpleAccess:
                                 self.gid(obj))
         elif isinstance(obj, Tag):
             return "[%s]" % (obj.name)
-        elif isinstance(obj, Handle):
-            return "%s.handle [%s]" % (prop, obj.handle)
         else:
             return "Error: incorrect object class in describe: '%s'" % type(obj)
 

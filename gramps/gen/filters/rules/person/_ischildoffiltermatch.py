@@ -48,14 +48,22 @@ class IsChildOfFilterMatch(Rule):
     category    = _('Family filters')
     description = _("Matches children of anybody matched by a filter")
 
-    def prepare(self,db):
+    def prepare(self, db, user):
         self.db = db
         self.map = set()
         filt = MatchesFilter(self.list)
-        filt.requestprepare(db)
+        filt.requestprepare(db, user)
+        if user:
+            user.begin_progress(self.category,
+                                _('Retrieving all sub-filter matches'),
+                                db.get_number_of_people())
         for person in db.iter_people():
+            if user:
+                user.step_progress()
             if filt.apply(db, person):
                 self.init_list(person)
+        if user:
+            user.end_progress()
         filt.requestreset()
 
     def reset(self):

@@ -15,6 +15,7 @@
 # Copyright (C) 2012      lcc <lcc@6zap.com>
 # Copyright (C) 2013-2014 Paul Franklin
 # Copyright (C) 2015      Craig J. Anderson
+# Copyright (C) 2017      Robert Carnell <bertcarnell_at_gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -86,7 +87,7 @@ class DetDescendantReport(Report):
 
         The arguments are:
 
-        database        - the GRAMPS database instance
+        database        - the Gramps database instance
         options         - instance of the Options class for this report
         user            - a gen.user.User() instance
 
@@ -98,6 +99,7 @@ class DetDescendantReport(Report):
         pageben       - Whether to include page break before End Notes.
         fulldates     - Whether to use full dates instead of just year.
         listc         - Whether to list children.
+        list_children_spouses - Whether to list the spouses of the children
         incnotes      - Whether to include notes.
         usecall       - Whether to use the call name as the first name.
         repplace      - Whether to replace missing Places with ___________.
@@ -151,6 +153,7 @@ class DetDescendantReport(Report):
         self.fulldate = get_value('fulldates')
         use_fulldate = self.fulldate
         self.listchildren = get_value('listc')
+        self.list_children_spouses = get_value('listc_spouses')
         self.inc_notes = get_value('incnotes')
         use_call = get_value('usecall')
         blankplace = get_value('repplace')
@@ -665,6 +668,8 @@ class DetDescendantReport(Report):
     def __write_children(self, family):
         """
         List the children for the given family.
+        :param family: Family
+        :return:
         """
         if not family.get_child_ref_list():
             return
@@ -724,6 +729,25 @@ class DetDescendantReport(Report):
             self.doc.write_text_citation(
                 self.__narrator.get_died_string() or
                 self.__narrator.get_buried_string())
+            # if the list_children_spouses option is selected:
+            if self.list_children_spouses:
+                # get the family of the child that contains the spouse
+                # of the child.  There may be more than one spouse for each
+                # child
+                family_handle_list = child.get_family_handle_list()
+                # for the first spouse, this is true.
+                # For subsequent spouses, make it false
+                is_first_family = True
+                for family_handle in family_handle_list:
+                    child_family = self.database.get_family_from_handle(
+                        family_handle
+                    )
+                    self.doc.write_text_citation(
+                        self.__narrator.get_married_string(
+                            child_family, is_first_family, self._name_display
+                        )
+                    )
+                    is_first_family = False
             self.doc.end_paragraph()
 
     def __write_family_notes(self, family):
@@ -871,10 +895,10 @@ class DetDescendantReport(Report):
                 atype = self._get_type(alt_name.get_type())
                 aname = alt_name.get_regular_name()
                 self.doc.write_text_citation(
-                    self._('%(name_kind)s: %(name)s%(endnotes)s'
-                          ) % {'name_kind' : self._(atype),
-                               'name'      : aname,
-                               'endnotes'  : self.endnotes(alt_name)})
+                    self._('%(type)s: %(value)s%(endnotes)s'
+                          ) % {'type' : self._(atype),
+                               'value' : aname,
+                               'endnotes' : self.endnotes(alt_name)})
                 self.doc.end_paragraph()
 
         if self.inc_events:
@@ -979,12 +1003,6 @@ class DetDescendantOptions(MenuReportOptions):
         self.__pid.set_help(_("The center person for the report"))
         add_option("pid", self.__pid)
 
-        stdoptions.add_name_format_option(menu, category)
-
-        stdoptions.add_private_data_option(menu, category)
-
-        stdoptions.add_living_people_option(menu, category)
-
         numbering = EnumeratedListOption(_("Numbering system"), "Henry")
         numbering.set_items([
             ("Henry", _("Henry numbering")),
@@ -1003,50 +1021,9 @@ class DetDescendantOptions(MenuReportOptions):
         structure.set_help(_("How people are organized in the report"))
         add_option("structure", structure)
 
-        generations = NumberOption(_("Generations"), 10, 1, 100)
-        generations.set_help(
-            _("The number of generations to include in the report"))
-        add_option("gen", generations)
-
-        stdoptions.add_localization_option(menu, category)
-
-        # Content
-
-        add_option = partial(menu.add_option, _("Content"))
-
-        usecall = BooleanOption(_("Use callname for common name"), False)
-        usecall.set_help(
-            _("Whether to use the call name as the first name."))
-        add_option("usecall", usecall)
-
-        fulldates = BooleanOption(
-            _("Use full dates instead of only the year"), True)
-        fulldates.set_help(
-            _("Whether to use full dates instead of just year."))
-        add_option("fulldates", fulldates)
-
-        listc = BooleanOption(_("List children"), True)
-        listc.set_help(_("Whether to list children."))
-        add_option("listc", listc)
-
-        computeage = BooleanOption(_("Compute death age"), True)
-        computeage.set_help(_("Whether to compute a person's age at death."))
-        add_option("computeage", computeage)
-
-        omitda = BooleanOption(_("Omit duplicate ancestors"), True)
-        omitda.set_help(_("Whether to omit duplicate ancestors."))
-        add_option("omitda", omitda)
-
-        verbose = BooleanOption(_("Use complete sentences"), True)
-        verbose.set_help(
-            _("Whether to use complete sentences or succinct language."))
-        add_option("verbose", verbose)
-
-        desref = BooleanOption(_("Add descendant reference in child list"),
-                               True)
-        desref.set_help(
-            _("Whether to add descendant references in child list."))
-        add_option("desref", desref)
+        gen = NumberOption(_("Generations"), 10, 1, 100)
+        gen.set_help(_("The number of generations to include in the report"))
+        add_option("gen", gen)
 
         pagebbg = BooleanOption(_("Page break between generations"), False)
         pagebbg.set_help(
@@ -1058,20 +1035,56 @@ class DetDescendantOptions(MenuReportOptions):
             _("Whether to start a new page before the end notes."))
         add_option("pageben", pageben)
 
-        add_option = partial(menu.add_option, _("Include") + " 1")
+        category = _("Report Options (2)")
+        add_option = partial(menu.add_option, category)
 
-        incphotos = BooleanOption(
-            _("Include Photo/Images from Gallery"), False)
-        incphotos.set_help(_("Whether to include images."))
-        add_option("incphotos", incphotos)
+        stdoptions.add_name_format_option(menu, category)
 
-        incevents = BooleanOption(_("Include events"), False)
-        incevents.set_help(_("Whether to include events."))
-        add_option("incevents", incevents)
+        stdoptions.add_private_data_option(menu, category)
 
-        incnotes = BooleanOption(_("Include notes"), True)
-        incnotes.set_help(_("Whether to include notes."))
-        add_option("incnotes", incnotes)
+        stdoptions.add_living_people_option(menu, category)
+
+        stdoptions.add_localization_option(menu, category)
+
+        # Content
+
+        add_option = partial(menu.add_option, _("Content"))
+
+        verbose = BooleanOption(_("Use complete sentences"), True)
+        verbose.set_help(
+            _("Whether to use complete sentences or succinct language."))
+        add_option("verbose", verbose)
+
+        fulldates = BooleanOption(
+            _("Use full dates instead of only the year"), True)
+        fulldates.set_help(
+            _("Whether to use full dates instead of just year."))
+        add_option("fulldates", fulldates)
+
+        computeage = BooleanOption(_("Compute death age"), True)
+        computeage.set_help(_("Whether to compute a person's age at death."))
+        add_option("computeage", computeage)
+
+        omitda = BooleanOption(_("Omit duplicate ancestors"), True)
+        omitda.set_help(_("Whether to omit duplicate ancestors."))
+        add_option("omitda", omitda)
+
+        usecall = BooleanOption(_("Use callname for common name"), False)
+        usecall.set_help(_("Whether to use the call name as the first name."))
+        add_option("usecall", usecall)
+
+        # What to include
+
+        add_option = partial(menu.add_option, _("Include"))
+
+        listc = BooleanOption(_("Include children"), True)
+        listc.set_help(_("Whether to list children."))
+        add_option("listc", listc)
+
+        listc_spouses = BooleanOption(_("Include spouses of children"), False)
+        listc_spouses.set_help(
+            _("Whether to list the spouses of the children."))
+        add_option("listc_spouses", listc_spouses)
 
         incmates = BooleanOption(_("Include spouses"), False)
         incmates.set_help(
@@ -1082,19 +1095,26 @@ class DetDescendantOptions(MenuReportOptions):
         incmateref.set_help(_("Whether to include reference to spouse."))
         add_option("incmateref", incmateref)
 
-        add_option = partial(menu.add_option, _("Include") + " 2")
+        incevents = BooleanOption(_("Include events"), False)
+        incevents.set_help(_("Whether to include events."))
+        add_option("incevents", incevents)
 
-        incaddresses = BooleanOption(_("Include addresses"), False)
-        incaddresses.set_help(_("Whether to include addresses."))
-        add_option("incaddresses", incaddresses)
+        desref = BooleanOption(
+            _("Include descendant reference in child list"), True)
+        desref.set_help(
+            _("Whether to add descendant references in child list."))
+        add_option("desref", desref)
 
-        incattrs = BooleanOption(_("Include attributes"), False)
-        incattrs.set_help(_("Whether to include attributes."))
-        add_option("incattrs", incattrs)
+        incphotos = BooleanOption(
+            _("Include Photo/Images from Gallery"), False)
+        incphotos.set_help(_("Whether to include images."))
+        add_option("incphotos", incphotos)
 
-        incnames = BooleanOption(_("Include alternative names"), False)
-        incnames.set_help(_("Whether to include other names."))
-        add_option("incnames", incnames)
+        add_option = partial(menu.add_option, _("Include (2)"))
+
+        incnotes = BooleanOption(_("Include notes"), True)
+        incnotes.set_help(_("Whether to include notes."))
+        add_option("incnotes", incnotes)
 
         incsources = BooleanOption(_("Include sources"), False)
         incsources.set_help(_("Whether to include source references."))
@@ -1105,6 +1125,18 @@ class DetDescendantOptions(MenuReportOptions):
             _("Whether to include source notes in the "
               "Endnotes section. Only works if Include sources is selected."))
         add_option("incsrcnotes", incsrcnotes)
+
+        incattrs = BooleanOption(_("Include attributes"), False)
+        incattrs.set_help(_("Whether to include attributes."))
+        add_option("incattrs", incattrs)
+
+        incaddresses = BooleanOption(_("Include addresses"), False)
+        incaddresses.set_help(_("Whether to include addresses."))
+        add_option("incaddresses", incaddresses)
+
+        incnames = BooleanOption(_("Include alternative names"), False)
+        incnames.set_help(_("Whether to include other names."))
+        add_option("incnames", incnames)
 
         incssign = BooleanOption(
             _("Include sign of succession ('+') in child-list"), True)
@@ -1118,8 +1150,7 @@ class DetDescendantOptions(MenuReportOptions):
                             "from the start-person to each descendant."))
         add_option("incpaths", incpaths)
 
-        # Missing information
-
+        # How to handle missing information
         add_option = partial(menu.add_option, _("Missing information"))
 
         repplace = BooleanOption(

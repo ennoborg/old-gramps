@@ -5,6 +5,7 @@
 # Copyright (C) 2010       Michiel D. Nauta
 # Copyright (C) 2011       Tim G L Lyons
 # Copyright (C) 2013       Doug Blank <doug.blank@gmail.com>
+# Copyright (C) 2017       Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,8 +38,9 @@ from .tagbase import TagBase
 from .attrbase import SrcAttributeBase
 from .reporef import RepoRef
 from .const import DIFFERENT, EQUAL, IDENTICAL
-from .handle import Handle
 from .citationbase import IndirectCitationBase
+from ..const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
@@ -80,107 +82,57 @@ class Source(MediaBase, NoteBase, SrcAttributeBase, IndirectCitationBase,
                 self.private)                                      # 12
 
     @classmethod
-    def get_labels(cls, _):
-        return {
-            "handle": _("Handle"),
-            "gramps_id": _("Gramps ID"),
-            "title": _("Title"),
-            "author": _("Author"),
-            "pubinfo": _("Publication info"),
-            "note_list": _("Notes"),
-            "media_list": _("Media"),
-            "abbrev": _("Abbreviation"),
-            "change": _("Last changed"),
-            "srcattr_list": _("Source Attributes"),
-            "reporef_list": _("Repositories"),
-            "tag_list": _("Tags"),
-            "private": _("Private")
-        }
-
-    @classmethod
     def get_schema(cls):
         """
-        Return the schema as a dictionary for this class.
+        Returns the JSON Schema for this class.
+
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
         """
         from .srcattribute import SrcAttribute
         from .reporef import RepoRef
-        from .url import Url
+        from .mediaref import MediaRef
         return {
-            "handle": Handle("Source", "SOURCE-HANDLE"),
-            "gramps_id": str,
-            "title": str,
-            "author": str,
-            "pubinfo": str,
-            "note_list": [Handle("Note", "NOTE-HANDLE")],
-            "media_list": [Handle("Media", "MEDIA-HANDLE")],
-            "abbrev": str,
-            "change": int,
-            "srcattr_list": [SrcAttribute],
-            "reporef_list": [RepoRef],
-            "tag_list": [Handle("Tag", "")],
-            "private": bool
+            "type": "object",
+            "title": _("Source"),
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "handle": {"type": "string",
+                           "maxLength": 50,
+                           "title": _("Handle")},
+                "gramps_id": {"type": "string",
+                              "title": _("Gramps ID")},
+                "title": {"type": "string",
+                          "title": _("Title")},
+                "author": {"type": "string",
+                           "title": _("Author")},
+                "pubinfo": {"type": "string",
+                            "title": _("Publication info")},
+                "note_list": {"type": "array",
+                              "items": {"type": "string",
+                                        "maxLength": 50},
+                              "title": _("Notes")},
+                "media_list": {"type": "array",
+                               "items": MediaRef.get_schema(),
+                               "title": _("Media")},
+                "abbrev": {"type": "string",
+                           "title": _("Abbreviation")},
+                "change": {"type": "integer",
+                           "title": _("Last changed")},
+                "srcattr_list": {"type": "array",
+                                 "items": SrcAttribute.get_schema(),
+                                 "title": _("Source Attributes")},
+                "reporef_list": {"type": "array",
+                                 "items": RepoRef.get_schema(),
+                                 "title": _("Repositories")},
+                "tag_list": {"type": "array",
+                             "items": {"type": "string",
+                                       "maxLength": 50},
+                             "title": _("Tags")},
+                "private": {"type": "boolean",
+                            "title": _("Private")}
+            }
         }
-
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {"_class": "Source",
-                "handle": Handle("Source", self.handle),
-                "gramps_id": self.gramps_id,
-                "title": str(self.title),
-                "author": str(self.author),
-                "pubinfo": str(self.pubinfo),
-                "note_list": NoteBase.to_struct(self),
-                "media_list": MediaBase.to_struct(self),
-                "abbrev": str(self.abbrev),
-                "change": self.change,
-                "srcattr_list": SrcAttributeBase.to_struct(self),
-                "reporef_list": [rr.to_struct() for rr in self.reporef_list],
-                "tag_list": TagBase.to_struct(self),
-                "private": self.private}
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        from .srcattribute import SrcAttribute
-        default = Source()
-        return (Handle.from_struct(struct.get("handle", default.handle)),
-                struct.get("gramps_id", default.gramps_id),
-                struct.get("title", default.title),
-                struct.get("author", default.author),
-                struct.get("pubinfo", default.pubinfo),
-                NoteBase.from_struct(struct.get("note_list",
-                                                default.note_list)),
-                MediaBase.from_struct(struct.get("media_list",
-                                                 default.media_list)),
-                struct.get("abbrev", default.abbrev),
-                struct.get("change", default.change),
-                SrcAttributeBase.from_struct(struct.get("srcattr_list", {})),
-                [RepoRef.from_struct(rr)
-                 for rr in struct.get("reporef_list", default.reporef_list)],
-                TagBase.from_struct(struct.get("tag_list", default.tag_list)),
-                struct.get("private", default.private))
 
     def unserialize(self, data):
         """

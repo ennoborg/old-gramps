@@ -4,6 +4,7 @@
 # Copyright (C) 2000-2007  Donald N. Allingham
 # Copyright (C) 2010       Michiel D. Nauta
 # Copyright (C) 2013       Doug Blank <doug.blank@gmail.com>
+# Copyright (C) 2017       Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -35,7 +36,6 @@ from .notebase import NoteBase
 from .refbase import RefBase
 from .srcmediatype import SourceMediaType
 from .const import IDENTICAL, EQUAL, DIFFERENT
-from .handle import Handle
 
 #-------------------------------------------------------------------------
 #
@@ -69,51 +69,6 @@ class RepoRef(SecondaryObject, PrivacyBase, NoteBase, RefBase):
             PrivacyBase.serialize(self),
             )
 
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {
-            "_class": "RepositoryRef",
-            "note_list": NoteBase.to_struct(self),
-            "ref": Handle("Repository", self.ref),
-            "call_number": self.call_number,
-            "media_type": self.media_type.to_struct(),
-            "private": PrivacyBase.serialize(self),
-            }
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = RepoRef()
-        return (
-            NoteBase.from_struct(struct.get("note_list", default.note_list)),
-            RefBase.from_struct(struct.get("ref", default.ref)),
-            struct.get("call_number", default.call_number),
-            SourceMediaType.from_struct(struct.get("media_type", {})),
-            struct.get("private", default.private),
-            )
-
     def unserialize(self, data):
         """
         Convert a serialized tuple of data to an object.
@@ -125,6 +80,29 @@ class RepoRef(SecondaryObject, PrivacyBase, NoteBase, RefBase):
         NoteBase.unserialize(self, note_list)
         RefBase.unserialize(self, ref)
         return self
+
+    @classmethod
+    def get_schema(cls):
+        """
+        Returns the JSON Schema for this class.
+
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
+        """
+        return {
+            "type": "object",
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "note_list": {"type": "array",
+                              "items": {"type": "string",
+                                        "maxLength": 50}},
+                "ref": {"type": "string",
+                        "maxLength": 50},
+                "call_number": {"type": "string"},
+                "media_type": SourceMediaType.get_schema(),
+                "private": {"type": "boolean"}
+            }
+        }
 
     def get_text_data_list(self):
         """

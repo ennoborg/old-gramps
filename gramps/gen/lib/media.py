@@ -3,7 +3,7 @@
 #
 # Copyright (C) 2000-2007  Donald N. Allingham
 # Copyright (C) 2010       Michiel D. Nauta
-# Copyright (C) 2010       Nick Hall
+# Copyright (C) 2010,2017  Nick Hall
 # Copyright (C) 2011       Tim G L Lyons
 #
 # This program is free software; you can redistribute it and/or modify
@@ -45,7 +45,8 @@ from .notebase import NoteBase
 from .datebase import DateBase
 from .attrbase import AttributeBase
 from .tagbase import TagBase
-from .handle import Handle
+from ..const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 
 LOG = logging.getLogger(".citation")
 
@@ -118,114 +119,56 @@ class Media(CitationBase, NoteBase, DateBase, AttributeBase,
                 TagBase.serialize(self),
                 self.private)
 
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {"_class": "Media",
-                "handle": Handle("Media", self.handle),
-                "gramps_id": self.gramps_id,
-                "path": self.path,
-                "mime": self.mime,
-                "desc": self.desc,
-                "checksum": self.checksum,
-                "attribute_list": AttributeBase.to_struct(self),
-                "citation_list": CitationBase.to_struct(self),
-                "note_list": NoteBase.to_struct(self),
-                "change": self.change,
-                "date": DateBase.to_struct(self),
-                "tag_list": TagBase.to_struct(self),
-                "private": self.private}
-
     @classmethod
     def get_schema(cls):
         """
-        Returns the schema for EventRef.
+        Returns the JSON Schema for this class.
 
-        :returns: Returns a dict containing the fields to types.
+        :returns: Returns a dict containing the schema.
         :rtype: dict
         """
         from .attribute import Attribute
         from .date import Date
         return {
-            "handle": Handle("Media", "MEDIA-HANDLE"),
-            "gramps_id": str,
-            "path": str,
-            "mime": str,
-            "desc": str,
-            "checksum": str,
-            "attribute_list": [Attribute],
-            "citation_list": [Handle("Citation", "CITATION-HANDLE")],
-            "note_list": [Handle("Note", "NOTE-HANDLE")],
-            "change": int,
-            "date": Date,
-            "tag_list": [Handle("Tag", "TAG-HANDLE")],
-            "private": bool,
+            "type": "object",
+            "title": _("Media"),
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "handle": {"type": "string",
+                           "maxLength": 50,
+                           "title": _("Handle")},
+                "gramps_id": {"type": "string",
+                              "title": _("Gramps ID")},
+                "path": {"type": "string",
+                         "title": _("Path")},
+                "mime": {"type": "string",
+                         "title": _("MIME")},
+                "desc": {"type": "string",
+                         "title": _("Description")},
+                "checksum": {"type": "string",
+                             "title": _("Checksum")},
+                "attribute_list": {"type": "array",
+                                   "items": Attribute.get_schema(),
+                                   "title": _("Attributes")},
+                "citation_list": {"type": "array",
+                                  "items": {"type": "string",
+                                            "maxLength": 50},
+                                  "title": _("Citations")},
+                "note_list": {"type": "array",
+                              "items": {"type": "string"},
+                              "title": _("Notes")},
+                "change": {"type": "integer",
+                           "title": _("Last changed")},
+                "date": {"oneOf": [{"type": "null"}, Date.get_schema()],
+                         "title": _("Date")},
+                "tag_list": {"type": "array",
+                             "items": {"type": "string",
+                                       "maxLength": 50},
+                             "title": _("Tags")},
+                "private": {"type": "boolean",
+                            "title": _("Private")}
+            }
         }
-
-    @classmethod
-    def get_labels(cls, _):
-        """
-        Given a translation function, returns the labels for
-        each field of this object.
-
-        :returns: Returns a dict containing the fields to labels.
-        :rtype: dict
-        """
-        return {
-            "_class": _("Media"),
-            "handle": _("Media"),
-            "gramps_id": _("Gramps ID"),
-            "path": _("Path"),
-            "mime": _("MIME"),
-            "desc": _("Description"),
-            "checksum": _("Checksum"),
-            "attribute_list": _("Attributes"),
-            "citation_list": _("Citations"),
-            "note_list": _("Notes"),
-            "change": _("Last changed"),
-            "date": _("Date"),
-            "tag_list": _("Tags"),
-            "private": _("Private"),
-        }
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = Media()
-        return (Handle.from_struct(struct.get("handle", default.handle)),
-                struct.get("gramps_id", default.gramps_id),
-                struct.get("path", default.path),
-                struct.get("mime", default.mime),
-                struct.get("desc", default.desc),
-                struct.get("checksum", default.checksum),
-                AttributeBase.from_struct(struct.get("attribute_list", default.attribute_list)),
-                CitationBase.from_struct(struct.get("citation_list", default.citation_list)),
-                NoteBase.from_struct(struct.get("note_list", default.note_list)),
-                struct.get("change", default.change),
-                DateBase.from_struct(struct.get("date", {})),
-                TagBase.from_struct(struct.get("tag_list", default.tag_list)),
-                struct.get("private", default.private))
 
     def unserialize(self, data):
         """

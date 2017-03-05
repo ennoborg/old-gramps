@@ -74,12 +74,6 @@ class DbReadBase:
         self.basedb = self
         self.__feature = {} # {"feature": VALUE, ...}
 
-    def get_table_func(self, table=None, func=None):
-        """
-        Base implementation of get_table_func.
-        """
-        return None
-
     def get_feature(self, feature):
         """
         Databases can implement certain features or not. The default is
@@ -1418,14 +1412,6 @@ class DbReadBase:
         A name for this database on this computer.
         """
         raise NotImplementedError
-
-    def _hash_name(self, table, name):
-        """
-        Used in SQL functions to eval expressions involving selected
-        data.
-        """
-        name = self.get_table_func(table, "class_func").get_field_alias(name)
-        return name.replace(".", "__")
 
 
 class DbWriteBase(DbReadBase):

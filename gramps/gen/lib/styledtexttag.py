@@ -3,6 +3,7 @@
 #
 # Copyright (C) 2008  Zsolt Foldvari
 # Copyright (C) 2013  Doug Blank <doug.blank@gmail.com>
+# Copyright (C) 2017  Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -72,43 +73,6 @@ class StyledTextTag:
         """
         return (self.name.serialize(), self.value, self.ranges)
 
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :return: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {"_class": "StyledTextTag",
-                "name": self.name.to_struct(),
-                "value": self.value,
-                "ranges": self.ranges}
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :return: Returns a serialized object
-        """
-        default = StyledTextTag()
-        return (StyledTextTagType.from_struct(struct.get("name", {})),
-                struct.get("value", default.value),
-                struct.get("ranges", default.ranges))
-
     def unserialize(self, data):
         """Convert a serialized tuple of data to an object.
 
@@ -121,3 +85,25 @@ class StyledTextTag:
         self.name = StyledTextTagType()
         self.name.unserialize(the_name)
         return self
+
+    @classmethod
+    def get_schema(cls):
+        """
+        Returns the JSON Schema for this class.
+
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
+        """
+        return {
+            "type": "object",
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "name": StyledTextTagType.get_schema(),
+                "value": {"type": ["null", "string", "integer"]},
+                "ranges": {"type": "array",
+                           "items": {"type": "array",
+                                     "items": {"type": "integer"},
+                                     "minItems": 2,
+                                     "maxItems": 2}}
+            }
+        }

@@ -3,7 +3,7 @@
 #
 # Copyright (C) 2000-2007  Donald N. Allingham
 # Copyright (C) 2010       Michiel D. Nauta
-# Copyright (C) 2010       Nick Hall
+# Copyright (C) 2010,2017  Nick Hall
 # Copyright (C) 2011       Tim G L Lyons
 #
 # This program is free software; you can redistribute it and/or modify
@@ -49,7 +49,8 @@ from .tagbase import TagBase
 from .childref import ChildRef
 from .familyreltype import FamilyRelType
 from .const import IDENTICAL, EQUAL, DIFFERENT
-from .handle import Handle
+from ..const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 
 LOG = logging.getLogger(".citation")
 
@@ -127,121 +128,67 @@ class Family(CitationBase, NoteBase, MediaBase, AttributeBase, LdsOrdBase,
                 NoteBase.serialize(self),
                 self.change, TagBase.serialize(self), self.private)
 
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {"_class": "Family",
-                "handle": Handle("Family", self.handle),
-                "gramps_id": self.gramps_id,
-                "father_handle": Handle("Person", self.father_handle),
-                "mother_handle": Handle("Person", self.mother_handle),
-                "child_ref_list": [cr.to_struct() for cr in self.child_ref_list],
-                "type": self.type.to_struct(),
-                "event_ref_list": [er.to_struct() for er in self.event_ref_list],
-                "media_list": MediaBase.to_struct(self),
-                "attribute_list": AttributeBase.to_struct(self),
-                "lds_ord_list": LdsOrdBase.to_struct(self),
-                "citation_list": CitationBase.to_struct(self),
-                "note_list": NoteBase.to_struct(self),
-                "change": self.change,
-                "tag_list": TagBase.to_struct(self),
-                "private": self.private}
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = Family()
-        return (Handle.from_struct(struct.get("handle", default.handle)),
-                struct.get("gramps_id", default.gramps_id),
-                Handle.from_struct(struct.get("father_handle",
-                                              default.father_handle)),
-                Handle.from_struct(struct.get("mother_handle",
-                                              default.mother_handle)),
-                [ChildRef.from_struct(cr)
-                 for cr in struct.get("child_ref_list",
-                                      default.child_ref_list)],
-                FamilyRelType.from_struct(struct.get("type", {})),
-                [EventRef.from_struct(er)
-                 for er in struct.get("event_ref_list",
-                                      default.event_ref_list)],
-                MediaBase.from_struct(struct.get("media_list",
-                                                 default.media_list)),
-                AttributeBase.from_struct(struct.get("attribute_list",
-                                                     default.attribute_list)),
-                LdsOrdBase.from_struct(struct.get("lds_ord_list",
-                                                  default.lds_ord_list)),
-                CitationBase.from_struct(struct.get("citation_list",
-                                                    default.citation_list)),
-                NoteBase.from_struct(struct.get("note_list",
-                                                default.note_list)),
-                struct.get("change", default.change),
-                TagBase.from_struct(struct.get("tag_list", default.tag_list)),
-                struct.get("private", default.private))
-
     @classmethod
     def get_schema(cls):
+        """
+        Returns the JSON Schema for this class.
+
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
+        """
         from .mediaref import MediaRef
         from .ldsord import LdsOrd
         from .childref import ChildRef
         from .attribute import Attribute
         return {
-            "handle": Handle("Family", "FAMILY-HANDLE"),
-            "gramps_id": str,
-            "father_handle": Handle("Person", "PERSON-HANDLE"),
-            "mother_handle": Handle("Person", "PERSON-HANDLE"),
-            "child_ref_list": [ChildRef],
-            "type": FamilyRelType,
-            "event_ref_list": [EventRef],
-            "media_list": [MediaRef],
-            "attribute_list": [Attribute],
-            "lds_ord_list": [LdsOrd],
-            "citation_list": [Handle("Citation", "CITATION-HANDLE")],
-            "note_list": [Handle("Note", "NOTE-HANDLE")],
-            "change": int,
-            "tag_list": [Handle("Tag", "TAG-HANDLE")],
-            "private": bool
-        }
-
-    @classmethod
-    def get_labels(cls, _):
-        return {
-            "_class": _("Family"),
-            "handle": _("Handle"),
-            "gramps_id": _("Gramps ID"),
-            "father_handle": _("Father"),
-            "mother_handle": _("Mother"),
-            "child_ref_list": _("Children"),
-            "type": _("Relationship"),
-            "event_ref_list": _("Events"),
-            "media_list": _("Media"),
-            "attribute_list": _("Attributes"),
-            "lds_ord_list": _("LDS ordinances"),
-            "citation_list": _("Citations"),
-            "note_list": _("Notes"),
-            "change": _("Last changed"),
-            "tag_list": _("Tags"),
-            "private": _("Private"),
+            "type": "object",
+            "title": _("Family"),
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "handle": {"type": "string",
+                           "maxLength": 50,
+                           "title": _("Handle")},
+                "gramps_id": {"type": "string",
+                              "title": _("Gramps ID")},
+                "father_handle": {"type": ["string", "null"],
+                                  "maxLength": 50,
+                                  "title": _("Father")},
+                "mother_handle": {"type": ["string", "null"],
+                                  "maxLength": 50,
+                                  "title": _("Mother")},
+                "child_ref_list": {"type": "array",
+                                   "items": ChildRef.get_schema(),
+                                   "title": _("Children")},
+                "type": FamilyRelType.get_schema(),
+                "event_ref_list": {"type": "array",
+                                   "items": EventRef.get_schema(),
+                                   "title": _("Events")},
+                "media_list": {"type": "array",
+                               "items": MediaRef.get_schema(),
+                               "title": _("Media")},
+                "attribute_list": {"type": "array",
+                                   "items": Attribute.get_schema(),
+                                   "title": _("Attributes")},
+                "lds_ord_list": {"type": "array",
+                                 "items": LdsOrd.get_schema(),
+                                 "title": _("LDS ordinances")},
+                "citation_list": {"type": "array",
+                                  "items": {"type": "string",
+                                            "maxLength": 50},
+                                  "title": _("Citations")},
+                "note_list": {"type": "array",
+                              "items": {"type": "string",
+                                        "maxLength": 50},
+                              "title": _("Notes")},
+                "change": {"type": "integer",
+                           "title": _("Last changed")},
+                "tag_list": {"type": "array",
+                             "items": {"type": "string",
+                                       "maxLength": 50},
+                             "title": _("Tags")},
+                "private": {"type": "boolean",
+                            "title": _("Private")}
+            }
         }
 
     def unserialize(self, data):

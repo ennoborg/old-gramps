@@ -1,7 +1,7 @@
 #
 # Gramps - a GTK+/GNOME based genealogy program
 #
-# Copyright (C) 2010      Nick Hall
+# Copyright (C) 2010,2017 Nick Hall
 # Copyright (C) 2013      Doug Blank <doug.blank@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -29,7 +29,8 @@ Tag object for Gramps.
 #
 #-------------------------------------------------------------------------
 from .tableobj import TableObject
-from .handle import Handle
+from ..const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
@@ -104,27 +105,30 @@ class Tag(TableObject):
     @classmethod
     def get_schema(cls):
         """
-        Return the schema for Tag
-        """
-        return {
-            "handle": Handle("Tag", "TAG-HANDLE"),
-            "name": str,
-            "color": str,
-            "priority": int,
-            "change": int,
-        }
+        Returns the JSON Schema for this class.
 
-    @classmethod
-    def get_labels(cls, _):
-        """
-        Return the label for fields
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
         """
         return {
-            "handle": _("Handle"),
-            "name": _("Name"),
-            "color": _("Color"),
-            "priority": _("Priority"),
-            "change": _("Last changed"),
+            "type": "object",
+            "title": _("Tag"),
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "handle": {"type": "string",
+                           "maxLength": 50,
+                           "title": _("Handle")},
+                "name": {"type": "string",
+                         "title": _("Name")},
+                "color": {"type": "string",
+                          "maxLength": 13,
+                          "title": _("Color")},
+                "priority": {"type": "integer",
+                             "minimum": 0,
+                             "title": _("Priority")},
+                "change": {"type": "integer",
+                           "title": _("Last changed")}
+            }
         }
 
     def get_text_data_list(self):
@@ -224,47 +228,6 @@ class Tag(TableObject):
         :rtype: int
         """
         return self.__priority
-
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {"_class": "Tag",
-                "handle": Handle("Tag", self.handle),
-                "name": self.__name,
-                "color": self.__color,
-                "priority": self.__priority,
-                "change": self.change}
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = Tag()
-        return (Handle.from_struct(struct.get("handle", default.handle)),
-                struct.get("name", default.name),
-                struct.get("color", default.color),
-                struct.get("priority", default.priority),
-                struct.get("change", default.change))
 
     priority = property(get_priority, set_priority, None,
                         'Returns or sets priority of the tag')

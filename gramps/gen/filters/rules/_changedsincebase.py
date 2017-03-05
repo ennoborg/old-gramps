@@ -33,10 +33,10 @@ import time
 # Gramps modules
 #
 #-------------------------------------------------------------------------
+from . import Rule
+from ...errors import FilterError
 from ...const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
-from . import Rule
-from gramps.gen.errors import FilterError
 
 #-------------------------------------------------------------------------
 #
@@ -85,7 +85,7 @@ class ChangedSinceBase(Rule):
                   "accepted. %s does not satisfy.") % iso_date_time)
         return time_sec
 
-    def prepare(self, db):
+    def prepare(self, db, user):
         self.since = None
         self.before = None
         if self.list[0]:

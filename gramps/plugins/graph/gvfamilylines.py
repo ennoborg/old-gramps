@@ -74,6 +74,11 @@ _COLORS = [{'name' : _("B&W outline"), 'value' : "outline"},
            {'name' : _("Colored outline"), 'value' : "colored"},
            {'name' : _("Color fill"), 'value' : "filled"}]
 
+_ARROWS = [ { 'name' : _("Descendants <- Ancestors"),  'value' : 'd' },
+            { 'name' : _("Descendants -> Ancestors"),  'value' : 'a' },
+            { 'name' : _("Descendants <-> Ancestors"), 'value' : 'da' },
+            { 'name' : _("Descendants - Ancestors"),   'value' : '' }]
+
 #------------------------------------------------------------------------
 #
 # A quick overview of the classes we'll be using:
@@ -111,10 +116,6 @@ class FamilyLinesOptions(MenuReportOptions):
         add_option = partial(menu.add_option, category_name)
         # ---------------------
 
-        stdoptions.add_name_format_option(menu, category_name)
-
-        stdoptions.add_private_data_option(menu, category_name, default=False)
-
         followpar = BooleanOption(_('Follow parents to determine '
                                     '"family lines"'), True)
         followpar.set_help(_('Parents and their ancestors will be '
@@ -135,10 +136,11 @@ class FamilyLinesOptions(MenuReportOptions):
                                        '"family lines".'))
         add_option('removeextra', remove_extra_people)
 
-        use_roundedcorners = BooleanOption(_('Use rounded corners'), False)
-        use_roundedcorners.set_help(_('Use rounded corners to differentiate '
-                                      'between women and men.'))
-        add_option("useroundedcorners", use_roundedcorners)
+        arrow = EnumeratedListOption(_("Arrowhead direction"), 'd')
+        for i in range( 0, len(_ARROWS) ):
+            arrow.add_item(_ARROWS[i]["value"], _ARROWS[i]["name"])
+        arrow.set_help(_("Choose the direction that the arrows point."))
+        add_option("arrow", arrow)
 
         color = EnumeratedListOption(_("Graph coloring"), "filled")
         for i in range(len(_COLORS)):
@@ -148,6 +150,29 @@ class FamilyLinesOptions(MenuReportOptions):
                          "If the sex of an individual "
                          "is unknown it will be shown with gray."))
         add_option("color", color)
+
+        roundedcorners = BooleanOption(_('Use rounded corners'), False)
+        roundedcorners.set_help(
+            _("Use rounded corners to differentiate between women and men."))
+        add_option("useroundedcorners", roundedcorners)
+
+        include_id = EnumeratedListOption(_('Gramps ID'), 0)
+        include_id.add_item(0, _('Do not include'))
+        include_id.add_item(1, _('Share an existing line'))
+        include_id.add_item(2, _('On a line of its own'))
+        include_id.set_help(_("Whether (and where) to include Gramps IDs"))
+        add_option("incid", include_id)
+
+        # ---------------------
+        category_name = _('Report Options (2)')
+        add_option = partial(menu.add_option, category_name)
+        # ---------------------
+
+        stdoptions.add_name_format_option(menu, category_name)
+
+        stdoptions.add_private_data_option(menu, category_name, default=False)
+
+        stdoptions.add_living_people_option(menu, category_name)
 
         stdoptions.add_localization_option(menu, category_name)
 
@@ -189,15 +214,6 @@ class FamilyLinesOptions(MenuReportOptions):
         category_name = _('Include')
         add_option = partial(menu.add_option, category_name)
         # --------------------
-
-        stdoptions.add_living_people_option(menu, category_name)
-
-        include_id = EnumeratedListOption(_('Include Gramps ID'), 0)
-        include_id.add_item(0, _('Do not include'))
-        include_id.add_item(1, _('Share an existing line'))
-        include_id.add_item(2, _('On a line of its own'))
-        include_id.set_help(_("Whether (and where) to include Gramps IDs"))
-        add_option("incid", include_id)
 
         self.include_dates = BooleanOption(_('Include dates'), True)
         self.include_dates.set_help(_('Whether to include dates for people '
@@ -313,7 +329,7 @@ class FamilyLinesReport(Report):
 
         The arguments are:
 
-        database     - the GRAMPS database instance
+        database     - the Gramps database instance
         options      - instance of the FamilyLinesOptions class for this report
         user         - a gen.user.User() instance
         name_format  - Preferred format to display names
@@ -365,6 +381,16 @@ class FamilyLinesReport(Report):
         self._incplaces = get_value('incplaces')
         self._incchildcount = get_value('incchildcnt')
         self.includeid = get_value('incid')
+
+        arrow_str = get_value('arrow')
+        if 'd' in arrow_str:
+            self._arrowheadstyle = 'normal'
+        else:
+            self._arrowheadstyle = 'none'
+        if 'a' in arrow_str:
+            self._arrowtailstyle = 'normal'
+        else:
+            self._arrowtailstyle = 'none'
 
         # the gidlist is annoying for us to use since we always have to convert
         # the GIDs to either Person or to handles, so we may as well convert the
@@ -1015,8 +1041,9 @@ class FamilyLinesReport(Report):
                     father = self._db.get_person_from_handle(father_handle)
                     father_rn = father.get_primary_name().get_regular_name()
                     comment = self._("father: %s") % father_rn
-                    self.doc.add_link(father.get_gramps_id(),
-                                      fgid, comment=comment)
+                    self.doc.add_link(father.get_gramps_id(), fgid, "",
+                                      self._arrowheadstyle, self._arrowtailstyle,
+                                      comment=comment)
 
             # see if we have a mother to link to this family
             if mother_handle:
@@ -1024,8 +1051,9 @@ class FamilyLinesReport(Report):
                     mother = self._db.get_person_from_handle(mother_handle)
                     mother_rn = mother.get_primary_name().get_regular_name()
                     comment = self._("mother: %s") % mother_rn
-                    self.doc.add_link(mother.get_gramps_id(),
-                                      fgid, comment=comment)
+                    self.doc.add_link(mother.get_gramps_id(), fgid, "",
+                                      self._arrowheadstyle, self._arrowtailstyle,
+                                      comment=comment)
 
             if self._usesubgraphs and father_handle and mother_handle:
                 self.doc.end_subgraph()
@@ -1036,7 +1064,8 @@ class FamilyLinesReport(Report):
                     child = self._db.get_person_from_handle(childref.ref)
                     child_rn = child.get_primary_name().get_regular_name()
                     comment = self._("child: %s") % child_rn
-                    self.doc.add_link(fgid, child.get_gramps_id(),
+                    self.doc.add_link(fgid, child.get_gramps_id(), "",
+                                      self._arrowheadstyle, self._arrowtailstyle,
                                       comment=comment)
 
     def get_event_place(self, event):

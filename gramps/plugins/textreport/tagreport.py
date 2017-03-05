@@ -67,7 +67,7 @@ class TagReport(Report):
 
         The arguments are:
 
-        database        - the GRAMPS database instance
+        database        - the Gramps database instance
         options         - instance of the Options class for this report
         user            - a gen.user.User() instance
 
@@ -455,7 +455,7 @@ class TagReport(Report):
 
             self.doc.start_cell('TR-TableCell')
             self.doc.start_paragraph('TR-Normal')
-            self.doc.write_text(place.get_name())
+            self.doc.write_text(place.get_name().get_value())
             self.doc.end_paragraph()
             self.doc.end_cell()
 

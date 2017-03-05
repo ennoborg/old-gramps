@@ -56,8 +56,8 @@ class MatchesEventFilterBase(MatchesFilterBase):
     # we want to have this filter show event filters
     namespace   = 'Event'
 
-    def prepare(self, db):
-        MatchesFilterBase.prepare(self, db)
+    def prepare(self, db, user):
+        MatchesFilterBase.prepare(self, db, user)
         self.MEF_filt = self.find_filter()
 
     def apply(self, db, object):

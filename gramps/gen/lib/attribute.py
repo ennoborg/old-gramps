@@ -4,6 +4,7 @@
 # Copyright (C) 2000-2007  Donald N. Allingham
 # Copyright (C) 2010       Michiel D. Nauta
 # Copyright (C) 2011       Tim G L Lyons
+# Copyright (C) 2017       Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -76,43 +77,6 @@ class AttributeRoot(SecondaryObject, PrivacyBase):
         """
         return (PrivacyBase.serialize(self),
                 self.type.serialize(), self.value)
-
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {"_class": self.__class__.__name__,
-                "private": PrivacyBase.serialize(self),
-                "type": self.type.to_struct(),
-                "value": self.value}
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = Attribute()
-        return (PrivacyBase.from_struct(struct.get("private", default.private)),
-                AttributeType.from_struct(struct.get("type", {})),
-                struct.get("value", default.value))
 
     def unserialize(self, data):
         """
@@ -246,46 +210,6 @@ class Attribute(AttributeRoot, CitationBase, NoteBase):
                 NoteBase.serialize(self),
                 self.type.serialize(), self.value)
 
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {"_class": "Attribute",
-                "private": PrivacyBase.serialize(self),
-                "citation_list": CitationBase.to_struct(self),
-                "note_list": NoteBase.to_struct(self),
-                "type": self.type.to_struct(),
-                "value": self.value}
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        return (PrivacyBase.from_struct(struct["private"]),
-                CitationBase.from_struct(struct["citation_list"]),
-                NoteBase.from_struct(struct["note_list"]),
-                AttributeType.from_struct(struct["type"]),
-                struct["value"])
-
     def unserialize(self, data):
         """
         Convert a serialized tuple of data to an object.
@@ -296,6 +220,30 @@ class Attribute(AttributeRoot, CitationBase, NoteBase):
         NoteBase.unserialize(self, note_list)
         self.type.unserialize(the_type)
         return self
+
+    @classmethod
+    def get_schema(cls):
+        """
+        Returns the JSON Schema for this class.
+
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
+        """
+        return {
+            "type": "object",
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "private": {"type": "boolean"},
+                "citation_list": {"type": "array",
+                                  "items": {"type": "string",
+                                            "maxLength": 50}},
+                "note_list": {"type": "array",
+                              "items": {"type": "string",
+                                        "maxLength": 50}},
+                "type": AttributeType.get_schema(),
+                "value": {"type": "string"}
+            }
+        }
 
     def get_referenced_handles(self):
         """

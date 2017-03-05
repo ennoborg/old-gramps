@@ -5,6 +5,7 @@
 # Copyright (C) 2010       Michiel D. Nauta
 # Copyright (C) 2011       Tim G L Lyons
 # Copyright (C) 2013       Doug Blank <doug.blank@gmail.com>
+# Copyright (C) 2017       Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -40,7 +41,8 @@ from .mediabase import MediaBase
 from .urlbase import UrlBase
 from .tagbase import TagBase
 from .location import Location
-from .handle import Handle
+from ..const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
@@ -118,125 +120,68 @@ class Place(CitationBase, NoteBase, MediaBase, UrlBase, PrimaryObject):
                 self.change, TagBase.serialize(self), self.private)
 
     @classmethod
-    def get_labels(cls, _):
-        return {
-            "handle": _("Handle"),
-            "gramps_id": _("Gramps ID"),
-            "title": _("Title"),
-            "long": _("Longitude"),
-            "lat": _("Latitude"),
-            "placeref_list": _("Places"),
-            "name": _("Name"),
-            "alt_names": _("Alternate Names"),
-            "place_type": _("Type"),
-            "code": _("Code"),
-            "alt_loc": _("Alternate Locations"),
-            "urls": _("URLs"),
-            "media_list": _("Media"),
-            "citation_list": _("Citations"),
-            "note_list": _("Notes"),
-            "change": _("Last changed"),
-            "tag_list": _("Tags"),
-            "private": _("Private")
-            }
-    @classmethod
     def get_schema(cls):
         """
-        Return the schema as a dictionary for this class.
-        """
-        from .url import Url
-        return {
-            "handle": Handle("Place", "PLACE-HANDLE"),
-            "gramps_id": str,
-            "title": str,
-            "long": str,
-            "lat": str,
-            "placeref_list": [PlaceRef],
-            "name": PlaceName,
-            "alt_names": [PlaceName],
-            "place_type": PlaceType,
-            "code": str,
-            "alt_loc": [Location],
-            "urls": [Url],
-            "media_list": [Handle("Media", "MEDIA-HANDLE")],
-            "citation_list": [Handle("Citation", "CITATION-HANDLE")],
-            "note_list": [Handle("Note", "NOTE-HANDLE")],
-            "change": int,
-            "tag_list": [Handle("Tag", "TAG-HANDLE")],
-            "private": bool
-        }
+        Returns the JSON Schema for this class.
 
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
+        :returns: Returns a dict containing the schema.
         :rtype: dict
         """
-        return {"_class": "Place",
-                "handle": Handle("Place", self.handle),
-                "gramps_id": self.gramps_id,
-                "title": self.title,
-                "long": self.long,
-                "lat": self.lat,
-                "placeref_list": [pr.to_struct() for pr in self.placeref_list],
-                "name": self.name.to_struct(),
-                "alt_names": [an.to_struct() for an in self.alt_names],
-                "place_type": self.place_type.to_struct(),
-                "code": self.code,
-                "alt_loc": [al.to_struct() for al in self.alt_loc],
-                "urls": UrlBase.to_struct(self),
-                "media_list": MediaBase.to_struct(self),
-                "citation_list": CitationBase.to_struct(self),
-                "note_list": NoteBase.to_struct(self),
-                "change": self.change,
-                "tag_list": TagBase.to_struct(self),
-                "private": self.private}
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = Place()
-        return (Handle.from_struct(struct.get("handle", default.handle)),
-                struct.get("gramps_id", default.gramps_id),
-                struct.get("title", default.title),
-                struct.get("long", default.long),
-                struct.get("lat", default.lat),
-                [PlaceRef.from_struct(pr)
-                 for pr in struct.get("placeref_list", default.placeref_list)],
-                PlaceName.from_struct(struct.get("name", {})),
-                [PlaceName.from_struct(an)
-                 for an in struct.get("alt_names", default.alt_names)],
-                PlaceType.from_struct(struct.get("place_type", {})),
-                struct.get("code", default.code),
-                [Location.from_struct(al)
-                 for al in struct.get("alt_loc", default.alt_loc)],
-                UrlBase.from_struct(struct.get("urls", default.urls)),
-                MediaBase.from_struct(struct.get("media_list",
-                                                 default.media_list)),
-                CitationBase.from_struct(struct.get("citation_list",
-                                                    default.citation_list)),
-                NoteBase.from_struct(struct.get("note_list", default.note_list)),
-                struct.get("change", default.change),
-                TagBase.from_struct(struct.get("tag_list", default.tag_list)),
-                struct.get("private", default.private))
+        from .url import Url
+        from .mediaref import MediaRef
+        return {
+            "type": "object",
+            "title": _("Place"),
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "handle": {"type": "string",
+                           "maxLength": 50,
+                           "title": _("Handle")},
+                "gramps_id": {"type": "string",
+                              "title": _("Gramps ID")},
+                "title": {"type": "string",
+                          "title": _("Title")},
+                "long": {"type": "string",
+                         "title": _("Longitude")},
+                "lat": {"type": "string",
+                        "title": _("Latitude")},
+                "placeref_list": {"type": "array",
+                                  "items": PlaceRef.get_schema(),
+                                  "title": _("Places")},
+                "name": PlaceName.get_schema(),
+                "alt_names": {"type": "array",
+                              "items": PlaceName.get_schema(),
+                              "title": _("Alternate Names")},
+                "place_type": PlaceType.get_schema(),
+                "code": {"type": "string",
+                         "title": _("Code")},
+                "alt_loc": {"type": "array",
+                            "items": Location.get_schema(),
+                            "title": _("Alternate Locations")},
+                "urls": {"type": "array",
+                         "items": Url.get_schema(),
+                         "title": _("URLs")},
+                "media_list": {"type": "array",
+                               "items": MediaRef.get_schema(),
+                               "title": _("Media")},
+                "citation_list": {"type": "array",
+                                  "items": {"type": "string",
+                                            "maxLength": 50},
+                                  "title": _("Citations")},
+                "note_list": {"type": "array",
+                              "items": {"type": "string",
+                                        "maxLength": 50},
+                              "title": _("Notes")},
+                "change": {"type": "integer",
+                           "title": _("Last changed")},
+                "tag_list": {"type": "array",
+                             "items": {"type": "string",
+                                       "maxLength": 50},
+                             "title": _("Tags")},
+                "private": {"type": "boolean",
+                            "title": _("Private")}
+            }
+        }
 
     def unserialize(self, data):
         """

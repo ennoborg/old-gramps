@@ -41,7 +41,7 @@ from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 from gramps.gen.errors import ReportError
 from gramps.gen.plug.menu import (PersonOption, BooleanOption, NumberOption,
-                                  EnumeratedListOption)
+                                  EnumeratedListOption, ColorOption)
 from gramps.gen.plug.report import Report
 from gramps.gen.plug.report import utils
 from gramps.gen.plug.report import MenuReportOptions
@@ -57,6 +57,11 @@ from gramps.gen.proxy import CacheProxyDb
 _COLORS = [{'name' : _("B&W outline"), 'value' : "outline"},
            {'name' : _("Colored outline"), 'value' : "colored"},
            {'name' : _("Color fill"), 'value' : "filled"}]
+
+_ARROWS = [ { 'name' : _("Center -> Others"),  'value' : 'o' },
+            { 'name' : _("Center <- Others"),  'value' : 'c' },
+            { 'name' : _("Center <-> Other"), 'value' : 'co' },
+            { 'name' : _("Center - Other"),   'value' : '' }]
 
 #------------------------------------------------------------------------
 #
@@ -99,31 +104,25 @@ class HourGlassReport(Report):
         if self.center_person is None:
             raise ReportError(_("Person %s is not in the Database") % pid)
 
-        # Would be nice to get rid of these 2 hard-coded arrays of colours
-        # and instead allow the user to pick-and-choose whatever colour they
-        # want.  When/if this is done, take a look at the colour-selection
-        # widget and code used in the FamilyLines graph.  FIXME
-        colored = {
-            'male': 'dodgerblue4',
-            'female': 'deeppink',
-            'unknown': 'black',
-            'family': 'darkgreen'
-        }
-        filled = {
-            'male': 'lightblue',
-            'female': 'lightpink',
-            'unknown': 'lightgray',
-            'family': 'lightyellow'
-        }
-
         self.colorize = menu.get_option_by_name('color').get_value()
-        if self.colorize == 'colored':
-            self.colors = colored
-        elif self.colorize == 'filled':
-            self.colors = filled
+        self.colors = {'male': menu.get_option_by_name('colormales').get_value(),
+            'female': menu.get_option_by_name('colorfemales').get_value(),
+            'unknown': menu.get_option_by_name('colorunknown').get_value(),
+            'family': menu.get_option_by_name('colorfamilies').get_value()
+        }
         self.roundcorners = menu.get_option_by_name('roundcorners').get_value()
 
         self.includeid = menu.get_option_by_name('incid').get_value()
+
+        arrow_str = menu.get_option_by_name('arrow').get_value()
+        if 'o' in arrow_str:
+            self.arrowheadstyle = 'normal'
+        else:
+            self.arrowheadstyle = 'none'
+        if 'c' in arrow_str:
+            self.arrowtailstyle = 'normal'
+        else:
+            self.arrowtailstyle = 'none'
 
         stdoptions.run_name_format_option(self, menu)
 
@@ -144,7 +143,9 @@ class HourGlassReport(Report):
         for family_handle in person.get_family_handle_list():
             family = self.__db.get_family_from_handle(family_handle)
             self.add_family(family)
-            self.doc.add_link(person.get_gramps_id(), family.get_gramps_id())
+            self.doc.add_link(person.get_gramps_id(), family.get_gramps_id(),
+                               head=self.arrowheadstyle,
+                               tail=self.arrowtailstyle)
             for child_ref in family.get_child_ref_list():
                 child_handle = child_ref.get_reference_handle()
                 if child_handle not in self.__used_people:
@@ -153,7 +154,9 @@ class HourGlassReport(Report):
                     child = self.__db.get_person_from_handle(child_handle)
                     self.add_person(child)
                     self.doc.add_link(family.get_gramps_id(),
-                                      child.get_gramps_id())
+                                      child.get_gramps_id(),
+                                      head=self.arrowheadstyle,
+                                      tail=self.arrowtailstyle)
                     self.traverse_down(child, gen+1)
 
     def traverse_up(self, person, gen):
@@ -168,7 +171,8 @@ class HourGlassReport(Report):
             family_id = family.get_gramps_id()
             self.add_family(family)
             self.doc.add_link(family_id, person.get_gramps_id(),
-                              head='none', tail='normal')
+                              head=self.arrowtailstyle,
+                              tail=self.arrowheadstyle )
 
             # create link from family to father
             father_handle = family.get_father_handle()
@@ -178,7 +182,8 @@ class HourGlassReport(Report):
                 father = self.__db.get_person_from_handle(father_handle)
                 self.add_person(father)
                 self.doc.add_link(father.get_gramps_id(), family_id,
-                                  head='none', tail='normal')
+                                  head=self.arrowtailstyle,
+                                  tail=self.arrowheadstyle )
                 # no need to go up if he is a father in another family
                 if father_handle not in self.__used_people:
                     self.__used_people.append(father_handle)
@@ -192,7 +197,8 @@ class HourGlassReport(Report):
                 mother = self.__db.get_person_from_handle(mother_handle)
                 self.add_person(mother)
                 self.doc.add_link(mother.get_gramps_id(), family_id,
-                                  head='none', tail='normal')
+                                  head=self.arrowtailstyle,
+                                  tail=self.arrowheadstyle)
                 # no need to go up if she is a mother in another family
                 if mother_handle not in self.__used_people:
                     self.__used_people.append(mother_handle)
@@ -309,34 +315,21 @@ class HourGlassOptions(MenuReportOptions):
         pid.set_help(_("The Center person for the graph"))
         menu.add_option(category_name, "pid", pid)
 
-        stdoptions.add_name_format_option(menu, category_name)
-
-        stdoptions.add_private_data_option(menu, category_name)
-
-        stdoptions.add_living_people_option(menu, category_name)
-
-        max_gen = NumberOption(_('Max Descendant Generations'), 10, 1, 15)
-        max_gen.set_help(_("The number of generations of descendants to "
+        max_gen_d = NumberOption(_('Max Descendant Generations'), 10, 1, 15)
+        max_gen_d.set_help(_("The number of generations of descendants to "
                            "include in the graph"))
-        menu.add_option(category_name, "maxdescend", max_gen)
+        menu.add_option(category_name, "maxdescend", max_gen_d)
 
-        max_gen = NumberOption(_('Max Ancestor Generations'), 10, 1, 15)
-        max_gen.set_help(_("The number of generations of ancestors to "
+        max_gen_a = NumberOption(_('Max Ancestor Generations'), 10, 1, 15)
+        max_gen_a.set_help(_("The number of generations of ancestors to "
                            "include in the graph"))
-        menu.add_option(category_name, "maxascend", max_gen)
+        menu.add_option(category_name, "maxascend", max_gen_a)
 
-        include_id = EnumeratedListOption(_('Include Gramps ID'), 0)
-        include_id.add_item(0, _('Do not include'))
-        include_id.add_item(1, _('Share an existing line'))
-        include_id.add_item(2, _('On a line of its own'))
-        include_id.set_help(_("Whether (and where) to include Gramps IDs"))
-        menu.add_option(category_name, "incid", include_id)
-
-        stdoptions.add_localization_option(menu, category_name)
-
-        ################################
-        category_name = _("Graph Style")
-        ################################
+        arrow = EnumeratedListOption(_("Arrowhead direction"), 'o')
+        for i in range( 0, len(_ARROWS) ):
+            arrow.add_item(_ARROWS[i]["value"], _ARROWS[i]["name"])
+        arrow.set_help(_("Choose the direction that the arrows point."))
+        menu.add_option(category_name, "arrow", arrow)
 
         color = EnumeratedListOption(_("Graph coloring"), "filled")
         for i in range(0, len(_COLORS)):
@@ -350,3 +343,41 @@ class HourGlassOptions(MenuReportOptions):
         roundedcorners.set_help(
             _("Use rounded corners to differentiate between women and men."))
         menu.add_option(category_name, "roundcorners", roundedcorners)
+
+        include_id = EnumeratedListOption(_('Gramps ID'), 0)
+        include_id.add_item(0, _('Do not include'))
+        include_id.add_item(1, _('Share an existing line'))
+        include_id.add_item(2, _('On a line of its own'))
+        include_id.set_help(_("Whether (and where) to include Gramps IDs"))
+        menu.add_option(category_name, "incid", include_id)
+
+        category_name = _("Report Options (2)")
+
+        stdoptions.add_name_format_option(menu, category_name)
+
+        stdoptions.add_private_data_option(menu, category_name)
+
+        stdoptions.add_living_people_option(menu, category_name)
+
+        stdoptions.add_localization_option(menu, category_name)
+
+        ################################
+        category_name = _("Graph Style")
+        ################################
+
+        color_males = ColorOption(_('Males'), '#e0e0ff')
+        color_males.set_help(_('The color to use to display men.'))
+        menu.add_option(category_name, 'colormales', color_males)
+
+        color_females = ColorOption(_('Females'), '#ffe0e0')
+        color_females.set_help(_('The color to use to display women.'))
+        menu.add_option(category_name, 'colorfemales', color_females)
+
+        color_unknown = ColorOption(_('Unknown'), '#e0e0e0')
+        color_unknown.set_help(_('The color to use '
+                                 'when the gender is unknown.'))
+        menu.add_option(category_name, 'colorunknown', color_unknown)
+
+        color_family = ColorOption(_('Families'), '#ffffe0')
+        color_family.set_help(_('The color to use to display families.'))
+        menu.add_option(category_name, 'colorfamilies', color_family)

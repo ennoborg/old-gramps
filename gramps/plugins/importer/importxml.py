@@ -1766,11 +1766,11 @@ class GrampsParser(UpdateCallback):
             val = attrs['value']
             match = self.grampsuri.match(val)
             if match:
-                target = {"Person":"person", "Family":"family",
-                          "Event":"event", "Place":"place", "Source":"source",
-                          "Citation":"citation",
-                          "Repository":"repository", "Media":"media",
-                          "Note":"note"}[str(match.group('object_class'))]
+                target = {"Person" : "person", "Family" : "family",
+                          "Event" : "event", "Place" : "place",
+                          "Source" : "source", "Citation" : "citation",
+                          "Repository" : "repository", "Media" : "media",
+                          "Note" : "note"}[str(match.group('object_class'))]
                 if match.group('handle') in self.import_handles:
                     if target in self.import_handles[match.group('handle')]:
                         val = "gramps://%s/handle/%s" % (
@@ -2499,7 +2499,7 @@ class GrampsParser(UpdateCallback):
         # TRANSLATORS: leave the {date} and {xml} untranslated in the format string,
         # but you may re-order them if needed.
         LOG.warning(_("Invalid date {date} in XML {xml}, preserving XML as text"
-            ).format(date=date_error.date.to_struct(), xml=xml))
+            ).format(date=date_error.date.__dict__, xml=xml))
         date_value.set(modifier=Date.MOD_TEXTONLY, text=xml)
 
     def start_datestr(self, attrs):

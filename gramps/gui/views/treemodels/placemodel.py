@@ -48,6 +48,7 @@ from gramps.gen.lib import Place, PlaceType
 from gramps.gen.datehandler import format_time
 from gramps.gen.utils.place import conv_lat_lon
 from gramps.gen.display.place import displayer as place_displayer
+from gramps.gen.config import config
 from .flatbasemodel import FlatBaseModel
 from .treebasemodel import TreeBaseModel
 
@@ -229,12 +230,12 @@ class PlaceListModel(PlaceBaseModel, FlatBaseModel):
     """
     Flat place model.  (Original code in PlaceBaseModel).
     """
-    def __init__(self, db, scol=0, order=Gtk.SortType.ASCENDING, search=None,
-                 skip=set(), sort_map=None):
+    def __init__(self, db, uistate, scol=0, order=Gtk.SortType.ASCENDING,
+                 search=None, skip=set(), sort_map=None):
 
         PlaceBaseModel.__init__(self, db)
-        FlatBaseModel.__init__(self, db, scol, order, search=search, skip=skip,
-                               sort_map=sort_map)
+        FlatBaseModel.__init__(self, db, uistate, scol, order, search=search,
+                               skip=skip, sort_map=sort_map)
 
     def destroy(self):
         """
@@ -252,11 +253,11 @@ class PlaceTreeModel(PlaceBaseModel, TreeBaseModel):
     """
     Hierarchical place model.
     """
-    def __init__(self, db, scol=0, order=Gtk.SortType.ASCENDING, search=None,
-                 skip=set(), sort_map=None):
+    def __init__(self, db, uistate, scol=0, order=Gtk.SortType.ASCENDING,
+                 search=None, skip=set(), sort_map=None):
 
         PlaceBaseModel.__init__(self, db)
-        TreeBaseModel.__init__(self, db, scol=scol, order=order,
+        TreeBaseModel.__init__(self, db, uistate, scol=scol, order=order,
                                search=search, skip=skip, sort_map=sort_map,
                                nrgroups=3,
                                group_can_have_handle=True)

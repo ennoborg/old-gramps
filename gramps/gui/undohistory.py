@@ -76,8 +76,8 @@ class UndoHistory(ManagedWindow):
         self.undodb = self.db.undodb
         self.dbstate = dbstate
 
-        window = Gtk.Dialog("", uistate.window,
-                            Gtk.DialogFlags.DESTROY_WITH_PARENT, None)
+        window = Gtk.Dialog(title="", transient_for=uistate.window,
+                            destroy_with_parent=True)
 
         self.help_button = window.add_button(_('_Help'),
                                              Gtk.ResponseType.HELP)
@@ -91,7 +91,7 @@ class UndoHistory(ManagedWindow):
                                               Gtk.ResponseType.CLOSE)
 
         self.set_window(window, None, self.title)
-        self.setup_configs('interface.undohistory', 400, 200)
+        self.setup_configs('interface.undohistory', 500, 200)
         self.window.connect('response', self._response)
 
         scrolled_window = Gtk.ScrolledWindow()
@@ -119,7 +119,6 @@ class UndoHistory(ManagedWindow):
 
         scrolled_window.add(self.tree)
         self.window.vbox.pack_start(scrolled_window, True, True, 0)
-        self.window.show_all()
 
         self._build_model()
         self._update_ui()

@@ -3,6 +3,7 @@
 #
 # Copyright (C) 2008       Zsolt Foldvari
 # Copyright (C) 2013       Doug Blank <doug.blank@gmail.com>
+# Copyright (C) 2017       Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,6 +28,8 @@
 #
 #-------------------------------------------------------------------------
 from .styledtexttag import StyledTextTag
+from ..const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
@@ -288,62 +291,25 @@ class StyledText:
 
         return (self._string, the_tags)
 
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :return: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        if self._tags:
-            the_tags = [tag.to_struct() for tag in self._tags]
-        else:
-            the_tags = []
-
-        return {"_class": "StyledText",
-                "string": self._string,
-                "tags": the_tags}
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :return: Returns a serialized object
-        """
-        default = StyledText()
-        return (struct.get("string", default.string),
-                [StyledTextTag.from_struct(t)
-                 for t in struct.get("tags", default.tags)])
-
     @classmethod
     def get_schema(cls):
         """
-        The schema for StyledText.
+        Returns the JSON Schema for this class.
+
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
         """
         return {
-            "string": str,
-            "tags": [StyledTextTag],
-        }
-
-    @classmethod
-    def get_labels(cls, _):
-        return {
-            "string": _("Text"),
-            "tags": _("Styled Text Tags"),
+            "type": "object",
+            "title": _("Styled Text"),
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "string": {"type": "string",
+                           "title": _("Text")},
+                "tags": {"type": "array",
+                         "items": StyledTextTag.get_schema(),
+                         "title": _("Styled Text Tags")}
+            }
         }
 
     def unserialize(self, data):
@@ -372,14 +338,29 @@ class StyledText:
         """
         return self._tags
 
+    def set_tags(self, tags):
+        """
+        Set the list of formatting tags.
+
+        :param tags: The formatting tags applied on the text.
+        :type tags: list of 0 or more :py:class:`.StyledTextTag` instances.
+        """
+        self._tags = tags
+
     def get_string(self):
         """
         Accessor for the associated string.
         """
         return self._string
 
-    tags = property(get_tags)
-    string = property(get_string)
+    def set_string(self, string):
+        """
+        Setter for the associated string.
+        """
+        self._string = string
+
+    tags = property(get_tags, set_tags)
+    string = property(get_string, set_string)
 
 if __name__ == '__main__':
     from .styledtexttagtype import StyledTextTagType

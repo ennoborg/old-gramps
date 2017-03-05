@@ -4,6 +4,7 @@
 # Copyright (C) 2000-2007  Donald N. Allingham
 # Copyright (C) 2010       Michiel D. Nauta
 # Copyright (C) 2011       Tim G L Lyons
+# Copyright (C) 2017       Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -45,7 +46,8 @@ from .datebase import DateBase
 from .placebase import PlaceBase
 from .tagbase import TagBase
 from .eventtype import EventType
-from .handle import Handle
+from ..const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 
 LOG = logging.getLogger(".citation")
 
@@ -118,108 +120,59 @@ class Event(CitationBase, NoteBase, MediaBase, AttributeBase,
                 AttributeBase.serialize(self),
                 self.change, TagBase.serialize(self), self.private)
 
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {"_class": "Event",
-                "handle": Handle("Event", self.handle),
-                "gramps_id": self.gramps_id,
-                "type": self.__type.to_struct(),
-                "date": DateBase.to_struct(self),
-                "description": self.__description,
-                "place": Handle("Place", self.place),
-                "citation_list": CitationBase.to_struct(self),
-                "note_list": NoteBase.to_struct(self),
-                "media_list": MediaBase.to_struct(self),
-                "attribute_list": AttributeBase.to_struct(self),
-                "change": self.change,
-                "tag_list": TagBase.to_struct(self),
-                "private": self.private}
-
     @classmethod
     def get_schema(cls):
         """
-        Return the schema as a dictionary for this class.
+        Returns the JSON Schema for this class.
+
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
         """
         from .attribute import Attribute
-        from .citation import Citation
-        from .note import Note
         from .date import Date
-        from .tag import Tag
-        from .media import Media
+        from .mediaref import MediaRef
         return {
-            "handle": Handle("Event", "EVENT-HANDLE"),
-            "gramps_id": str,
-            "type": EventType,
-            "date": Date,
-            "description": str,
-            "place": Handle("Place", "PLACE-HANDLE"),
-            "citation_list": [Citation],
-            "note_list": [Note],
-            "media_list": [Media],
-            "attribute_list": [Attribute],
-            "change": int,
-            "tag_list": [Tag],
-            "private": bool,
+            "type": "object",
+            "title": _("Event"),
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "handle": {"type": "string",
+                           "maxLength": 50,
+                           "title": _("Handle")},
+                "gramps_id": {"type": "string",
+                              "title": _("Gramps ID")},
+                "type": EventType.get_schema(),
+                "date": {"oneOf": [{"type": "null"}, Date.get_schema()],
+                         "title": _("Date")},
+                "description": {"type": "string",
+                                "title": _("Description")},
+                "place": {"type": ["string", "null"],
+                          "maxLength": 50,
+                          "title": _("Place")},
+                "citation_list": {"type": "array",
+                                  "items": {"type": "string",
+                                            "maxLength": 50},
+                                  "title": _("Citations")},
+                "note_list": {"type": "array",
+                              "items": {"type": "string",
+                                        "maxLength": 50},
+                               "title": _("Notes")},
+                "media_list": {"type": "array",
+                               "items": MediaRef.get_schema(),
+                               "title": _("Media")},
+                "attribute_list": {"type": "array",
+                                   "items": Attribute.get_schema(),
+                                   "title": _("Media")},
+                "change": {"type": "integer",
+                           "title": _("Last changed")},
+                "tag_list": {"type": "array",
+                             "items": {"type": "string",
+                                       "maxLength": 50},
+                             "title": _("Tags")},
+                "private": {"type": "boolean",
+                            "title": _("Private")},
+            }
         }
-
-    @classmethod
-    def get_labels(cls, _):
-        return {
-            "_class": _("Event"),
-            "handle":  _("Handle"),
-            "gramps_id": _("Gramps ID"),
-            "type": _("Type"),
-            "date": _("Date"),
-            "description": _("Description"),
-            "place":  _("Place"),
-            "citation_list": _("Citations"),
-            "note_list": _("Notes"),
-            "media_list": _("Media"),
-            "attribute_list": _("Attributes"),
-            "change": _("Last changed"),
-            "tag_list": _("Tags"),
-            "private": _("Private"),
-        }
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = Event()
-        return (Handle.from_struct(struct.get("handle", default.handle)),
-                struct.get("gramps_id", default.gramps_id),
-                EventType.from_struct(struct.get("type", {})),
-                DateBase.from_struct(struct.get("date", {})),
-                struct.get("description", default.description),
-                Handle.from_struct(struct.get("place", default.place)),
-                CitationBase.from_struct(struct.get("citation_list", default.citation_list)),
-                NoteBase.from_struct(struct.get("note_list", default.note_list)),
-                MediaBase.from_struct(struct.get("media_list", default.media_list)),
-                AttributeBase.from_struct(struct.get("attribute_list", default.attribute_list)),
-                struct.get("change", default.change),
-                TagBase.from_struct(struct.get("tag_list", default.tag_list)),
-                struct.get("private", default.private))
 
     def unserialize(self, data):
         """

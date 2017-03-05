@@ -2,6 +2,7 @@
 # Gramps - a GTK+/GNOME based genealogy program
 #
 # Copyright (C) 2000-2007  Donald N. Allingham
+# Copyright (C) 2017       Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -208,50 +209,22 @@ class GrampsType(object, metaclass=GrampsTypeMeta):
         return (self.__value, self.__string)
 
     @classmethod
-    def get_labels(cls, _):
-        return {
-            "_class": _("Family Relationship"),
-            "value": _("Family Relationship"),
-            "string": _("Family Relationship"),
-        }
-
-    def to_struct(self):
+    def get_schema(cls):
         """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
+        Returns the JSON Schema for this class.
 
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
+        :returns: Returns a dict containing the schema.
         :rtype: dict
         """
-        return {"_class": self.__class__.__name__,
-                "value": self.__value,
-                "string": str(self)}
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = cls()
-        if struct.get("value", cls._CUSTOM) == cls._CUSTOM:
-            return (struct.get("value", default.value),
-                    struct.get("string", ""))
-        else:
-            return (struct.get("value", default.value), '')
+        return {
+            "type": "object",
+            "title": _("Type"),
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "string":  {"type": "string",
+                            "title": _("Type")},
+            }
+        }
 
     def unserialize(self, data):
         """Convert a serialized tuple of data to an object."""

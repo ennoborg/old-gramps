@@ -49,7 +49,7 @@ class IsAncestorOfFilterMatch(IsAncestorOf):
     description = _("Matches people that are ancestors "
                     "of anybody matched by a filter")
 
-    def prepare(self,db):
+    def prepare(self, db, user):
         self.db = db
         self.map = set()
         try:
@@ -61,10 +61,18 @@ class IsAncestorOfFilterMatch(IsAncestorOf):
             first = 1
 
         filt = MatchesFilter(self.list[0:1])
-        filt.requestprepare(db)
+        filt.requestprepare(db, user)
+        if user:
+            user.begin_progress(self.category,
+                                _('Retrieving all sub-filter matches'),
+                                db.get_number_of_people())
         for person in db.iter_people():
+            if user:
+                user.step_progress()
             if filt.apply(db, person):
                 self.init_ancestor_list(db, person, first)
+        if user:
+            user.end_progress()
         filt.requestreset()
 
     def reset(self):

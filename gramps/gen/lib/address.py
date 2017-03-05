@@ -5,6 +5,7 @@
 # Copyright (C) 2010       Michiel D. Nauta
 # Copyright (C) 2011       Tim G L Lyons
 # Copyright (C) 2013       Doug Blank <doug.blank@gmail.com>
+# Copyright (C) 2017       Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -67,49 +68,6 @@ class Address(SecondaryObject, PrivacyBase, CitationBase, NoteBase, DateBase,
                 DateBase.serialize(self),
                 LocationBase.serialize(self))
 
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {"_class": "Address",
-                "private": PrivacyBase.serialize(self),
-                "citation_list": CitationBase.to_struct(self),
-                "note_list": NoteBase.to_struct(self),
-                "date": DateBase.to_struct(self),
-                "location": LocationBase.to_struct(self)
-               }
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = Address()
-        return (PrivacyBase.from_struct(struct.get("private", default.private)),
-                CitationBase.from_struct(struct.get("citation_list", default.citation_list)),
-                NoteBase.from_struct(struct.get("note_list", default.note_list)),
-                DateBase.from_struct(struct.get("date", {})),
-                LocationBase.from_struct(struct.get("location", {}))
-               )
-
     def unserialize(self, data):
         """
         Convert a serialized tuple of data to an object.
@@ -122,6 +80,38 @@ class Address(SecondaryObject, PrivacyBase, CitationBase, NoteBase, DateBase,
         DateBase.unserialize(self, date)
         LocationBase.unserialize(self, location)
         return self
+
+    @classmethod
+    def get_schema(cls):
+        """
+        Returns the JSON Schema for this class.
+
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
+        """
+        from .date import Date
+        return {
+            "type": "object",
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "private": {"type": "boolean"},
+                "citation_list": {"type": "array",
+                                  "items": {"type": "string",
+                                            "maxLength": 50}},
+                "note_list": {"type": "array",
+                              "items": {"type": "string",
+                                        "maxLength": 50}},
+                "date": {"oneOf": [{"type": "null"}, Date.get_schema()]},
+                "street": {"type": "string"},
+                "locality": {"type": "string"},
+                "city": {"type": "string"},
+                "county": {"type": "string"},
+                "state": {"type": "string"},
+                "country": {"type": "string"},
+                "postal": {"type": "string"},
+                "phone": {"type": "string"}
+            }
+        }
 
     def get_text_data_list(self):
         """

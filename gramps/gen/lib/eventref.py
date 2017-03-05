@@ -5,6 +5,7 @@
 # Copyright (C) 2010       Michiel D. Nauta
 # Copyright (C) 2011       Tim G L Lyons
 # Copyright (C) 2013       Doug Blank <doug.blank@gmail.com>
+# Copyright (C) 2017       Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,7 +39,8 @@ from .refbase import RefBase
 from .eventroletype import EventRoleType
 from .const import IDENTICAL, EQUAL, DIFFERENT
 from .citationbase import IndirectCitationBase
-from .handle import Handle
+from ..const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 
 #-------------------------------------------------------------------------
 #
@@ -79,84 +81,35 @@ class EventRef(PrivacyBase, NoteBase, AttributeBase, RefBase,
             self.__role.serialize()
             )
 
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {
-            "_class": "EventRef",
-            "private": PrivacyBase.to_struct(self),
-            "note_list": NoteBase.to_struct(self),
-            "attribute_list": AttributeBase.to_struct(self),
-            "ref": Handle("Event", self.ref),
-            "role": self.__role.to_struct()
-            }
-
     @classmethod
     def get_schema(cls):
         """
-        Returns the schema for EventRef.
+        Returns the JSON Schema for this class.
 
-        :returns: Returns a dict containing the fields to types.
+        :returns: Returns a dict containing the schema.
         :rtype: dict
         """
         from .attribute import Attribute
         return {
-            "private": bool,
-            "note_list": [Handle("Note", "NOTE-HANDLE")],
-            "attribute_list": [Attribute],
-            "ref": Handle("Event", "EVENT-HANDLE"),
-            "role": EventRoleType,
+            "type": "object",
+            "title": _("Event reference"),
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "private": {"type": "boolean",
+                            "title": _("Private")},
+                "note_list": {"type": "array",
+                              "items": {"type": "string",
+                                        "maxLength": 50},
+                              "title": _("Notes")},
+                "attribute_list": {"type": "array",
+                                   "items": Attribute.get_schema(),
+                                   "title": _("Attributes")},
+                "ref": {"type": "string",
+                        "maxLength": 50,
+                        "title": _("Event")},
+                "role": EventRoleType.get_schema(),
+            }
         }
-
-    @classmethod
-    def get_labels(cls, _):
-        """
-        Given a translation function, returns the labels for
-        each field of this object.
-
-        :returns: Returns a dict containing the fields to labels.
-        :rtype: dict
-        """
-        return {
-            "private": _("Private"),
-            "note_list": _("Notes"),
-            "attribute_list": _("Attributes"),
-            "ref": _("Event"),
-            "role": _("Role"),
-        }
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = EventRef()
-        return (
-            PrivacyBase.from_struct(struct.get("private", default.private)),
-            NoteBase.from_struct(struct.get("note_list", default.note_list)),
-            AttributeBase.from_struct(struct.get("attribute_list", default.attribute_list)),
-            RefBase.from_struct(struct.get("ref", default.ref)),
-            EventRoleType.from_struct(struct.get("role", {}))
-        )
 
     def unserialize(self, data):
         """

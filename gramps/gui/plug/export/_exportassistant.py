@@ -274,7 +274,8 @@ class ExportAssistant(ManagedWindow, Gtk.Assistant):
         # add new content
         if config_box_class:
             self.option_box_instance = config_box_class(
-                self.person, self.dbstate, self.uistate, track=self.track)
+                self.person, self.dbstate, self.uistate, track=self.track,
+                window=self.window)
             box = self.option_box_instance.get_option_box()
             vbox.add(box)
         else:
@@ -350,6 +351,8 @@ class ExportAssistant(ManagedWindow, Gtk.Assistant):
         box.set_spacing(6)
         box.pack_start(image, False, False, 5)
         box.pack_start(self.confirm, False, False, 5)
+        self.progressbar = Gtk.ProgressBar()
+        box.pack_start(self.progressbar, False, False, 0)
 
         page = box
         self.append_page(page)
@@ -369,13 +372,10 @@ class ExportAssistant(ManagedWindow, Gtk.Assistant):
         image.set_from_file(SPLASH)
         vbox.pack_start(image, False, False, 5)
 
-        self.labelsum = Gtk.Label(label=_("Please wait while your data is selected and exported"))
+        self.labelsum = Gtk.Label()
         self.labelsum.set_line_wrap(True)
         self.labelsum.set_use_markup(True)
         vbox.pack_start(self.labelsum, False, False, 0)
-
-        self.progressbar = Gtk.ProgressBar()
-        vbox.pack_start(self.progressbar, True, True, 0)
 
         page = vbox
         page.show_all()
@@ -486,6 +486,7 @@ class ExportAssistant(ManagedWindow, Gtk.Assistant):
                 # Override message
                 confirm_text = self.option_box_instance.confirm_text
             self.confirm.set_label(confirm_text)
+            self.progressbar.hide()
 
         elif self.get_page_type(page) ==  Gtk.AssistantPageType.SUMMARY :
             # The summary page
@@ -601,11 +602,14 @@ class ExportAssistant(ManagedWindow, Gtk.Assistant):
             log.error(_("Error exporting your Family Tree"), exc_info=True)
         return success
 
-    def pre_save(self,page):
-        #as all is locked, show the page, which assistant normally only does
-        # after prepare signal!
+    def pre_save(self, page):
+        ''' Since we are in 'prepare', the next page is not yet shown, so
+        modify the 'confirm' page text and show the progress bar
+        '''
+        self.confirm.set_label(
+            _("Please wait while your data is selected and exported"))
         self.writestarted = True
-        page.set_child_visible(True)
+        self.progressbar.show()
         self.show_all()
 
         self.set_busy_cursor(1)
@@ -636,6 +640,9 @@ class ExportAssistant(ManagedWindow, Gtk.Assistant):
         self.progressbar.set_fraction(min(value/100.0, 1.0))
         if text:
             self.progressbar.set_text("%s: %d%%" % (text, value))
+            self.confirm.set_label(
+                _("Please wait while your data is selected and exported") +
+                "\n" + text)
         else:
             self.progressbar.set_text("%d%%" % value)
         while Gtk.events_pending():

@@ -5,6 +5,7 @@
 # Copyright (C) 2010       Michiel D. Nauta
 # Copyright (C) 2011       Tim G L Lyons
 # Copyright (C) 2013       Doug Blank <doug.blank@gmail.com>
+# Copyright (C) 2017       Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -144,57 +145,6 @@ class LdsOrd(SecondaryObject, CitationBase, NoteBase,
                 self.type, self.place,
                 self.famc, self.temple, self.status, self.private)
 
-    def to_struct(self):
-        """
-        Convert the data held in this object to a structure (eg,
-        struct) that represents all the data elements.
-
-        This method is used to recursively convert the object into a
-        self-documenting form that can easily be used for various
-        purposes, including diffs and queries.
-
-        These structures may be primitive Python types (string,
-        integer, boolean, etc.) or complex Python types (lists,
-        tuples, or dicts). If the return type is a dict, then the keys
-        of the dict match the fieldname of the object. If the return
-        struct (or value of a dict key) is a list, then it is a list
-        of structs. Otherwise, the struct is just the value of the
-        attribute.
-
-        :returns: Returns a struct containing the data of the object.
-        :rtype: dict
-        """
-        return {"_class": "LdsOrd",
-                "citation_list": CitationBase.to_struct(self),
-                "note_list": NoteBase.to_struct(self),
-                "date": DateBase.to_struct(self),
-                "type": self.type,
-                "place": self.place,
-                "famc": self.famc,
-                "temple": self.temple,
-                "status": self.status,
-                "private": self.private}
-
-    @classmethod
-    def from_struct(cls, struct):
-        """
-        Given a struct data representation, return a serialized object.
-
-        :returns: Returns a serialized object
-        """
-        default = LdsOrd()
-        return (CitationBase.from_struct(struct.get("citation_list",
-                                                    default.citation_list)),
-                NoteBase.from_struct(struct.get("note_list",
-                                                default.note_list)),
-                DateBase.from_struct(struct.get("date", {})),
-                struct.get("type", {}),
-                struct.get("place", default.place),
-                struct.get("famc", default.famc),
-                struct.get("temple", default.temple),
-                struct.get("status", default.status),
-                struct.get("private", default.private))
-
     def unserialize(self, data):
         """
         Convert a serialized tuple of data to an object.
@@ -205,6 +155,35 @@ class LdsOrd(SecondaryObject, CitationBase, NoteBase,
         NoteBase.unserialize(self, note_list)
         DateBase.unserialize(self, date)
         return self
+
+    @classmethod
+    def get_schema(cls):
+        """
+        Returns the JSON Schema for this class.
+
+        :returns: Returns a dict containing the schema.
+        :rtype: dict
+        """
+        from .date import Date
+        return {
+            "type": "object",
+            "properties": {
+                "_class": {"enum": [cls.__name__]},
+                "citation_list": {"type": "array",
+                                  "items": {"type": "string",
+                                            "maxLength": 50}},
+                "note_list": {"type": "array",
+                              "items": {"type": "string",
+                                        "maxLength": 50}},
+                "date": {"oneOf": [{"type": "null"}, Date.get_schema()]},
+                "type": {"type": "integer"},
+                "place": {"type": "string"},
+                "famc": {"type": ["null", "string"]},
+                "temple": {"type": "string"},
+                "status": {"type": "integer"},
+                "private": {"type": "boolean"}
+            }
+        }
 
     def get_text_data_list(self):
         """
