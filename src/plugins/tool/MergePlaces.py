@@ -145,7 +145,7 @@ class MergePlaces(tool.BatchTool, ManagedWindow.ManagedWindow):
             _("Number of merges done"),
             ngettext("%(num)d places merged",
             "%(num)d places merged", num_merges) % {'num': num_merges})
-        self.close(obj)
+        self.close()
 
     def display(self):
 
