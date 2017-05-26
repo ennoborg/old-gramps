@@ -75,8 +75,7 @@ class RecordsReport(Report):
         Report.__init__(self, database, options, user)
         menu = options.menu
 
-        lang = options.menu.get_option_by_name('trans').get_value()
-        self._locale = self.set_locale(lang)
+        self.set_locale(options.menu.get_option_by_name('trans').get_value())
 
         stdoptions.run_private_data_option(self, menu)
         living_opt = stdoptions.run_living_people_option(self, menu,
@@ -325,7 +324,7 @@ class RecordsReportOptions(MenuReportOptions):
         para = ParagraphStyle()
         para.set_font(font)
         para.set_top_margin(utils.pt2cm(6))
-        para.set_description(_('The style used for headings.'))
+        para.set_description(_('The style used for the section headers.'))
         default_style.add_paragraph_style('REC-Heading', para)
 
         font = FontStyle()

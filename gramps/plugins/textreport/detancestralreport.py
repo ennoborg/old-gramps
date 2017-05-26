@@ -92,6 +92,7 @@ class DetAncestorReport(Report):
         that come in the options class.
 
         gen           - Maximum number of generations to include.
+        inc_id        - Whether to include Gramps IDs
         pagebgg       - Whether to include page breaks between generations.
         pageben       - Whether to include page break before End Notes.
         firstName     - Whether to use first names instead of pronouns.
@@ -124,8 +125,9 @@ class DetAncestorReport(Report):
         get_option_by_name = menu.get_option_by_name
         get_value = lambda name: get_option_by_name(name).get_value()
 
-        lang = menu.get_option_by_name('trans').get_value()
-        self._locale = self.set_locale(lang)
+        self.set_locale(menu.get_option_by_name('trans').get_value())
+
+        stdoptions.run_date_format_option(self, menu)
 
         stdoptions.run_private_data_option(self, menu)
         stdoptions.run_living_people_option(self, menu, self._locale)
@@ -155,6 +157,7 @@ class DetAncestorReport(Report):
         self.inc_srcnotes = get_value('incsrcnotes')
         self.inc_attrs = get_value('incattrs')
         self.initial_sosa = get_value('initial_sosa')
+        self.want_ids = get_value('inc_id')
         pid = get_value('pid')
         self.other_events = get_value('incotherevents')
 
@@ -297,6 +300,8 @@ class DetAncestorReport(Report):
         elif name:
             self.doc.write_text_citation("%s. " % self.endnotes(person))
         self.doc.end_bold()
+        if self.want_ids:
+            self.doc.write_text('(%s) ' % person.get_gramps_id())
 
         if self.dupperson:
             # Check for duplicate record (result of distant cousins marrying)
@@ -556,6 +561,8 @@ class DetAncestorReport(Report):
                                                       self._nd)
             if text:
                 self.doc.write_text_citation(text, spouse_mark)
+                if self.want_ids:
+                    self.doc.write_text(' (%s)' % family.get_gramps_id())
                 is_first = False
 
     def write_children(self, family):
@@ -613,6 +620,8 @@ class DetAncestorReport(Report):
             self.__narrator.set_subject(child)
             if child_name:
                 self.doc.write_text("%s. " % child_name, child_mark)
+                if self.want_ids:
+                    self.doc.write_text('(%s) ' % child.get_gramps_id())
             self.doc.write_text_citation(
                 self.__narrator.get_born_string() or
                 self.__narrator.get_christened_string() or
@@ -734,6 +743,8 @@ class DetAncestorReport(Report):
                                         mark)
                 if name[-1:] != '.':
                     self.doc.write_text(".")
+                if self.want_ids:
+                    self.doc.write_text(' (%s)' % ind.get_gramps_id())
                 self.doc.write_text_citation(self.endnotes(ind))
                 self.doc.end_paragraph()
 
@@ -820,6 +831,8 @@ class DetAncestorOptions(MenuReportOptions):
         gen.set_help(_("The number of generations to include in the report"))
         addopt("gen", gen)
 
+        stdoptions.add_gramps_id_option(menu, category)
+
         pagebbg = BooleanOption(_("Page break between generations"), False)
         pagebbg.set_help(
             _("Whether to start a new page after each generation."))
@@ -839,7 +852,9 @@ class DetAncestorOptions(MenuReportOptions):
 
         stdoptions.add_living_people_option(menu, category)
 
-        stdoptions.add_localization_option(menu, category)
+        locale_opt = stdoptions.add_localization_option(menu, category)
+
+        stdoptions.add_date_format_option(menu, category, locale_opt)
 
         # Content options
 
@@ -950,7 +965,7 @@ class DetAncestorOptions(MenuReportOptions):
         para.set_top_margin(0.25)
         para.set_bottom_margin(0.25)
         para.set_alignment(PARA_ALIGN_CENTER)
-        para.set_description(_('The style used for the title of the page.'))
+        para.set_description(_('The style used for the title.'))
         default_style.add_paragraph_style("DAR-Title", para)
 
         font = FontStyle()
@@ -980,7 +995,8 @@ class DetAncestorOptions(MenuReportOptions):
         para.set(first_indent=-0.75, lmargin=1.75)
         para.set_top_margin(0.25)
         para.set_bottom_margin(0.25)
-        para.set_description(_('The style used for the children list.'))
+        para.set_description(
+            _('The style used for the text related to the children.'))
         default_style.add_paragraph_style("DAR-ChildList", para)
 
         font = FontStyle()
@@ -990,6 +1006,7 @@ class DetAncestorOptions(MenuReportOptions):
         para.set(first_indent=0.0, lmargin=1.0)
         para.set_top_margin(0.25)
         para.set_bottom_margin(0.25)
+        para.set_description(_('The style used for the note header.'))
         default_style.add_paragraph_style("DAR-NoteHeader", para)
 
         para = ParagraphStyle()
@@ -1003,7 +1020,7 @@ class DetAncestorOptions(MenuReportOptions):
         para.set(first_indent=-1.0, lmargin=1.0)
         para.set_top_margin(0.25)
         para.set_bottom_margin(0.25)
-        para.set_description(_('The style used for the first personal entry.'))
+        para.set_description(_('The style used for first level headings.'))
         default_style.add_paragraph_style("DAR-First-Entry", para)
 
         font = FontStyle()
@@ -1013,7 +1030,7 @@ class DetAncestorOptions(MenuReportOptions):
         para.set(first_indent=0.0, lmargin=1.0)
         para.set_top_margin(0.25)
         para.set_bottom_margin(0.25)
-        para.set_description(_('The style used for the More About header.'))
+        para.set_description(_('The style used for second level headings.'))
         default_style.add_paragraph_style("DAR-MoreHeader", para)
 
         font = FontStyle()
@@ -1023,7 +1040,7 @@ class DetAncestorOptions(MenuReportOptions):
         para.set(first_indent=0.0, lmargin=1.0)
         para.set_top_margin(0.25)
         para.set_bottom_margin(0.25)
-        para.set_description(_('The style used for additional detail data.'))
+        para.set_description(_('The style used for details.'))
         default_style.add_paragraph_style("DAR-MoreDetails", para)
 
         endnotes.add_endnote_styles(default_style)

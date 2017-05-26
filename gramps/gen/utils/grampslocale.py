@@ -4,6 +4,7 @@
 #
 # Copyright (C) 2000-2006  Donald N. Allingham
 # Copyright (C) 2009       Brian G. Matherly
+# Copyright (C) 2013       John Ralls
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -102,6 +103,7 @@ _LOCALE_NAMES = {
     'sq': ('Albanian_Albania', '1250', _("Albanian")),
     'sr': ('Serbian(Cyrillic)_Serbia and Montenegro', '1251', _("Serbian")),
     'sv': ('Swedish_Sweden', '1252', _("Swedish")),
+    'ta': (None, None, _("Tamil")), # Windows has no codepage for Tamil
     'tr': ('Turkish_Turkey', '1254', _("Turkish")),
     'uk': ('Ukrainian_Ukraine', '1251', _("Ukrainian")),
     'vi': ('Vietnamese_Vietnam', '1258', _("Vietnamese")),
@@ -110,8 +112,11 @@ _LOCALE_NAMES = {
     'zh_TW': ('Chinese_Taiwan', '950', _("Chinese (Traditional)")),
     }
 
+# locales with right-to-left text
+_RTL_LOCALES = ('ar', 'he')
+
 # locales with less than 70% currently translated
-INCOMPLETE_TRANSLATIONS = ('ar', 'bg', 'he', 'ja', 'sq', 'tr')
+INCOMPLETE_TRANSLATIONS = ('ar', 'bg', 'he', 'ja', 'sq', 'ta', 'tr')
 
 def _check_mswin_locale(locale):
     msloc = None
@@ -138,6 +143,46 @@ def _check_mswin_locale_reverse(locale):
     if locale.startswith('English') and locale != 'English_United States':
         return ('en_GB', '1252')
     return (None, None)
+
+def _check_gformat():
+    """
+    Some OS environments do not support the locale.nl_langinfo() method
+    of determing month names and other date related information.
+    """
+    try:
+        gformat = locale.nl_langinfo(locale.D_FMT).replace('%y','%Y')
+        # Gramps treats dates with '-' as ISO format, so replace separator
+        # on locale dates that use '-' to prevent confict
+        gformat = gformat.replace('-', '/')
+    except:
+        '''
+        Depending on the locale, the value returned for 20th Feb 2009
+        could be '20/2/2009', '20/02/2009', '20.2.2009', '20.02.2009',
+        '20-2-2009', '20-02-2009', '2009/02/20', '2009.02.20',
+        '2009-02-20', or '09-02-20' so to reduce the possible values to
+        test for, make sure both the month and the day are double digits,
+        preferably greater than 12 for human readablity
+        '''
+        import time
+        timestr = time.strftime('%x',(2005,10,25,1,1,1,1,1,1))
+
+        # Gramps treats dates with '-' as ISO format, so replace separator
+        # on locale dates that use '-' to prevent confict
+        timestr = timestr.replace('-', '/')
+
+        time2fmt_map = {'25/10/2005' : '%d/%m/%Y',
+                        '10/25/2005' : '%m/%d/%Y',
+                        '2005/10/25' : '%Y/%m/%d',
+                        '25.10.2005' : '%d.%m.%Y',
+                        '10.25.2005' : '%m.%d.%Y',
+                        '2005.10.25' : '%Y.%m.%d',
+                       }
+
+        try:
+            gformat = time2fmt_map[timestr]
+        except KeyError:
+            gformat = '%d/%m/%Y'  # default value
+    return gformat
 
 #------------------------------------------------------------------------
 #
@@ -330,18 +375,6 @@ class GrampsLocale:
             else:
                 LOG.debug("No translation for LC_MESSAGES locale %s", loc)
 
-        # $LANGUAGE overrides $LANG, $LC_MESSAGES
-        if "LANGUAGE" in os.environ:
-            language = [x for x in [self.check_available_translations(l)
-                                    for l in os.environ["LANGUAGE"].split(":")]
-                            if x]
-            if language:
-                self.language = language
-                if not self.lang.startswith(self.language[0]):
-                    LOG.debug("Overiding locale setting %s with LANGUAGE setting %s", self.lang, self.language[0])
-            elif _failure:
-                LOG.warning("No valid locale settings found, using US English")
-
         if HAVE_ICU:
             self.calendar = locale.getlocale(locale.LC_TIME)[0] or self.lang[:5]
             self.collation = locale.getlocale(locale.LC_COLLATE)[0] or self.lang[:5]
@@ -372,6 +405,23 @@ class GrampsLocale:
             self.currency = '.'.join(loc)
         else:
             self.currency = self.lang
+
+        # $LANGUAGE overrides $LANG, $LC_MESSAGES
+        if "LANGUAGE" in os.environ:
+            language = [x for x in [self.check_available_translations(l)
+                                    for l in os.environ["LANGUAGE"].split(":")]
+                            if x]
+            if language:
+                self.language = language
+                if not self.lang.startswith(self.language[0]):
+                    LOG.debug("Overiding locale setting '%s' with LANGUAGE setting '%s'", self.lang, self.language[0])
+                    self.lang = self.calendar = self.language[0]
+            elif _failure:
+                LOG.warning("No valid locale settings found, using US English")
+
+        if __debug__:
+            LOG.debug("The locale tformat for '%s' is '%s'",
+                      self.lang, _check_gformat())
 
     def _win_bindtextdomain(self, localedomain, localedir):
         """
@@ -479,18 +529,25 @@ class GrampsLocale:
                 self._win_bindtextdomain(self.localedomain.encode('utf-8'),
                                          self.localedir.encode('utf-8'))
 
+        self.rtl_locale = False
+        if self.language[0] in _RTL_LOCALES:
+            self.rtl_locale = True # right-to-left
+
     def _init_secondary_locale(self):
         """
         Init a secondary locale. Secondary locales are used to provide
         an alternate localization to the one used for the UI; for
         example, some reports offer the option to use a different
         language.
+
+        This GrampsLocale class does no caching of the secondary locale.
+        If any caching is desired it must be done externally.
         """
         if not self.localedir:
             LOG.warning("No Localedir provided, unable to find translations")
 
         if not self.localedomain:
-            if _firstlocaledomain:
+            if _firstlocaledomain: # TODO this variable is nowhere else
                 self.localedomain = _first.localedomain
             else:
                 self.localedomain = "gramps"
@@ -508,7 +565,11 @@ class GrampsLocale:
         if not self.language and _first.language:
             self.language = _first.language
 
-        self.calendar = self.collation = self.lang
+        self.numeric = self.currency = self.calendar = self.collation = self.lang
+
+        self.rtl_locale = False
+        if self.language[0] in _RTL_LOCALES:
+            self.rtl_locale = True # right-to-left
 
     def __init__(self, localedir=None, lang=None, domain=None, languages=None):
         """
@@ -667,11 +728,11 @@ class GrampsLocale:
         elif self.calendar[:2] in displayers:
             self._dd = displayers[self.calendar[:2]](val)
         elif self != _first and _first.calendar in displayers:
-            self._dd = displayers[_first.calendar](val)
+            self._dd = displayers[_first.calendar](val, blocale=self)
         elif self != _first and _first.calendar[:2] in displayers:
-            self._dd = displayers[_first.calendar[:2]](val)
+            self._dd = displayers[_first.calendar[:2]](val, blocale=self)
         else:
-            self._dd = displayers['C'](val)
+            self._dd = displayers['C'](val, blocale=self)
 
         return self._dd
 

@@ -99,15 +99,15 @@ class TimeLine(Report):
         self._user = user
         menu = options.menu
 
-        lang = options.menu.get_option_by_name('trans').get_value()
-        rlocale = self.set_locale(lang)
+        self.set_locale(options.menu.get_option_by_name('trans').get_value())
 
         stdoptions.run_private_data_option(self, menu)
-        living_opt = stdoptions.run_living_people_option(self, menu, rlocale)
+        living_opt = stdoptions.run_living_people_option(self, menu,
+                                                         self._locale)
         self.database = CacheProxyDb(self.database)
 
         self.filter = menu.get_option_by_name('filter').get_filter()
-        self.fil_name = "(%s)" % self.filter.get_name(rlocale)
+        self.fil_name = "(%s)" % self.filter.get_name(self._locale)
 
         living_value = menu.get_option_by_name('living_people').get_value()
         for (value, description) in living_opt.get_items(xml_items=True):
@@ -476,7 +476,7 @@ class TimeLineOptions(MenuReportOptions):
         fstyle.set_type_face(FONT_SANS_SERIF)
         pstyle = ParagraphStyle()
         pstyle.set_font(fstyle)
-        pstyle.set_description(_("The style used for the person's name."))
+        pstyle.set_description(_("The basic style used for the text display."))
         default_style.add_paragraph_style("TLG-Name", pstyle)
 
         fstyle = FontStyle()
@@ -485,7 +485,7 @@ class TimeLineOptions(MenuReportOptions):
         pstyle = ParagraphStyle()
         pstyle.set_font(fstyle)
         pstyle.set_alignment(PARA_ALIGN_CENTER)
-        pstyle.set_description(_("The style used for the year labels."))
+        pstyle.set_description(_("The style used for the section headers."))
         default_style.add_paragraph_style("TLG-Label", pstyle)
 
         fstyle = FontStyle()
@@ -494,7 +494,7 @@ class TimeLineOptions(MenuReportOptions):
         pstyle = ParagraphStyle()
         pstyle.set_font(fstyle)
         pstyle.set_alignment(PARA_ALIGN_CENTER)
-        pstyle.set_description(_("The style used for the title of the page."))
+        pstyle.set_description(_("The style used for the title."))
         default_style.add_paragraph_style("TLG-Title", pstyle)
 
         """

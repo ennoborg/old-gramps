@@ -83,8 +83,7 @@ class NumberOfAncestorsReport(Report):
         if self.__person is None:
             raise ReportError(_("Person %s is not in the Database") % pid)
 
-        lang = options.menu.get_option_by_name('trans').get_value()
-        self._locale = self.set_locale(lang)
+        self.set_locale(options.menu.get_option_by_name('trans').get_value())
 
         stdoptions.run_name_format_option(self, options.menu)
 
@@ -224,7 +223,7 @@ class NumberOfAncestorsOptions(MenuReportOptions):
         para.set_bottom_margin(utils.pt2cm(8))
         para.set_font(font)
         para.set_alignment(PARA_ALIGN_CENTER)
-        para.set_description(_("The style used for the title of the page."))
+        para.set_description(_("The style used for the title."))
         default_style.add_paragraph_style("NOA-Title", para)
 
         font = FontStyle()

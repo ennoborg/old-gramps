@@ -88,6 +88,8 @@ class AncestorReport(Report):
         pagebbg   - Whether to include page breaks between generations.
         name_format   - Preferred format to display names
         incl_private  - Whether to include private data
+        namebrk       - Whether a line break should follow the name
+        inc_id        - Whether to include Gramps IDs
         living_people - How to handle living people
         years_past_death - Consider as living this many years after death
         """
@@ -96,25 +98,28 @@ class AncestorReport(Report):
         self.map = {}
         menu = options.menu
 
-        lang = menu.get_option_by_name('trans').get_value()
-        rlocale = self.set_locale(lang)
+        self.set_locale(menu.get_option_by_name('trans').get_value())
+
+        stdoptions.run_date_format_option(self, menu)
 
         stdoptions.run_private_data_option(self, menu)
-        stdoptions.run_living_people_option(self, menu, rlocale)
+        stdoptions.run_living_people_option(self, menu, self._locale)
         self.database = CacheProxyDb(self.database)
 
         self.max_generations = menu.get_option_by_name('maxgen').get_value()
         self.pgbrk = menu.get_option_by_name('pagebbg').get_value()
         self.opt_namebrk = menu.get_option_by_name('namebrk').get_value()
+        self.want_ids = menu.get_option_by_name('inc_id').get_value()
+
         pid = menu.get_option_by_name('pid').get_value()
         self.center_person = self.database.get_person_from_gramps_id(pid)
-        if (self.center_person == None) :
-            raise ReportError(_("Person %s is not in the Database") % pid )
+        if self.center_person is None:
+            raise ReportError(_("Person %s is not in the Database") % pid)
 
         stdoptions.run_name_format_option(self, menu)
 
         self.__narrator = Narrator(self.database,  use_fulldate=True,
-                                   nlocale=rlocale)
+                                   nlocale=self._locale)
 
     def apply_filter(self, person_handle, index, generation=1):
         """
@@ -184,7 +189,7 @@ class AncestorReport(Report):
 
         self.apply_filter(self.center_person.get_handle(), 1)
 
-        # Write the title line. Set in INDEX marker so that this section will be
+        # Write the title line. Set an INDEX mark so that this section will be
         # identified as a major category if this is included in a Book report.
 
         name = self._name_display.display_formal(self.center_person)
@@ -231,15 +236,17 @@ class AncestorReport(Report):
             self.doc.start_bold()
             self.doc.write_text(name.strip(), mark)
             self.doc.end_bold()
+            if self.want_ids:
+                self.doc.write_text(' (%s)' % person.get_gramps_id())
 
             # terminate with a period if it is not already terminated.
             # This can happen if the person's name ends with something 'Jr.'
-            if name[-1:] == '.':
+            if name[-1:] == '.' and not self.want_ids:
                 self.doc.write_text(" ")
             else:
                 self.doc.write_text(". ")
 
-            # Add a line break if requested (not implemented yet)
+            # Add a line break if requested
             if self.opt_namebrk:
                 self.doc.write_text('\n')
 
@@ -285,8 +292,11 @@ class AncestorOptions(MenuReportOptions):
         menu.add_option(category_name, "pid", self.__pid)
 
         maxgen = NumberOption(_("Generations"), 10, 1, 100)
-        maxgen.set_help(_("The number of generations to include in the report"))
+        maxgen.set_help(
+            _("The number of generations to include in the report"))
         menu.add_option(category_name, "maxgen", maxgen)
+
+        stdoptions.add_gramps_id_option(menu, category_name)
 
         pagebbg = BooleanOption(_("Page break between generations"), False)
         pagebbg.set_help(
@@ -294,7 +304,7 @@ class AncestorOptions(MenuReportOptions):
         menu.add_option(category_name, "pagebbg", pagebbg)
 
         namebrk = BooleanOption(_("Add linebreak after each name"), False)
-        namebrk.set_help(_("Indicates if a line break should follow the name."))
+        namebrk.set_help(_("Whether a line break should follow the name."))
         menu.add_option(category_name, "namebrk", namebrk)
 
         category_name = _("Report Options (2)")
@@ -305,7 +315,9 @@ class AncestorOptions(MenuReportOptions):
 
         stdoptions.add_living_people_option(menu, category_name)
 
-        stdoptions.add_localization_option(menu, category_name)
+        locale_opt = stdoptions.add_localization_option(menu, category_name)
+
+        stdoptions.add_date_format_option(menu, category_name, locale_opt)
 
     def make_default_style(self, default_style):
         """
@@ -348,7 +360,7 @@ class AncestorOptions(MenuReportOptions):
         para.set_top_margin(0.25)
         para.set_bottom_margin(0.25)
         para.set_alignment(PARA_ALIGN_CENTER)
-        para.set_description(_('The style used for the title of the page.'))
+        para.set_description(_('The style used for the title.'))
         default_style.add_paragraph_style("AHN-Title", para)
 
         #

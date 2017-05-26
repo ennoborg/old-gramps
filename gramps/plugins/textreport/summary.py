@@ -75,11 +75,10 @@ class SummaryReport(Report):
         """
         Report.__init__(self, database, options, user)
 
-        lang = options.menu.get_option_by_name('trans').get_value()
-        rlocale = self.set_locale(lang)
+        self.set_locale(options.menu.get_option_by_name('trans').get_value())
 
         stdoptions.run_private_data_option(self, options.menu)
-        stdoptions.run_living_people_option(self, options.menu, rlocale)
+        stdoptions.run_living_people_option(self, options.menu, self._locale)
         self.database = CacheProxyDb(self.database)
         self.__db = self.database
 
@@ -308,7 +307,7 @@ class SummaryOptions(MenuReportOptions):
         para.set_bottom_margin(utils.pt2cm(3))
         para.set_font(font)
         para.set_alignment(PARA_ALIGN_CENTER)
-        para.set_description(_("The style used for the title of the page."))
+        para.set_description(_("The style used for the title."))
         default_style.add_paragraph_style("SR-Title", para)
 
         font = FontStyle()
@@ -317,7 +316,7 @@ class SummaryOptions(MenuReportOptions):
         para = ParagraphStyle()
         para.set_font(font)
         para.set_top_margin(0)
-        para.set_description(_('The basic style used for sub-headings.'))
+        para.set_description(_('The style used for second level headings.'))
         default_style.add_paragraph_style("SR-Heading", para)
 
         font = FontStyle()

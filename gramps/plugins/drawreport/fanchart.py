@@ -176,11 +176,10 @@ class FanChart(Report):
 
         menu = options.menu
 
-        lang = options.menu.get_option_by_name('trans').get_value()
-        rlocale = self.set_locale(lang)
+        self.set_locale(options.menu.get_option_by_name('trans').get_value())
 
         stdoptions.run_private_data_option(self, menu)
-        stdoptions.run_living_people_option(self, menu, rlocale)
+        stdoptions.run_living_people_option(self, menu, self._locale)
         self.database = CacheProxyDb(self.database)
 
         self.max_generations = menu.get_option_by_name('maxgen').get_value()
@@ -767,7 +766,7 @@ class FanChartOptions(MenuReportOptions):
         p_style.set_font(f_style)
         p_style.set_alignment(PARA_ALIGN_CENTER)
         p_style.set_description(
-            _('The basic style used for the default text display.'))
+            _('The basic style used for the text display.'))
         default_style.add_paragraph_style("FC-Text", p_style)
 
         for i in range(0, self.max_generations):

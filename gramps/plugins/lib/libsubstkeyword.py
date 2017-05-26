@@ -309,7 +309,6 @@ class DateFormat(GenericFormat):
         def modifier():
             #ui_mods taken from date.py def lookup_modifier(self, modifier):
             # trans_text is a defined keyword (in po/update_po.py, po/genpot.sh)
-            # (in po/update_po.py, po/genpot.sh)
             trans_text = self._locale.translation.gettext
             ui_mods = ["", trans_text("before"), trans_text("after"),
                        trans_text("about"), "", "", ""]
@@ -630,7 +629,7 @@ class ConsumableString:
     def __get_a_char_of_text(self):
         """ Removes one char of TEXT from the string and returns it. """
         if self.this == "\\":
-            if self.next == None:
+            if self.next is None:
                 rtrn = "\\"
             else:
                 rtrn = self.next

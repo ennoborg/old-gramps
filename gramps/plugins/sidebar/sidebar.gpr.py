@@ -17,9 +17,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-# $Id: sidebar.gpr.py 20634 2012-11-07 17:53:14Z bmcage $
+from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
 
-MODULE_VERSION="5.0"
+MODULE_VERSION="5.1"
 
 #------------------------------------------------------------------------
 #

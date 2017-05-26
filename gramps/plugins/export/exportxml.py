@@ -376,7 +376,7 @@ class GrampsXmlWriter(UpdateCallback):
             for key in group_map:
                 value = self.db.get_name_group_mapping(key)
                 self.g.write('    <map type="group_as" key="%s" value="%s"/>\n'
-                             % (key, value) )
+                             % (self.fix(key), value))
             self.g.write("  </namemaps>\n")
 
     def write_bookmarks(self):
@@ -511,7 +511,7 @@ class GrampsXmlWriter(UpdateCallback):
             self.g.write('  ' * indent)
 
         self.g.write('<%s>' % val)
-        self.g.write(self.fix(text.rstrip()))
+        self.g.write(escxml(str(text).translate(strip_dict)))
         self.g.write("</%s>\n" % val)
 
     def write_person(self,person,index=1):

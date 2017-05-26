@@ -25,7 +25,7 @@ _ = glocale.translation.gettext
 GRAMPS registration file
 """
 
-MODULE_VERSION="5.0"
+MODULE_VERSION="5.1"
 
 #------------------------------------------------------------------------
 #
@@ -61,8 +61,8 @@ tool_modes = [TOOL_MODE_GUI, TOOL_MODE_CLI]
 
 register(TOOL,
 id    = 'dgenstats',
-name  = "Dump Gender Statistics",
-description =  ("Will dump the statistics for the gender guessing "
+name  = _("Dump Gender Statistics"),
+description = _("Will dump the statistics for guessing the gender "
                 "from the first name."),
 version = '1.0',
 gramps_target_version = MODULE_VERSION,

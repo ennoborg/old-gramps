@@ -105,7 +105,7 @@ class TitleN(TitleNoDisplay):
     """No Title class for the report """
 
     def __init__(self, doc, locale):
-        TitleNoDisplay.__init__(self, doc, "AC2-Title")
+        TitleNoDisplay.__init__(self, doc, "AC2-Title-box")
         self._ = locale.translation.sgettext
 
     def calc_title(self, center):
@@ -118,7 +118,7 @@ class TitleA(TitleBox):
     """Title class for the report """
     def __init__(self, doc, locale, name_displayer):
         self._nd = name_displayer
-        TitleBox.__init__(self, doc, "AC2-Title")
+        TitleBox.__init__(self, doc, "AC2-Title-box")
         self._ = locale.translation.sgettext
 
     def calc_title(self, center):
@@ -556,8 +556,8 @@ class AncestorTree(Report):
         self.options = options
         self._user = user
 
-        lang = options.menu.get_option_by_name('trans').get_value()
-        self._locale = self.set_locale(lang)
+        self.set_locale(options.menu.get_option_by_name('trans').get_value())
+        stdoptions.run_date_format_option(self, options.menu)
         stdoptions.run_private_data_option(self, options.menu)
         stdoptions.run_living_people_option(self, options.menu, self._locale)
         self.database = CacheProxyDb(self.database)
@@ -901,7 +901,9 @@ class AncestorTreeOptions(MenuReportOptions):
 
         stdoptions.add_private_data_option(menu, category_name)
 
-        stdoptions.add_localization_option(menu, category_name)
+        locale_opt = stdoptions.add_localization_option(menu, category_name)
+
+        stdoptions.add_date_format_option(menu, category_name, locale_opt)
 
         ##################
         category_name = _("Display")
@@ -1043,8 +1045,8 @@ class AncestorTreeOptions(MenuReportOptions):
         font.set_type_face(FONT_SANS_SERIF)
         para_style = ParagraphStyle()
         para_style.set_font(font)
-        para_style.set_description(_('The basic style used for the '
-                                     'text display.'))
+        para_style.set_description(
+            _('The basic style used for the text display.'))
         default_style.add_paragraph_style("AC2-Normal", para_style)
         box_shadow = PT2CM(font.get_size()) * .6
 
@@ -1053,8 +1055,8 @@ class AncestorTreeOptions(MenuReportOptions):
         font.set_type_face(FONT_SANS_SERIF)
         para_style = ParagraphStyle()
         para_style.set_font(font)
-        para_style.set_description(_('The basic style used for the '
-                                     'note display.'))
+        para_style.set_description(
+            _('The basic style used for the note display.'))
         default_style.add_paragraph_style("AC2-Note", para_style)
 
         font = FontStyle()
@@ -1063,8 +1065,7 @@ class AncestorTreeOptions(MenuReportOptions):
         para_style = ParagraphStyle()
         para_style.set_font(font)
         para_style.set_alignment(PARA_ALIGN_CENTER)
-        para_style.set_description(_('The basic style used for the '
-                                     'title display.'))
+        para_style.set_description(_('The style used for the title.'))
         default_style.add_paragraph_style("AC2-Title", para_style)
 
         ## Draw styles
@@ -1085,12 +1086,14 @@ class AncestorTreeOptions(MenuReportOptions):
         graph_style.set_fill_color((255, 255, 255))
         default_style.add_draw_style("AC2-note-box", graph_style)
 
+        # TODO this seems meaningless, as only the text is displayed
         graph_style = GraphicsStyle()
         graph_style.set_paragraph_style("AC2-Title")
         graph_style.set_color((0, 0, 0))
         graph_style.set_fill_color((255, 255, 255))
         graph_style.set_line_width(0)
-        default_style.add_draw_style("AC2-Title", graph_style)
+        graph_style.set_description(_("Cannot edit this reference"))
+        default_style.add_draw_style("AC2-Title-box", graph_style)
 
         graph_style = GraphicsStyle()
         default_style.add_draw_style("AC2-line", graph_style)

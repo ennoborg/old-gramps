@@ -51,7 +51,7 @@ import argparse
 ALL_LINGUAS = ('ar', 'bg', 'ca', 'cs', 'da', 'de', 'el', 'en_GB',
                'eo', 'es', 'fi', 'fr', 'he', 'hr', 'hu', 'is', 'it',
                'ja', 'lt', 'nb', 'nl', 'nn', 'pl', 'pt_BR', 'pt_PT',
-               'ru', 'sk', 'sl', 'sq', 'sr', 'sv', 'tr', 'uk', 'vi',
+               'ru', 'sk', 'sl', 'sq', 'sr', 'sv', 'ta', 'tr', 'uk', 'vi',
                'zh_CN', 'zh_HK', 'zh_TW')
 _FILES = ('data/tips.xml', 'data/holidays.xml')
 
@@ -488,7 +488,7 @@ setup(name = 'gramps',
       data_files = data_files,
       scripts = ['scripts/gramps'],
       classifiers = [
-          "Development Status :: 3 - Alpha",
+          "Development Status :: 1 - Planning",
           "Environment :: Console",
           "Environment :: MacOS X",
           "Environment :: Plugins",
