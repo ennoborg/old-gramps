@@ -17978,7 +17978,7 @@ msgstr "Hij huwde ook %(spouse)s in %(partial_date)s in %(place)s%(endnotes)s."
 #: ../src/plugins/lib/libnarrate.py:997
 #, python-format
 msgid "He also married %(spouse)s on %(full_date)s in %(place)s%(endnotes)s."
-msgstr "Hij huwde ooks %(spouse)s op %(full_date)s in %(place)s%(endnotes)s."
+msgstr "Hij huwde ook %(spouse)s op %(full_date)s in %(place)s%(endnotes)s."
 
 #: ../src/plugins/lib/libnarrate.py:998
 #, python-format
