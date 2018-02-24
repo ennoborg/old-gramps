@@ -4628,7 +4628,7 @@ msgstr "Grafisch"
 #: ../src/plugins/textreport/DetAncestralReport.py:868
 #: ../src/plugins/textreport/DetDescendantReport.py:1063
 msgid "The style used for the generation header."
-msgstr "De gebruikte stijl voor de generatiehoofding."
+msgstr "De gebruikte stijl voor de generatiekoptekst."
 
 #: ../src/gen/plug/report/endnotes.py:56
 msgid "The basic style used for the endnotes source display."
@@ -10317,7 +10317,7 @@ msgstr "De gebruikte stijl voor de ondertitel van het verslag."
 
 #: ../src/plugins/Records.py:603
 msgid "The style used for headings."
-msgstr "De gebruikte stijl voor de hoofding."
+msgstr "De gebruikte stijl voor de kopteksten."
 
 #: ../src/plugins/Records.py:611
 #: ../src/plugins/drawreport/AncestorTree.py:1070
@@ -12020,7 +12020,7 @@ msgstr "Kinderen bijvoegen"
 
 #: ../src/plugins/export/ExportCsv.py:199
 msgid "Translate headers"
-msgstr "Hoofdingen vertalen"
+msgstr "Kopteksten vertalen"
 
 #: ../src/plugins/export/ExportCsv.py:339
 #: ../src/plugins/import/ImportCsv.py:186
@@ -15620,7 +15620,7 @@ msgstr "REPO (bibliotheek) Gramps-id %s"
 
 #: ../src/plugins/lib/libgedcom.py:6661
 msgid "Head (header)"
-msgstr "Hoofding"
+msgstr "Koptekst"
 
 #: ../src/plugins/lib/libgedcom.py:6677
 msgid "Approved system identification"
@@ -21433,7 +21433,7 @@ msgstr "De gebruikte stijl voor de sectietitels."
 
 #: ../src/plugins/textreport/EndOfLineReport.py:308
 msgid "The basic style used for generation headings."
-msgstr "De standaardstijl voor de hoofding van de generaties."
+msgstr "De standaardstijl voor de kopteksten van de generaties."
 
 #: ../src/plugins/textreport/FamilyGroup.py:123
 #: ../src/plugins/webreport/NarrativeWeb.py:1038
@@ -21843,7 +21843,7 @@ msgstr "De gebruikte stijl voor de locatiedetails."
 
 #: ../src/plugins/textreport/PlaceReport.py:460
 msgid "The style used for a column title."
-msgstr "De gebruikte stijl voor de kolomhoofding."
+msgstr "De gebruikte stijl voor de kolomtitel."
 
 #: ../src/plugins/textreport/PlaceReport.py:474
 msgid "The style used for each section."
@@ -21983,15 +21983,15 @@ msgstr "Totale grootte van media-objecten: %s MB"
 
 #: ../src/plugins/textreport/TableOfContents.py:105
 msgid "The style used for first level headings."
-msgstr "De gebruikte stijl voor de hoofding 'eerste niveau'."
+msgstr "De gebruikte stijl voor de 'eerste niveau'-kopteksten."
 
 #: ../src/plugins/textreport/TableOfContents.py:111
 msgid "The style used for second level headings."
-msgstr "De gebruikte stijl voor de hoofding 'tweede niveau'."
+msgstr "De gebruikte stijl voor de 'tweede niveau'-kopteksten."
 
 #: ../src/plugins/textreport/TableOfContents.py:117
 msgid "The style used for third level headings."
-msgstr "De gebruikte stijl voor de hoofding 'derde niveau'."
+msgstr "De gebruikte stijl voor de 'derde niveau'-kopteksten."
 
 #: ../src/plugins/textreport/TagReport.py:79
 #: ../src/plugins/textreport/textplugins.gpr.py:252
@@ -22023,7 +22023,7 @@ msgstr "De gebruikte tag voor dit verslag"
 
 #: ../src/plugins/textreport/TagReport.py:590
 msgid "The basic style used for table headings."
-msgstr "De gebruikte basisstijl voor de tabelhoofdingen."
+msgstr "De gebruikte basisstijl voor de tabelkoppen."
 
 #: ../src/plugins/textreport/textplugins.gpr.py:31
 msgid "Ahnentafel Report"
@@ -25515,11 +25515,11 @@ msgstr ""
 
 #: ../src/plugins/webreport/NarrativeWeb.py:8123
 msgid "HTML user header"
-msgstr "Zelf aangemaakte HTML-hoofding"
+msgstr "Zelf aangemaakte HTML-header"
 
 #: ../src/plugins/webreport/NarrativeWeb.py:8124
 msgid "A note to be used as the page header"
-msgstr "Een opmerking gebruiken als paginahoofding"
+msgstr "Een opmerking gebruiken als paginakoptekst"
 
 #: ../src/plugins/webreport/NarrativeWeb.py:8127
 msgid "HTML user footer"
@@ -32163,7 +32163,7 @@ msgstr ""
 #~ msgstr "Personen"
 
 #~ msgid "Translate _Headers"
-#~ msgstr "Hoofdingen vertalen"
+#~ msgstr "Kopteksten vertalen"
 
 #~ msgid "_Marriages"
 #~ msgstr "Huwelijken"
