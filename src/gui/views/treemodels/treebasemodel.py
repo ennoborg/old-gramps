@@ -933,6 +933,8 @@ class TreeBaseModel(gtk.GenericTreeModel):
         pathlist = list(path)
         for index in pathlist:
             _index = (-index - 1) if self.__reverse else index
+            if _index >= len(node.children):
+                return None
             node = self.nodemap.node(node.children[_index][1])
         return node
         
