@@ -278,6 +278,32 @@ class Citation(MediaBase, NoteBase, IndirectCitationBase,
         """Get the page indicator of the Citation."""
         return self.page
 
+    def set_title(self, title):
+        """
+        Set the descriptive title of the Source object.
+
+        :param title: descriptive title to assign to the Source
+        :type title: str
+        """
+        self.title = title
+
+    def get_title(self):
+        """
+        Return the descriptive title of the Place object.
+
+        :returns: Returns the descriptive title of the Place
+        :rtype: str
+        """
+        return self.title
+
+    def set_author(self, author):
+        """Set the author of the Source."""
+        self.author = author
+
+    def get_author(self):
+        """Return the author of the Source."""
+        return self.author
+
     def set_reference_handle(self, val):
         self.source_handle = val
 
