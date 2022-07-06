@@ -278,14 +278,12 @@ class ListView(NavigationView):
     def foreground_color(self, column, renderer, model, iter_, data=None):
         '''
         Set the foreground color of the cell renderer.  We use a cell data
-        function because we don't want to set the color of untagged rows.
+        function because there is a problem returning None from a model.
         '''
         fg_color = model.get_value(iter_, model.color_column())
-        #for color errors, typically color column is badly set
-        if fg_color:
-            renderer.set_property('foreground', fg_color)
-        else:
-            LOG.debug('Bad color set: ' + str(fg_color))
+        if fg_color == '':
+            fg_color = None
+        renderer.set_property('foreground', fg_color)
 
     def set_active(self):
         """
@@ -891,7 +889,7 @@ class ListView(NavigationView):
             self.edit(obj)
             return True
         # Custom interactive search
-        if event.string:
+        if Gdk.keyval_to_unicode(event.keyval):
             return self.searchbox.treeview_keypress(obj, event)
         return False
 
@@ -919,7 +917,7 @@ class ListView(NavigationView):
                     else:
                         self.edit(obj)
                         return True
-        elif event.string:
+        elif Gdk.keyval_to_unicode(event.keyval):
             # Custom interactive search
             return self.searchbox.treeview_keypress(obj, event)
         return False

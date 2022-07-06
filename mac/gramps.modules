@@ -18,7 +18,7 @@
   <repository type="tarball" name="oracle"
 	      href="http://download.oracle.com/"/>
   <repository type="tarball" name="pymodules"
-	      href="http://pypi.python.org/packages/source/"/>
+	      href="https://pypi.python.org/packages/"/>
   <repository type="tarball" name="stowers"
 	     href="http://www.johnstowers.co.nz/files/"/>
   <repository type="git" name="github"
@@ -54,25 +54,23 @@ gtk-mac-bundler gtk-osx-build/projects/gramps/gramps.bundle
 
 -->
 
-  <!--include href="http://git.gnome.org/browse/gtk-osx/plain/modulesets-stable/gtk-osx.modules"/-->
-  <include href="/Users/john/Development/GTK-OSX/gtk-osx-build/modulesets-stable/gtk-osx.modules"/>
+  <include href="http://git.gnome.org/browse/gtk-osx/plain/modulesets-stable/gtk-osx.modules"/>
+  <!--include href="/Users/john/Development/GTK-OSX/gtk-osx-build/modulesets-stable/gtk-osx.modules"/-->
 
   <distutils id="gramps-git" supports-non-srcdir-builds="no">
     <branch module="gramps-project/gramps.git" repo="github"
 	    checkoutdir="gramps-git" tag="maintenance/gramps42"/>
     <dependencies>
-      <dep package="meta-python2-modules"/>
-      <dep package="meta-python3-modules"/>
+      <dep package="meta-gramps-modules"/>
     </dependencies>
   </distutils>
 
   <distutils id="gramps" supports-non-srcdir-builds="no">
-    <branch module="gramps-project/gramps/archive/v4.2.5.tar.gz"
-	    repo="github-tarball" version="4.2.5"
-	    checkoutdir="gramps-gramps-4.2.5"/>
+    <branch module="gramps-project/gramps/archive/v4.2.8.tar.gz"
+	    repo="github-tarball" version="4.2.8"
+	    checkoutdir="gramps-gramps-4.2.8"/>
     <dependencies>
-      <dep package="meta-python2-modules"/>
-      <dep package="meta-python3-modules"/>
+      <dep package="meta-gramps-modules"/>
     </dependencies>
   </distutils>
 
@@ -114,9 +112,12 @@ gtk-mac-bundler gtk-osx-build/projects/gramps/gramps.bundle
 	     supports-non-srcdir-builds="no">
     <branch module="nzjrs/osm-gps-map" revision="1.0.2" repo="github"/>
     <dependencies>
-      <dep package="meta-gtk-osx-gtk3"/>
       <dep package="libsoup"/>
     </dependencies>
+    <after>
+      <dep package="meta-gtk-osx-gtk3"/>
+      <dep package="meta-gtk-osx-gtk3.14"/>
+    </after>
   </autotools>
 
   <autotools id="graphviz" autogen-sh="configure"
@@ -162,18 +163,17 @@ gtk-mac-bundler gtk-osx-build/projects/gramps/gramps.bundle
   </distutils>
 
  <distutils id='pyicu'>
-    <branch version='1.8' repo='pymodules'
-	    module='P/PyICU/PyICU-1.8.tar.gz'/>
+    <branch version='2.0.3' repo='pymodules'
+	    module='bb/ef/3a7fcbba81bfd213e479131ae21445a2ddd14b46d70ef0109640b580bc5d/PyICU-2.0.3.tar.gz'/>
     <dependencies>
       <dep package='icu'/>
     </dependencies>
   </distutils>
 
-  <metamodule id="meta-python2-modules">
+  <metamodule id="meta-gramps-modules">
     <dependencies>
-      <dep package="python"/>
-      <dep package="meta-gtk-osx-gtk3"/>
-      <dep package="gtk-mac-integration-python"/>
+      <dep package="python3"/>
+      <dep package="meta-gtk-osx-gtk3.14"/>
       <dep package="meta-gtk-osx-gtk3-core-themes"/>
       <dep package="goocanvas2"/>
       <dep package="librsvg"/>
@@ -184,18 +184,14 @@ gtk-mac-bundler gtk-osx-build/projects/gramps/gramps.bundle
       <dep package="graphviz"/>
       <dep package="pil"/>
       <dep package="gexiv2"/>
-   </dependencies>
- </metamodule>
-
- <metamodule id="meta-python3-modules">
-   <dependencies>
-     <dep package="python3"/>
-     <dep package="berkeleydb"/>
-     <dep package="pycairo"/>
-     <dep package="pygobject3"/>
-     <dep package='pyicu'/>
-     <dep package='pybsddb'/>
-   </dependencies>
- </metamodule>
+      <dep package="berkeleydb"/>
+      <dep package="gtk-mac-integration-python"/>
+      <dep package="pycairo"/>
+      <dep package="pygobject3"/>
+      <dep package='pyicu'/>
+      <dep package='pybsddb'/>
+      <dep package="pil"/>
+    </dependencies>
+  </metamodule>
 
 </moduleset>

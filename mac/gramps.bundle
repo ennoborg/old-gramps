@@ -13,7 +13,7 @@
 
   <plist>${project}/Info.plist</plist>
   <!-- Build gramps-launcher with:
-          gcc -L$PREFIX `python-config -\-cflags -\-ldflags` \
+          gcc -L$PREFIX/lib `python-config -\-cflags -\-ldflags` \
               -o $PREFIX/bin/gramps-launcher \
 	      path/to/gtk-mac-bundler/examples/python-launcher.c
        with the obvious substitution.
@@ -231,4 +231,15 @@
     ${project}/settings.ini
   </data>
 
+  <data>
+    ${prefix}/share/doc/gramps/*
+  </data>
+  
+  <data>
+    ${prefix}/share/doc/gramps/example/gedcom/sample.ged
+  </data>
+
+  <data>
+    ${prefix}/share/doc/gramps/example/gramps/*
+  </data>
 </app-bundle>

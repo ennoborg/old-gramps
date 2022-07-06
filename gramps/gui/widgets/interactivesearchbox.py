@@ -70,7 +70,7 @@ class InteractiveSearchBox():
         function handling keypresses from the treeview
         for the typeahead find capabilities
         """
-        if not event.string:
+        if not Gdk.keyval_to_unicode(event.keyval):
             return False
         if self._key_cancels_search(event.keyval):
             return False
@@ -399,7 +399,7 @@ class InteractiveSearchBox():
             self._search_window.hide()
             self._search_entry.set_text("")
             self._treeview.emit('focus-in-event', event)
-        self.__selected_search_result = None
+        self.__selected_search_result = 0
 
     def _position_func(self, userdata=None):
         tree_window = self._treeview.get_window()

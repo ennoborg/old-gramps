@@ -134,6 +134,7 @@ from gramps.gui.dialog import WarningDialog
 from gramps.gen.lib.const import IDENTICAL, DIFFERENT
 from gramps.gen.lib import (StyledText, StyledTextTag, StyledTextTagType)
 from gramps.gen.constfunc import conv_to_unicode, win
+from gramps.gen.lib.urlbase import UrlBase
 from gramps.plugins.lib.libplaceimport import PlaceImport
 from gramps.gen.display.place import displayer as _pd
 
@@ -273,6 +274,8 @@ TOKEN__PHOTO = 132
 TOKEN__LINK = 133
 TOKEN__PRIM = 134
 TOKEN__JUST = 135
+TOKEN__TEXT = 136
+TOKEN__DATE = 137
 
 TOKENS = {
     "HEAD"         : TOKEN_HEAD,    "MEDI"         : TOKEN_MEDI,
@@ -364,7 +367,7 @@ TOKENS = {
     "_WITN"          : TOKEN__WITN, "_WTN"          : TOKEN__WTN,
     "_CHUR"          : TOKEN_IGNORE,"RELA"          : TOKEN_RELA,
     "_DETAIL"        : TOKEN_IGNORE,"_PREF"         : TOKEN__PRIMARY,
-    "_LKD"           : TOKEN__LKD,  "_DATE"         : TOKEN_IGNORE,
+    "_LKD"           : TOKEN__LKD,  "_DATE"         : TOKEN__DATE,
     "_SCBK"          : TOKEN_IGNORE,"_TYPE"         : TOKEN_TYPE,
     "_PRIM"          : TOKEN__PRIM, "_SSHOW"        : TOKEN_IGNORE,
     "_PAREN"         : TOKEN_IGNORE,"BLOB"          : TOKEN_BLOB,
@@ -382,7 +385,7 @@ TOKENS = {
     "_ADPN"          : TOKEN__ADPN, "_FSFTID"       : TOKEN__FSFTID,
     "_LINK"          : TOKEN__LINK, "_PHOTO"        : TOKEN__PHOTO,
     "_JUST"          : TOKEN__JUST,  # FTM Citation Quality Justification
-    "FAX"            : TOKEN_FAX,
+    "FAX"            : TOKEN_FAX,   "_TEXT"         : TOKEN__TEXT,
 }
 
 ADOPT_NONE         = 0
@@ -636,8 +639,8 @@ for __val, __key in PERSONALCONSTANTATTRIBUTES.items():
 #
 #-------------------------------------------------------------------------
 HMONTH = [
-    "", "ELUL", "TSH", "CSH", "KSL", "TVT", "SHV", "ADR",
-    "ADS", "NSN", "IYR", "SVN", "TMZ", "AAV", "ELL" ]
+    "", "TSH", "CSH", "KSL", "TVT", "SHV", "ADR",
+    "ADS", "NSN", "IYR", "SVN", "TMZ", "AAV", "ELL"]
 
 FMONTH = [
     "",     "VEND", "BRUM", "FRIM", "NIVO", "PLUV", "VENT",
@@ -1058,6 +1061,7 @@ class GedLine:
 _MAP_DATA = {
     TOKEN_UNKNOWN : GedLine.calc_unknown,
     TOKEN_DATE    : GedLine.calc_date,
+    TOKEN__DATE   : GedLine.calc_date,
     TOKEN_SEX     : GedLine.calc_sex,
     TOKEN_NOTE    : GedLine.calc_note,
     TOKEN_NCHI    : GedLine.calc_nchi,
@@ -2549,7 +2553,9 @@ class GedcomParser(UpdateCallback):
             TOKEN_TITL   : self.__obje_title,
             TOKEN_FILE   : self.__obje_file,    # de-facto extension
             TOKEN_TEXT   : self.__obje_text,    # FTM extension
+            TOKEN__TEXT  : self.__obje_text,    # FTM 2017 extension
             TOKEN_DATE   : self.__obje_date,    # FTM extension
+            TOKEN__DATE  : self.__obje_date,    # FTM 2017 extension
             TOKEN_NOTE   : self.__obje_note,
             TOKEN_RNOTE  : self.__obje_note,
             TOKEN_SOUR   : self.__obje_sour,
@@ -4121,6 +4127,9 @@ class GedcomParser(UpdateCallback):
         @param state: The current state
         @type state: CurrentState
         """
+        if self.is_ftw:
+            self.__person_resi(line, state)
+            return
         free_form = line.data
 
         sub_state = CurrentState(level=state.level + 1)
@@ -4131,6 +4140,26 @@ class GedcomParser(UpdateCallback):
 
         self.__merge_address(free_form, sub_state.addr, line, state)
         state.person.add_address(sub_state.addr)
+
+    def __person_resi(self, line, state):
+        """
+        Parses GEDCOM ADDR tag, subordinate to the INDI tag, when sourced by
+        FTM.  We treat this as a RESI event, because FTM puts standard event
+        details below the ADDR line.
+
+           n  ADDR <ADDRESS_LINE> {0:1}
+           +1 <<EVENT_DETAIL>> {0:1} p.*
+
+        @param line: The current line in GedLine format
+        @type line: GedLine
+        @param state: The current state
+        @type state: CurrentState
+        """
+        self.backoff = True  # reprocess the current ADDR line
+        line.level += 1      # as if it was next level down
+        event_ref = self.__build_event_pair(state, EventType.RESIDENCE,
+                                            self.event_parse_tbl, '')
+        state.person.add_event_ref(event_ref)
 
     def __person_phon(self, line, state):
         """
@@ -5055,6 +5084,8 @@ class GedcomParser(UpdateCallback):
                 event.set_description('')
             else:
                 state.family.type.set(FamilyRelType.MARRIED)
+            if descr == "Y":
+                event.set_description('')
 
         self.dbase.commit_event(event, self.trans)
         event_ref.ref = event.handle
@@ -5259,12 +5290,20 @@ class GedcomParser(UpdateCallback):
 
     def __family_attr(self, line, state):
         """
+        Parses an TOKEN that Gramps recognizes as an Attribute
         @param line: The current line in GedLine format
         @type line: GedLine
         @param state: The current state
         @type state: CurrentState
         """
+        sub_state = CurrentState()
+        sub_state.person = state.person
+        sub_state.attr = line.data
+        sub_state.level = state.level + 1
         state.family.add_attribute(line.data)
+        self.__parse_level(sub_state, self.person_attr_parse_tbl,
+                           self.__ignore)
+        state.msg += sub_state.msg
 
     def __family_cust_attr(self, line, state):
         """
@@ -5343,11 +5382,21 @@ class GedcomParser(UpdateCallback):
         # The following code that detects URL is an older v5.5 usage; the
         # modern option is to use the EMAIL tag.
         if isinstance(sub_state.form, str) and sub_state.form == "url":
-            url = Url()
-            url.set_path(sub_state.filename)
-            url.set_description(sub_state.title)
-            url.set_type(UrlType.WEB_HOME)
-            pri_obj.add_url(url)
+            if isinstance(pri_obj, UrlBase):
+                url = Url()
+                url.set_path(sub_state.filename)
+                url.set_description(sub_state.title)
+                url.set_type(UrlType.WEB_HOME)
+                pri_obj.add_url(url)
+            else:  # some primary objects (Event) son't have spot for URL
+                new_note = Note(sub_state.filename)
+                new_note.set_gramps_id(self.nid_map[""])
+                new_note.set_handle(create_id())
+                new_note.set_type(OBJ_NOTETYPE.get(type(pri_obj).__name__,
+                                                   NoteType.GENERAL))
+                self.dbase.commit_note(new_note, self.trans, new_note.change)
+                pri_obj.add_note(new_note.get_handle())
+
         else:
             # to allow import of references to URLs (especially for import from
             # geni.com), do not try to find the file if it is blatently a URL
